@@ -43,6 +43,7 @@ model Team {
   aliases         TeamSourceAlias[]
   ratingsWeekly   TeamRatingWeekly[]
   rankings        Ranking[]
+  trends          TeamTrend[]
   homeGames       Game[]              @relation("HomeTeam")
   awayGames       Game[]              @relation("AwayTeam")
   injuries        Injury[]
@@ -79,6 +80,22 @@ model Rivalry {
   teamBId  String
   teamB    Team   @relation("RivalryTeamB", fields: [teamBId], references: [id])
   name     String // e.g. "Iron Bowl"
+}
+
+// ---------- TEAM TRENDS (ATS / SU / O-U splits, recomputed weekly) ----------
+
+model TeamTrend {
+  id         String   @id @default(cuid())
+  teamId     String
+  team       Team     @relation(fields: [teamId], references: [id])
+  season     Int
+  // { games, ats:{w,l,p}, atsHome, atsAway, suHome:{w,l}, suAway,
+  //   atsFav, atsDog, ou:{over,under,push}, atsAfterWin, atsAfterLoss,
+  //   outliers:[ "atsDog", ... ] }  — see scripts/computeTeamTrends.ts
+  splits     Json
+  computedAt DateTime @default(now())
+
+  @@unique([teamId, season])
 }
 
 // ---------- POLLS (AP / Coaches), one snapshot per week, from CFBD /rankings ----------

@@ -126,7 +126,17 @@ export default async function GamePage({
   const data = await getGameDetail(id);
   if (!data) notFound();
 
-  const { game: g, pred, ratings, lines, weather, homeApRank, awayApRank } = data;
+  const {
+    game: g,
+    pred,
+    ratings,
+    lines,
+    weather,
+    homeApRank,
+    awayApRank,
+    homeTrend,
+    awayTrend,
+  } = data;
 
   const home = g.homeTeam;
   const away = g.awayTeam;
@@ -361,6 +371,20 @@ export default async function GamePage({
         </p>
       )}
 
+      {/* ---------- team trends ---------- */}
+      <h2>
+        Team trends{" "}
+        <span className="dim" style={{ fontWeight: 400, fontSize: 12 }}>
+          · {g.season} season to date
+        </span>
+      </h2>
+      <TrendGrid
+        away={awayShort}
+        home={homeShort}
+        awayTrend={awayTrend as TrendSplits | null}
+        homeTrend={homeTrend as TrendSplits | null}
+      />
+
       {/* ---------- line movement ---------- */}
       <h2>Line movement</h2>
       {spreadTL.length === 0 && totalTL.length === 0 ? (
@@ -588,6 +612,126 @@ function ModelRow({
         )}
       </div>
     </div>
+  );
+}
+
+type WLP = { w: number; l: number; p: number };
+type OU = { over: number; under: number; push: number };
+export interface TrendSplits {
+  games: number;
+  gamesWithLine: number;
+  ats: WLP;
+  atsHome: WLP;
+  atsAway: WLP;
+  suHome: WLP;
+  suAway: WLP;
+  atsFav: WLP;
+  atsDog: WLP;
+  ou: OU;
+  atsAfterWin: WLP;
+  atsAfterLoss: WLP;
+  outliers: string[];
+}
+
+function rec(r?: WLP): string {
+  if (!r || r.w + r.l + r.p === 0) return "–";
+  return r.p > 0 ? `${r.w}-${r.l}-${r.p}` : `${r.w}-${r.l}`;
+}
+function pct(r?: WLP): string {
+  if (!r) return "";
+  const n = r.w + r.l;
+  return n === 0 ? "" : ` ${Math.round((r.w / n) * 100)}%`;
+}
+
+function TrendCell({
+  r,
+  outlier,
+}: {
+  r?: WLP;
+  outlier: boolean;
+}) {
+  return (
+    <span className={`trend-cell${outlier ? " trend-outlier" : ""}`}>
+      {rec(r)}
+      {r && r.w + r.l >= 3 && <span className="trend-pct">{pct(r)}</span>}
+    </span>
+  );
+}
+
+function TrendGrid({
+  away,
+  home,
+  awayTrend,
+  homeTrend,
+}: {
+  away: string;
+  home: string;
+  awayTrend: TrendSplits | null;
+  homeTrend: TrendSplits | null;
+}) {
+  const anyGames = (awayTrend?.games ?? 0) + (homeTrend?.games ?? 0) > 0;
+  if (!anyGames) {
+    return (
+      <p className="subhead">
+        Neither team has enough completed games yet this season.
+      </p>
+    );
+  }
+  const rows: { label: string; key: keyof TrendSplits; kind?: "su" }[] = [
+    { label: "ATS overall", key: "ats" },
+    { label: "ATS at home", key: "atsHome" },
+    { label: "ATS on the road", key: "atsAway" },
+    { label: "ATS as favorite", key: "atsFav" },
+    { label: "ATS as underdog", key: "atsDog" },
+    { label: "ATS after a win", key: "atsAfterWin" },
+    { label: "ATS after a loss", key: "atsAfterLoss" },
+    { label: "W–L at home", key: "suHome", kind: "su" },
+    { label: "W–L on the road", key: "suAway", kind: "su" },
+  ];
+  const cell = (t: TrendSplits | null, key: keyof TrendSplits, su?: boolean) => {
+    if (!t) return <span className="trend-cell">–</span>;
+    const r = t[key] as WLP;
+    const outlier = !su && (t.outliers ?? []).includes(key as string);
+    return <TrendCell r={r} outlier={outlier} />;
+  };
+  const ouCell = (t: TrendSplits | null) => {
+    if (!t) return <span className="trend-cell">–</span>;
+    const { over, under } = t.ou;
+    if (over + under === 0) return <span className="trend-cell">–</span>;
+    const outlier =
+      (t.outliers ?? []).includes("over") || (t.outliers ?? []).includes("under");
+    return (
+      <span className={`trend-cell${outlier ? " trend-outlier" : ""}`}>
+        {over}O–{under}U
+      </span>
+    );
+  };
+  return (
+    <>
+      <div className="trend-grid">
+        <div className="trend-row trend-head">
+          <span />
+          <span>{away}</span>
+          <span>{home}</span>
+        </div>
+        {rows.map((r) => (
+          <div className="trend-row" key={r.key}>
+            <span className="trend-label">{r.label}</span>
+            {cell(awayTrend, r.key, r.kind === "su")}
+            {cell(homeTrend, r.key, r.kind === "su")}
+          </div>
+        ))}
+        <div className="trend-row">
+          <span className="trend-label">Over / Under</span>
+          {ouCell(awayTrend)}
+          {ouCell(homeTrend)}
+        </div>
+      </div>
+      <p className="subhead" style={{ marginTop: 10 }}>
+        Amber = an outlier split (≥65% or ≤35% ATS on 8+ games). Trends are
+        context, not a signal on their own.
+      </p>
+    </>
   );
 }
 

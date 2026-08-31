@@ -18,6 +18,7 @@
     "run-model": "tsx --env-file=.env scripts/runModel.ts",
     "generate-picks": "tsx --env-file=.env scripts/generatePicks.ts",
     "grade-picks": "tsx --env-file=.env scripts/gradePicks.ts",
+    "compute-trends": "tsx --env-file=.env scripts/computeTeamTrends.ts",
     "seed-rivalries": "tsx --env-file=.env scripts/seedRivalries.ts",
     "compute-flags": "tsx --env-file=.env scripts/computeFlags.ts",
     "dev": "next dev",

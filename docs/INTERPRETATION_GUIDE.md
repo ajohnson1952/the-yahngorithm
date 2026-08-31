@@ -269,3 +269,30 @@ the market produces; if our picks **consistently beat it**, the process is
 finding real value, *regardless of that season's win/loss variance*. Positive
 average CLV with a break-even ATS record is a good sign. Negative CLV with a
 winning record is probably luck. Watch the CLV.
+
+---
+
+## 8. Team trends (ATS / SU / O-U splits)
+
+On each game page, current season to date, for both teams:
+
+| Split | What it is |
+|---|---|
+| **ATS overall** | record against the closing spread |
+| **ATS at home / on the road** | same, split by venue |
+| **ATS as favorite / as underdog** | same, split by which side of the number they were |
+| **ATS after a win / after a loss** | the next game's ATS result, bucketed by the previous game's straight-up result — the "bounce-back / letdown" angle in raw form |
+| **W–L at home / on the road** | straight-up record by venue (not ATS) |
+| **Over / Under** | how often the game's total went over vs under the closing number |
+
+**Amber = an outlier**: a split where the team is **≥ 65% or ≤ 35% ATS with at
+least 8 games**. Anything short of that is just noise and isn't highlighted.
+
+How to use them: **context, not a signal.** A team that's 9–3 ATS as a favorite
+tells you the market has been slow to catch up to them — worth knowing when the
+model also likes that side. It is not a reason to bet on its own, and ATS
+records regress hard: last year's 10–3 ATS team is a coin flip this year. Treat
+an outlier the same way you'd treat a situational flag — a tiebreaker that adds
+confidence when it points the same way as the model, nothing when it doesn't.
+
+Early in the season every split reads "–" until a team has played enough games.

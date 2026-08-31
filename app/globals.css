@@ -274,6 +274,32 @@ a.card:hover .team-name { color: var(--blue); }
 .pos { color: var(--green); }
 .neg { color: var(--red); }
 
+/* ---------- team trends grid ---------- */
+.trend-grid { max-width: 520px; margin: 4px 0 6px; }
+.trend-row {
+  display: grid; grid-template-columns: 1fr 92px 92px; gap: 8px;
+  align-items: baseline;
+  padding: 7px 2px; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.trend-row:last-child { border-bottom: none; }
+.trend-head {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-faint); font-weight: 700;
+}
+.trend-head span:not(:first-child) { text-align: right; }
+.trend-label { color: var(--text-dim); }
+.trend-cell {
+  font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums;
+}
+.trend-cell .trend-pct { color: var(--text-faint); font-size: 11px; }
+.trend-outlier {
+  color: var(--amber); font-weight: 700;
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border-radius: 4px; padding: 1px 4px; margin: -1px -4px -1px 0;
+}
+.trend-outlier .trend-pct { color: color-mix(in srgb, var(--amber) 75%, var(--text)); }
+
 /* ---------- history lists (line movement / weather / injuries) ---------- */
 .hist { list-style: none; margin: 4px 0 6px; padding: 0; max-width: 780px; }
 .hist li {

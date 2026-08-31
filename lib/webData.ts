@@ -342,6 +342,13 @@ export async function getGameDetail(id: string) {
     apRankMap(g.season, g.week),
   ]);
 
+  const trends = await db.teamTrend.findMany({
+    where: {
+      season: g.season,
+      teamId: { in: [g.homeTeamId, g.awayTeamId] },
+    },
+  });
+
   return {
     game: g,
     pred,
@@ -350,6 +357,8 @@ export async function getGameDetail(id: string) {
     weather,
     homeApRank: apRanks.get(g.homeTeamId) ?? null,
     awayApRank: apRanks.get(g.awayTeamId) ?? null,
+    homeTrend: trends.find((t) => t.teamId === g.homeTeamId)?.splits ?? null,
+    awayTrend: trends.find((t) => t.teamId === g.awayTeamId)?.splits ?? null,
   };
 }
 
