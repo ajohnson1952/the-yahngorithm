@@ -21,15 +21,19 @@ Living checklist. See `README.md` for the architecture overview.
 - [x] `/rankings` — drag-and-drop "My Top 25" → Yahn model
 - [x] `/admin` — manual pipeline runs, password-gated
 - [x] GitHub Actions schedule (`.github/workflows/`)
-- [x] Deployed to Render
+- [x] Deployed to Render, `pipeline` merged into `main`
+- [x] Totals split around the spread margin (spread & total now consistent)
+- [x] Kalshi per-side data + game-page panel; board edge/kickoff sort toggle
 
-## Open
+## Open — needs you
 
-- [ ] **Merge `pipeline` → `main`** (or set `pipeline` as default) so scheduled
-      workflows run
-- [ ] Add repo secrets: `DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY`
+- [ ] Add repo secrets (GitHub → Settings → Secrets → Actions): `DATABASE_URL`,
+      `CFBD_API_KEY`, `ODDS_API_KEY` — the cron does nothing until these exist
 - [ ] Add `CFBD_API_KEY` + `ODDS_API_KEY` to the Render service env
 - [ ] Set a real Top 25 at `/rankings` (currently seeded from the AP poll)
+
+## Open — build backlog
+
 - [ ] Make Yahn a formal pick corroborator (2-of-3 model agreement) — calibrate first
 - [ ] Kalshi "fair-value gap" flag (static book-vs-market divergence, not just movement)
 - [ ] FCS SRS (pullRatings only iterates SP+ rows today = FBS)
