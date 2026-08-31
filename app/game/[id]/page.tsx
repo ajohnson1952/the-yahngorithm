@@ -194,24 +194,54 @@ export default async function GamePage({
       ? `${homeShort} ${spreadStr(-r1(homeMargin))}`
       : `${awayShort} ${spreadStr(r1(homeMargin))}`;
 
-  return (
-    <>
-      <div style={{ margin: "20px 0 0" }}>
-        <a className="inline-link" href="/" style={{ color: "var(--text-faint)", fontSize: 12 }}>
-          ← back to the board
-        </a>
-      </div>
-      <h1 style={{ marginTop: 8 }}>
-        {away.canonicalName}{" "}
-        <span style={{ color: "var(--text-faint)" }}>@</span>{" "}
-        {home.canonicalName}
-      </h1>
-      <p className="subhead">{meta.join(" · ")}</p>
+  const modelHomeSpread = modelSp != null ? spreadForm(modelSp) : null;
 
-      <div className="card" style={{ maxWidth: 440 }}>
-        <div className="matchup">
-          <TeamRow team={lite(away, awayApRank)} score={g.awayScore} won={awayWon} />
-          <TeamRow team={lite(home, homeApRank)} score={g.homeScore} won={homeWon} />
+  return (
+    <div className="gpage">
+      <a
+        className="inline-link gback"
+        href="/"
+        style={{ color: "var(--text-faint)", fontSize: 12 }}
+      >
+        ← board
+      </a>
+
+      <div className="ghero">
+        <div className="ghero-teams">
+          <GHeroTeam t={lite(away, awayApRank)} score={g.awayScore} won={awayWon} />
+          <span className="ghero-at">@</span>
+          <GHeroTeam t={lite(home, homeApRank)} score={g.homeScore} won={homeWon} />
+        </div>
+        <div className="ghero-meta">{meta.join(" · ")}</div>
+        <div className="ghero-nums">
+          <div className="ghero-num">
+            <span className="k">Market spread</span>
+            <span className="v mono">
+              {mktSpread != null ? spreadForm(-mktSpread) : "—"}
+            </span>
+          </div>
+          <div className="ghero-num">
+            <span className="k">Market total</span>
+            <span className="v mono">{mktTotal != null ? trim(mktTotal) : "—"}</span>
+          </div>
+          <div className="ghero-num">
+            <span className="k">Model spread</span>
+            <span className="v mono">{modelHomeSpread ?? "—"}</span>
+          </div>
+          <div className="ghero-num">
+            <span className="k">Edge</span>
+            <span
+              className={`v mono ${
+                spEdge != null && Math.abs(spEdge) >= 2.5
+                  ? spEdge > 0
+                    ? "pos"
+                    : "neg"
+                  : ""
+              }`}
+            >
+              {spEdge != null ? signed(spEdge) : "—"}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -596,7 +626,46 @@ export default async function GamePage({
         </a>
         .
       </p>
-    </>
+    </div>
+  );
+}
+
+function GHeroTeam({
+  t,
+  score,
+  won,
+}: {
+  t: {
+    name: string;
+    logo: string | null;
+    color: string | null;
+    conference: string | null;
+    classification: string;
+    apRank: number | null;
+  };
+  score: number | null;
+  won: boolean;
+}) {
+  return (
+    <div className={`ghero-team${won ? " won" : ""}`}>
+      {t.logo ? (
+        <img className="ghero-logo" src={t.logo} alt="" />
+      ) : (
+        <span
+          className="ghero-logo"
+          style={{ background: t.color ?? "var(--border)", borderRadius: 8 }}
+        />
+      )}
+      <div className="ghero-name">
+        {t.apRank != null && <span className="ap-rank">{t.apRank}</span>}
+        {t.name}
+      </div>
+      <div className="ghero-conf">
+        {t.conference ?? ""}
+        {t.classification !== "fbs" ? ` · ${t.classification.toUpperCase()}` : ""}
+      </div>
+      {score != null && <div className="ghero-score mono">{score}</div>}
+    </div>
   );
 }
 
@@ -773,21 +842,13 @@ interface PMRow {
   capturedAt: Date;
   homeWinProb: number;
   homePrevProb: number | null;
-  homeYesPrice: number | null;
-  awayYesPrice: number | null;
-  homeBid: number | null;
-  homeAsk: number | null;
-  awayBid: number | null;
-  awayAsk: number | null;
-  homeVolume: number;
-  awayVolume: number;
-  homeOI: number;
-  awayOI: number;
   volume: number;
+  volume24h: number;
+  openInterest: number;
 }
 
-const usd = (n: number) =>
-  n >= 1000 ? `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${Math.round(n)}`;
+const kNum = (n: number) =>
+  n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${Math.round(n)}`;
 
 function KalshiPanel({
   away,
@@ -819,63 +880,67 @@ function KalshiPanel({
   const gap =
     bookHomeMargin == null ? null : r1(kalshiHomeMargin - bookHomeMargin);
   const thin = pm.volume < 500;
-
-  const bidAsk = (b: number | null, a: number | null) =>
-    b != null && a != null ? `${(b * 100).toFixed(0)}–${(a * 100).toFixed(0)}¢` : "–";
+  const move =
+    pm.homePrevProb != null ? r1((homeProb - pm.homePrevProb) * 100) : null;
 
   return (
     <>
-      <div className="trend-grid">
-        <div className="trend-row trend-head">
-          <span />
-          <span>{away}</span>
-          <span>{home}</span>
+      <div className="kpanel">
+        <div className="kpanel-probs">
+          <div className="kprob">
+            <span className="t">{away}</span>
+            <span className="p mono">{(awayProb * 100).toFixed(0)}%</span>
+          </div>
+          <div className="kprob">
+            <span className="t">{home}</span>
+            <span className="p mono">{(homeProb * 100).toFixed(0)}%</span>
+            {move != null && Math.abs(move) >= 1 && (
+              <span className={`m ${move > 0 ? "pos" : "neg"}`}>
+                {move > 0 ? "▲" : "▼"} {Math.abs(move)}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="trend-row">
-          <span className="trend-label">Win probability</span>
-          <span className="trend-cell">{(awayProb * 100).toFixed(0)}%</span>
-          <span className="trend-cell">{(homeProb * 100).toFixed(0)}%</span>
-        </div>
-        <div className="trend-row">
-          <span className="trend-label">$ traded</span>
-          <span className="trend-cell">{usd(pm.awayVolume)}</span>
-          <span className="trend-cell">{usd(pm.homeVolume)}</span>
-        </div>
-        <div className="trend-row">
-          <span className="trend-label">Open interest</span>
-          <span className="trend-cell">{usd(pm.awayOI)}</span>
-          <span className="trend-cell">{usd(pm.homeOI)}</span>
-        </div>
-        <div className="trend-row">
-          <span className="trend-label">Bid–ask</span>
-          <span className="trend-cell">{bidAsk(pm.awayBid, pm.awayAsk)}</span>
-          <span className="trend-cell">{bidAsk(pm.homeBid, pm.homeAsk)}</span>
+        <div className="kpanel-stats">
+          <div>
+            <span className="k">Implied line</span>
+            <span className="v mono">{spreadForm(kalshiHomeMargin)}</span>
+          </div>
+          <div>
+            <span className="k">Volume</span>
+            <span className="v mono">{kNum(pm.volume)}</span>
+          </div>
+          <div>
+            <span className="k">Open interest</span>
+            <span className="v mono">{kNum(pm.openInterest)}</span>
+          </div>
+          <div>
+            <span className="k">Traded 24h</span>
+            <span className="v mono">{kNum(pm.volume24h)}</span>
+          </div>
         </div>
       </div>
 
       <p className="subhead" style={{ marginTop: 10 }}>
-        Kalshi implies <strong>{spreadForm(kalshiHomeMargin)}</strong>
+        Kalshi&apos;s market prices {home} to win {(homeProb * 100).toFixed(0)}% —
+        about <strong>{spreadForm(kalshiHomeMargin)}</strong>
         {bookHomeMargin != null && (
           <>
             {" "}
-            vs the book&apos;s <strong>{spreadForm(bookHomeMargin)}</strong> —{" "}
-            {gap != null && Math.abs(gap) < 1.5 ? (
-              "they agree."
-            ) : (
-              <>
-                a {Math.abs(gap!).toFixed(1)}-pt gap; the market has{" "}
-                {gap! > 0 ? home : away} stronger than the book does.
-              </>
-            )}
+            vs the book&apos;s <strong>{spreadForm(bookHomeMargin)}</strong>.{" "}
+            {gap != null && Math.abs(gap) < 1.5
+              ? "They agree."
+              : `${Math.abs(gap!).toFixed(1)}-pt gap — the market rates ${
+                  gap! > 0 ? home : away
+                } higher than the book.`}
           </>
-        )}
-        {thin && (
-          <>
-            {" "}
-            <span style={{ color: "var(--amber)" }}>
-              Thin market ({usd(pm.volume)} total) — read lightly.
-            </span>
-          </>
+        )}{" "}
+        <em>Volume</em> and <em>open interest</em> are total contracts on the game
+        (each settles at $1), not a per-side split — they tell you how much to
+        trust the price. {thin && (
+          <span style={{ color: "var(--amber)" }}>
+            Under 500 here — thin, read lightly.
+          </span>
         )}{" "}
         Guide §9.
       </p>
@@ -886,8 +951,10 @@ function KalshiPanel({
             <li key={i}>
               <span className="hist-when">{stampCT(h.capturedAt)}</span>
               <span className="hist-vals mono">
-                <span>{home} {(h.homeWinProb * 100).toFixed(0)}%</span>
-                <span className="dim">{usd(h.volume)} vol</span>
+                <span>
+                  {home} {(h.homeWinProb * 100).toFixed(0)}%
+                </span>
+                <span className="dim">{kNum(h.volume)} vol</span>
               </span>
             </li>
           ))}
