@@ -19,6 +19,9 @@ datasource db {
 model Team {
   id            String   @id @default(cuid())
   canonicalName String   @unique
+  // short betting-style acronym for tight UI spots (e.g. "MISS ST", "NMSU"),
+  // from CFBD /teams .abbreviation — backfilled by scripts/backfillTeamMeta.ts
+  abbreviation  String?
   conference    String?
   // 'fbs' for teams we rate and predict; 'fcs' / 'ii' / 'iii' for opponents
   // that only exist here so FBS-vs-lower-division games have real team IDs.
@@ -121,6 +124,7 @@ model Game {
   homeScore   Int?
   awayScore   Int?
   status      String   @default("scheduled") // 'scheduled' | 'final'
+  broadcast   String?  // TV network (e.g. "ABC", "ESPN") from CFBD /games/media
 
   lines             Line[]
   weather           Weather[]

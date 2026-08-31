@@ -22,6 +22,7 @@ const prisma = new PrismaClient();
 
 interface CfbdTeam {
   school: string;
+  abbreviation: string | null;
   color: string | null;
   alternateColor: string | null;
   logos: string[] | null;
@@ -64,6 +65,7 @@ async function main() {
     await prisma.team.update({
       where: { id: teamId },
       data: {
+        abbreviation: t.abbreviation ?? undefined,
         lat: loc?.latitude ?? undefined,
         lng: loc?.longitude ?? undefined,
         timezone: loc?.timezone ?? undefined,
@@ -76,6 +78,22 @@ async function main() {
     });
     updated++;
   }
+
+  // --- abbreviations for every team, FCS opponents included (cheap, /teams
+  //     returns all divisions) — used in tight UI spots like the spread cell ---
+  const allCfbd = await cfbdGet<CfbdTeam[]>("/teams");
+  let abbrSet = 0;
+  for (const t of allCfbd) {
+    if (!t.abbreviation) continue;
+    const teamId = teams.resolve(t.school);
+    if (!teamId) continue;
+    await prisma.team.update({
+      where: { id: teamId },
+      data: { abbreviation: t.abbreviation },
+    });
+    abbrSet++;
+  }
+  console.log(`Abbreviations set (all divisions): ${abbrSet}\n`);
 
   // --- ESPN team ids (for the injuries feed) ---
   const espnResolver = await buildTeamResolver(prisma, "espn");

@@ -68,8 +68,8 @@ export function FlagChip({
       : "wx";
   const det = flagDetail(flag.flagType, flag.detail);
   return (
-    <span className={`chip ${cls}`} title={det}>
-      {showTeam ? `${abbrevTeam(flag.team)} · ` : ""}
+    <span className={`chip ${cls}`} title={`${flag.team}${det ? ` — ${det}` : ""}`}>
+      {showTeam ? `${flag.teamAbbr ?? abbrevTeam(flag.team)} ` : ""}
       {FLAG_LABEL[flag.flagType] ?? flag.flagType}
     </span>
   );
@@ -92,6 +92,7 @@ export function signed(n: number): string {
   return n > 0 ? `+${trim(n)}` : trim(n);
 }
 
+/** all game times shown in US Central. */
 export function kickoffStr(iso: string): string {
   const d = new Date(iso);
   return (
@@ -101,26 +102,26 @@ export function kickoffStr(iso: string): string {
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
-      timeZone: "America/New_York",
-    }) + " ET"
+      timeZone: "America/Chicago",
+    }) + " CT"
   );
 }
 
-/** short team name for tight spots — canonical names are already short for most */
-export function shortTeam(name: string): string {
-  const map: Record<string, string> = {
-    "Massachusetts": "UMass",
-    "Southern Miss": "So. Miss",
-    "Coastal Carolina": "Coastal",
-    "Appalachian State": "App State",
-    "Florida International": "FIU",
-    "Florida Atlantic": "FAU",
-    "Middle Tennessee": "Mid. Tenn",
-    "Western Kentucky": "W. Kentucky",
-    "San José State": "SJSU",
-    "Jacksonville State": "Jax State",
-  };
-  return map[name] ?? name;
+/** short timestamp (for line/weather history), US Central. */
+export function stampCT(d: string | Date): string {
+  return new Date(d).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Chicago",
+  });
+}
+
+/** betting-style short name for tight spots: the stored abbreviation, else a
+ *  trimmed canonical name. */
+export function teamShort(t: { abbr: string | null; name: string }): string {
+  return t.abbr ?? abbrevTeam(t.name);
 }
 
 export function abbrevTeam(name: string): string {

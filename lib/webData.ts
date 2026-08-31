@@ -10,6 +10,7 @@ import {
 export interface TeamLite {
   id: string;
   name: string;
+  abbr: string | null;
   logo: string | null;
   color: string | null;
   classification: string;
@@ -18,6 +19,7 @@ export interface TeamLite {
 
 export interface FlagView {
   team: string;
+  teamAbbr: string | null;
   teamId: string;
   flagType: string;
   detail: unknown;
@@ -46,6 +48,7 @@ export interface GameView {
   neutralSite: boolean;
   indoor: boolean;
   venue: string | null;
+  broadcast: string | null;
   home: TeamLite;
   away: TeamLite;
   homeScore: number | null;
@@ -116,7 +119,9 @@ export async function getWeekBoard(
     include: {
       homeTeam: true,
       awayTeam: true,
-      gameFlags: { include: { team: { select: { canonicalName: true } } } },
+      gameFlags: {
+        include: { team: { select: { canonicalName: true, abbreviation: true } } },
+      },
       picks: true,
     },
     orderBy: { kickoffTime: "asc" },
@@ -153,6 +158,7 @@ export async function getWeekBoard(
   const toLite = (t: (typeof games)[number]["homeTeam"]): TeamLite => ({
     id: t.id,
     name: t.canonicalName,
+    abbr: t.abbreviation,
     logo: t.logoLight,
     color: t.color,
     classification: t.classification,
@@ -192,7 +198,13 @@ export async function getWeekBoard(
         marketLine: p.marketLine,
         edge: p.edge,
         flags: Array.isArray(p.flagsPresent) ? (p.flagsPresent as string[]) : [],
-        side: pickSide(p.market, p.edge, p.marketLine, home.name, away.name),
+        side: pickSide(
+          p.market,
+          p.edge,
+          p.marketLine,
+          home.abbr ?? home.name,
+          away.abbr ?? away.name
+        ),
         atsResult: p.atsResult,
         actualResult: p.actualResult,
         closingLine: p.closingLine,
@@ -232,6 +244,7 @@ export async function getWeekBoard(
       neutralSite: g.neutralSite,
       indoor: g.indoor,
       venue: g.venue,
+      broadcast: g.broadcast,
       home,
       away,
       homeScore: g.homeScore,
@@ -250,6 +263,7 @@ export async function getWeekBoard(
       tempF: wx?.tempF != null ? Math.round(wx.tempF) : null,
       flags: g.gameFlags.map((f) => ({
         team: f.team.canonicalName,
+        teamAbbr: f.team.abbreviation,
         teamId: f.teamId,
         flagType: f.flagType,
         detail: f.detail,
@@ -277,7 +291,9 @@ export async function getGameDetail(id: string) {
     include: {
       homeTeam: true,
       awayTeam: true,
-      gameFlags: { include: { team: { select: { canonicalName: true } } } },
+      gameFlags: {
+        include: { team: { select: { canonicalName: true, abbreviation: true } } },
+      },
       picks: true,
       injuries: { include: { team: { select: { canonicalName: true } } } },
     },
@@ -312,8 +328,12 @@ export async function getPickLog(season: number) {
     include: {
       game: {
         include: {
-          homeTeam: { select: { canonicalName: true, logoLight: true } },
-          awayTeam: { select: { canonicalName: true, logoLight: true } },
+          homeTeam: {
+            select: { canonicalName: true, abbreviation: true, logoLight: true },
+          },
+          awayTeam: {
+            select: { canonicalName: true, abbreviation: true, logoLight: true },
+          },
         },
       },
     },
@@ -327,6 +347,8 @@ export async function getPickLog(season: number) {
     kickoff: p.game.kickoffTime.toISOString(),
     home: p.game.homeTeam.canonicalName,
     away: p.game.awayTeam.canonicalName,
+    homeAbbr: p.game.homeTeam.abbreviation,
+    awayAbbr: p.game.awayTeam.abbreviation,
     market: p.market,
     method: p.method,
     modelLine: p.modelLine,
@@ -336,8 +358,8 @@ export async function getPickLog(season: number) {
       p.market,
       p.edge,
       p.marketLine,
-      p.game.homeTeam.canonicalName,
-      p.game.awayTeam.canonicalName
+      p.game.homeTeam.abbreviation ?? p.game.homeTeam.canonicalName,
+      p.game.awayTeam.abbreviation ?? p.game.awayTeam.canonicalName
     ),
     flags: Array.isArray(p.flagsPresent) ? (p.flagsPresent as string[]) : [],
     atsResult: p.atsResult,

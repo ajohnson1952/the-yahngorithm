@@ -7,7 +7,7 @@ import {
   spreadStr,
   signed,
   trim,
-  shortTeam,
+  teamShort,
 } from "./ui";
 import { SPREAD_EDGE_THRESHOLD, TOTAL_EDGE_THRESHOLD } from "../lib/modelConfig";
 
@@ -38,29 +38,35 @@ export function GameCard({ g }: { g: GameView }) {
   const awayWon =
     g.homeScore != null && g.awayScore != null && g.awayScore > g.homeScore;
 
+  const meta = [
+    g.status === "final" ? "Final" : kickoffStr(g.kickoff),
+    g.broadcast,
+    g.neutralSite ? "neutral" : null,
+    g.indoor ? "indoor" : null,
+    g.wind != null && g.wind >= 15 ? `wind ${trim(g.wind)}` : null,
+  ].filter(Boolean);
+
+  const paceFlags =
+    g.picks[0]?.flags?.filter((f) =>
+      ["wind", "slow_pace", "fast_pace"].includes(f)
+    ) ?? [];
+
   return (
     <a href={`/game/${g.id}`} className={`card${g.picks.length ? " pick" : ""}`}>
       <div className="card-grid">
-        {/* matchup */}
-        <div className="matchup">
+        <div className="gc-matchup">
           <TeamRow team={g.away} score={g.awayScore} won={awayWon} />
           <TeamRow team={g.home} score={g.homeScore} won={homeWon} />
-          <div className="kick">
-            {g.status === "final" ? "Final" : kickoffStr(g.kickoff)}
-            {g.neutralSite ? " · neutral" : ""}
-            {g.indoor ? " · indoor" : ""}
-            {g.wind != null && g.wind >= 12 ? ` · wind ${trim(g.wind)}` : ""}
-          </div>
+          <div className="kick">{meta.join(" · ")}</div>
         </div>
 
-        {/* spread */}
-        <div className="mm">
+        <div className="gc-spread mm">
           <span className="mm-label">Spread</span>
           {g.marketSpread != null ? (
             <>
               <span className="mm-line">
                 <span className="mkt mono">
-                  {shortTeam(g.home.name)} {spreadStr(g.marketSpread)}
+                  {teamShort(g.home)} {spreadStr(g.marketSpread)}
                 </span>
               </span>
               <span className="mm-line">
@@ -85,8 +91,7 @@ export function GameCard({ g }: { g: GameView }) {
           )}
         </div>
 
-        {/* total */}
-        <div className="mm">
+        <div className="gc-total mm">
           <span className="mm-label">Total</span>
           {g.marketTotal != null ? (
             <>
@@ -115,37 +120,28 @@ export function GameCard({ g }: { g: GameView }) {
           )}
         </div>
 
-        {/* rail */}
-        <div className="rail">
+        <div className="gc-rail">
           {g.picks.map((p, i) => (
-            <div key={i} style={{ textAlign: "right" }}>
-              <span className="pick-badge">PICK</span>
-              <div className="pick-side">
-                {p.side}
-                {p.atsResult && (
-                  <span className={`res ${p.atsResult}`}>
-                    {p.atsResult.toUpperCase()}
-                  </span>
-                )}
-              </div>
-            </div>
+            <span key={i} className="pick-pill">
+              <span className="pick-pill-tag">PICK</span>
+              <span className="pick-pill-side">{p.side}</span>
+              {p.atsResult && (
+                <span className={`res ${p.atsResult}`}>
+                  {p.atsResult.toUpperCase()}
+                </span>
+              )}
+            </span>
           ))}
-          {g.flags.length > 0 && (
-            <div className="chips">
-              {g.flags.slice(0, 4).map((f, i) => (
-                <FlagChip key={i} flag={f} showTeam />
+          {(g.flags.length > 0 || paceFlags.length > 0) && (
+            <span className="chips">
+              {g.flags.map((f, i) => (
+                <FlagChip key={`f${i}`} flag={f} showTeam />
               ))}
-            </div>
+              {paceFlags.map((f, i) => (
+                <PickFlagChip key={`p${i}`} label={f} />
+              ))}
+            </span>
           )}
-          {g.picks[0]?.flags?.length ? (
-            <div className="chips">
-              {g.picks[0].flags
-                .filter((f) => ["wind", "slow_pace", "fast_pace"].includes(f))
-                .map((f, i) => (
-                  <PickFlagChip key={i} label={f} />
-                ))}
-            </div>
-          ) : null}
         </div>
       </div>
     </a>

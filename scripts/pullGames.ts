@@ -58,6 +58,26 @@ interface CfbdVenue {
   dome: boolean | null;
 }
 
+interface CfbdMedia {
+  id: number; // game id
+  mediaType: string | null; // 'tv' | 'radio' | 'web' | 'ppv' | 'mobile'
+  outlet: string | null; // 'ABC', 'ESPN', 'FOX', ...
+}
+
+/** one network per game id — prefer a real 'tv' entry, then web/mobile; skip radio/ppv */
+function broadcastMap(media: CfbdMedia[]): Map<number, string> {
+  const rank = (t: string | null) =>
+    t === "tv" ? 3 : t === "web" ? 2 : t === "mobile" ? 1 : 0;
+  const best = new Map<number, { outlet: string; r: number }>();
+  for (const m of media) {
+    const r = rank(m.mediaType);
+    if (!m.outlet || r === 0) continue;
+    const cur = best.get(m.id);
+    if (!cur || r > cur.r) best.set(m.id, { outlet: m.outlet, r });
+  }
+  return new Map([...best].map(([k, v]) => [k, v.outlet]));
+}
+
 function parseArgs(): { season?: number; week?: number; all: boolean } {
   const args = process.argv.slice(2);
   const val = (flag: string) => {
@@ -95,10 +115,16 @@ async function main() {
   console.log("Pulling games and venues from CFBD...");
   const gamesPath =
     week == null ? `/games?year=${season}` : `/games?year=${season}&week=${week}`;
-  const [allGames, venues] = await Promise.all([
+  const mediaPath =
+    week == null
+      ? `/games/media?year=${season}&seasonType=regular`
+      : `/games/media?year=${season}&week=${week}&seasonType=regular`;
+  const [allGames, venues, media] = await Promise.all([
     cfbdGet<CfbdGame[]>(gamesPath),
     cfbdGet<CfbdVenue[]>(`/venues`),
+    cfbdGet<CfbdMedia[]>(mediaPath).catch(() => [] as CfbdMedia[]),
   ]);
+  const broadcastById = broadcastMap(media);
 
   const venueById = new Map(venues.map((v) => [v.id, v]));
   const games = allGames.filter(
@@ -187,6 +213,7 @@ async function main() {
       homeScore: g.homePoints,
       awayScore: g.awayPoints,
       status: g.completed ? "final" : "scheduled",
+      broadcast: broadcastById.get(g.id) ?? null,
     };
 
     await prisma.game.upsert({
