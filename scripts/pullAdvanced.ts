@@ -1,19 +1,18 @@
 // ============================================================
 // Advanced team stats + EPA  (Yahn model v2 — efficiency factors)
 // ============================================================
-// CFBD /stats/season/advanced  (success rate, explosiveness, havoc,
-//   points per scoring opportunity, field position) merged with
-// CFBD /ppa/teams  (EPA per play, offense & defense).
-//
-// These are the raw "Five Factors" ingredients. NOT opponent-adjusted
-// here — SP+ is our opponent-adjusted backbone; these ride alongside
-// it for the ensemble and for the game-page breakdown.
+// CFBD /stats/season/advanced — success rate, explosiveness, havoc,
+// points per scoring opportunity, field position, AND per-play PPA
+// (= EPA). NOT opponent-adjusted here; SP+ is our adjusted backbone,
+// these ride alongside for the ensemble + the game-page breakdown.
 //
 // Snapshotted per (team, season, week) as a "season to date through
-// week N" view. 2 CFBD calls.
+// week N" view. `--through N` sets the API's endWeek so historical
+// backfill gets point-in-time cumulative stats. 1 CFBD call.
 //
-// Run:  npm run pull-advanced
+// Run:  npm run pull-advanced                         (auto week, full season to date)
 //       npm run pull-advanced -- --season 2026 --week 5
+//       npm run pull-advanced -- --season 2023 --through 8   (backfill: stats thru wk 8)
 // ============================================================
 
 import { PrismaClient } from "@prisma/client";
@@ -25,6 +24,7 @@ const prisma = new PrismaClient();
 interface AdvSide {
   successRate?: number | null;
   explosiveness?: number | null;
+  ppa?: number | null;
   pointsPerOpportunity?: number | null;
   havoc?: { total?: number | null } | null;
   fieldPosition?: { averagePredictedPoints?: number | null } | null;
@@ -35,14 +35,8 @@ interface AdvRow {
   offense?: AdvSide | null;
   defense?: AdvSide | null;
 }
-interface PpaRow {
-  season: number;
-  team: string;
-  offense?: { overall?: number | null } | null;
-  defense?: { overall?: number | null } | null;
-}
 
-function parseArgs(): { season?: number; week?: number } {
+function parseArgs(): { season?: number; week?: number; through?: number } {
   const args = process.argv.slice(2);
   const val = (f: string) => {
     const i = args.indexOf(f);
@@ -50,11 +44,16 @@ function parseArgs(): { season?: number; week?: number } {
   };
   const season = val("--season");
   const week = val("--week");
-  if ((season && !week) || (!season && week)) {
-    console.error("Pass --season AND --week together, or neither. Stopping.");
+  const through = val("--through");
+  if (through != null && season == null) {
+    console.error("--through needs --season. Stopping.");
     process.exit(1);
   }
-  return { season, week };
+  if (through == null && (season && !week) || (!season && week)) {
+    console.error("Pass --season AND --week together, or --season --through N, or neither.");
+    process.exit(1);
+  }
+  return { season, week, through };
 }
 
 const n = (v: unknown): number | null => {
@@ -64,27 +63,40 @@ const n = (v: unknown): number | null => {
 
 async function main() {
   const o = parseArgs();
-  const { season, week } =
-    o.season != null && o.week != null
-      ? { season: o.season, week: o.week }
-      : await getCurrentSeasonWeek();
+  let season: number, week: number, endWeek: number | null;
+  if (o.season != null && o.through != null) {
+    season = o.season;
+    week = o.through;
+    endWeek = o.through;
+  } else if (o.season != null && o.week != null) {
+    season = o.season;
+    week = o.week;
+    endWeek = null;
+  } else {
+    const cur = await getCurrentSeasonWeek();
+    season = cur.season;
+    week = cur.week;
+    endWeek = null;
+  }
 
-  console.log(`Advanced stats + EPA — season ${season}, through week ${week}\n`);
+  console.log(
+    `Advanced stats + EPA — season ${season}, through week ${week}` +
+      (endWeek ? ` (API endWeek=${endWeek})` : "") + "\n"
+  );
 
   const teams = await buildTeamResolver(prisma, "cfbd");
-  const [adv, ppa] = await Promise.all([
-    cfbdGet<AdvRow[]>(`/stats/season/advanced?year=${season}`),
-    cfbdGet<PpaRow[]>(`/ppa/teams?year=${season}`),
-  ]);
-  console.log(`  -> advanced rows: ${adv.length}, ppa rows: ${ppa.length}`);
+  const path = endWeek
+    ? `/stats/season/advanced?year=${season}&startWeek=1&endWeek=${endWeek}`
+    : `/stats/season/advanced?year=${season}`;
+  const adv = await cfbdGet<AdvRow[]>(path);
+  console.log(`  -> advanced rows: ${adv.length}`);
 
-  if (adv.length === 0 && ppa.length === 0) {
-    console.log("\nNo advanced data yet — normal before any games are played. Nothing written.");
+  if (adv.length === 0) {
+    console.log("\nNo advanced data — normal before any games are played. Nothing written.");
     await prisma.$disconnect();
     return;
   }
 
-  const ppaByTeam = new Map(ppa.map((r) => [r.team, r]));
   const unmatched: string[] = [];
   let wrote = 0;
 
@@ -95,7 +107,6 @@ async function main() {
       unmatched.push(r.team);
       continue;
     }
-    const p = ppaByTeam.get(r.team);
     const data = {
       offSuccess: n(r.offense?.successRate),
       defSuccess: n(r.defense?.successRate),
@@ -107,8 +118,8 @@ async function main() {
       defHavoc: n(r.defense?.havoc?.total),
       offFieldPos: n(r.offense?.fieldPosition?.averagePredictedPoints),
       defFieldPos: n(r.defense?.fieldPosition?.averagePredictedPoints),
-      offPPA: n(p?.offense?.overall),
-      defPPA: n(p?.defense?.overall),
+      offPPA: n(r.offense?.ppa),
+      defPPA: n(r.defense?.ppa),
     };
     await prisma.teamAdvancedWeekly.upsert({
       where: { teamId_season_week: { teamId, season, week } },
@@ -121,9 +132,7 @@ async function main() {
   console.log("\n============================================================");
   console.log(`TeamAdvancedWeekly rows upserted: ${wrote}  (season ${season}, week ${week})`);
   if (unmatched.length) {
-    console.log(
-      `Unmatched team names (${unmatched.length}): ${unmatched.slice(0, 20).join(", ")}`
-    );
+    console.log(`Unmatched (${unmatched.length}): ${unmatched.slice(0, 20).join(", ")}`);
   }
   console.log("============================================================");
 

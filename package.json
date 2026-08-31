@@ -31,7 +31,9 @@
     "compute-market-flags": "tsx --env-file=.env scripts/computeMarketFlags.ts",
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "next start"
+    "start": "next start",
+    "compute-asof-ratings": "tsx --env-file=.env scripts/computeAsofRatings.ts",
+    "backtest-harness": "tsx --env-file=.env scripts/backtestHarness.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

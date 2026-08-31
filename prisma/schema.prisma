@@ -59,6 +59,7 @@ model Team {
   portalIn        PortalEntry[]       @relation("PortalDestination")
   portalOut       PortalEntry[]       @relation("PortalOrigin")
   hfa             TeamHfa?
+  ratingsAsOf     TeamRatingAsOf[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -467,4 +468,22 @@ model TeamHfa {
   hfa        Float
   sampleSize Int
   computedAt DateTime @default(now())
+}
+
+// Point-in-time opponent-adjusted scoring-margin rating (ridge-adjusted,
+// shrunk toward a talent-based preseason prior). Recomputed for every
+// (season, throughWeek) so the calibration harness can predict a game
+// using only what was known before it. computeAsofRatings.ts.
+model TeamRatingAsOf {
+  id          String   @id @default(cuid())
+  teamId      String
+  team        Team     @relation(fields: [teamId], references: [id])
+  season      Int
+  throughWeek Int // games with week <= this are baked in (0 = preseason prior)
+  rating      Float // points better than an average FBS team
+  gamesUsed   Int
+  computedAt  DateTime @default(now())
+
+  @@unique([teamId, season, throughWeek])
+  @@index([season, throughWeek])
 }
