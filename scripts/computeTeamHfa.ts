@@ -13,7 +13,12 @@
 // to play") tracks the scoreboard effect poorly, and the one robust
 // venue factor is ALTITUDE. So:
 //
-//   HFA(team) = BASE  +  altitude bump (from Team.elevationM)
+//   HFA(team) = BASE + max( altitude bump , hostile-venue bump )
+//
+// altitude bump  — from Team.elevationM, data-supported.
+// hostile bump   — a small hand-set list of famous cauldrons
+//                  (HOSTILE_BUMP below), user-curated. The two do NOT
+//                  stack — a team gets whichever is larger.
 //
 // The SP+-residual number is still computed and printed as a
 // diagnostic (not stored) so we can sanity-check against it and
@@ -38,6 +43,37 @@ const ALT_FLOOR_M = 1100;
 const ALT_CEIL_M = 2200;
 const ALT_MAX_BUMP = 1.0;
 const BLOWOUT_GAP = 21;
+
+// Manual "famous hostile venue" bump. Small, hand-set (see docs/guide §1).
+// A team gets BASE + max(altitude, hostile) — the two do NOT stack.
+const HOSTILE_BUMP: Record<string, number> = {
+  // Tier 1 — the poll-toppers
+  LSU: 0.4,
+  "Texas A&M": 0.4,
+  "Penn State": 0.4,
+  Oregon: 0.4,
+  // Tier 2 — always top ~10
+  "Ohio State": 0.25,
+  Georgia: 0.25,
+  Alabama: 0.25,
+  Tennessee: 0.25,
+  Clemson: 0.25,
+  Florida: 0.25,
+  Auburn: 0.25,
+  Wisconsin: 0.25,
+  Oklahoma: 0.25,
+  // Tier 3 — loud, real edge, a notch below
+  "Virginia Tech": 0.15,
+  Texas: 0.15,
+  "South Carolina": 0.15,
+  "West Virginia": 0.15,
+  Iowa: 0.15,
+  Washington: 0.15,
+  "Notre Dame": 0.15,
+  "Mississippi State": 0.15,
+  "Ole Miss": 0.15,
+  Michigan: 0.15,
+};
 
 interface SpRow {
   year: number;
@@ -68,16 +104,30 @@ function altitudeBump(elevationM: number | null): number {
 
 async function main() {
   const { seasons } = parseArgs();
-  console.log(`Per-team HFA — rules-based (base ${BASE_HFA} + altitude)\n`);
+  console.log(`Per-team HFA — rules-based (base ${BASE_HFA} + max(altitude, hostile))\n`);
 
   const teams = await prisma.team.findMany({
     where: { classification: "fbs" },
     select: { id: true, canonicalName: true, elevationM: true },
   });
 
+  // typo guard: every HOSTILE_BUMP key must match a real team
+  const knownNames = new Set(teams.map((t) => t.canonicalName));
+  const badKeys = Object.keys(HOSTILE_BUMP).filter((k) => !knownNames.has(k));
+  if (badKeys.length) {
+    console.error(`HOSTILE_BUMP keys with no matching team: ${badKeys.join(", ")}`);
+    process.exit(1);
+  }
+
+  const bumpOf = (t: { canonicalName: string; elevationM: number | null }) => {
+    const alt = altitudeBump(t.elevationM);
+    const hostile = HOSTILE_BUMP[t.canonicalName] ?? 0;
+    return { alt, hostile, applied: Math.max(alt, hostile) };
+  };
+
   const rows: Prisma.TeamHfaCreateManyInput[] = teams.map((t) => ({
     teamId: t.id,
-    hfa: Math.round((BASE_HFA + altitudeBump(t.elevationM)) * 100) / 100,
+    hfa: Math.round((BASE_HFA + bumpOf(t).applied) * 100) / 100,
     sampleSize: 0,
   }));
 
@@ -118,19 +168,29 @@ async function main() {
     );
   }
 
-  const nameById = new Map(teams.map((t) => [t.id, t.canonicalName]));
-  const withAlt = rows
+  const byId = new Map(teams.map((t) => [t.id, t]));
+  const adjusted = rows
     .filter((r) => r.hfa > BASE_HFA)
     .sort((a, b) => b.hfa - a.hfa);
 
   console.log("============================================================");
-  console.log(`TeamHfa rows written: ${rows.length}  (base ${BASE_HFA}, ${withAlt.length} altitude-adjusted)\n`);
-  console.log("  Altitude-adjusted venues:");
-  for (const r of withAlt) {
+  console.log(
+    `TeamHfa rows written: ${rows.length}  (base ${BASE_HFA}, ${adjusted.length} adjusted)\n`
+  );
+  console.log(
+    `  ${"venue".padEnd(22)} ${"HFA".padStart(5)}  reason${" ".repeat(14)}SP+-residual diag`
+  );
+  for (const r of adjusted) {
+    const t = byId.get(r.teamId)!;
+    const b = bumpOf(t);
+    const reason =
+      b.alt >= b.hostile
+        ? `altitude +${b.alt.toFixed(2)}`
+        : `hostile +${b.hostile.toFixed(2)}`;
     const d = resid.get(r.teamId);
     console.log(
-      `    ${(nameById.get(r.teamId) ?? "").padEnd(22)} ${r.hfa.toFixed(2)}   ` +
-        `(SP+-residual diag: ${d && d.length >= 10 ? mean(d).toFixed(1) : "n/a"})`
+      `  ${t.canonicalName.padEnd(22)} ${r.hfa.toFixed(2).padStart(5)}  ` +
+        `${reason.padEnd(20)}${d && d.length >= 10 ? mean(d).toFixed(1) : "n/a"}`
     );
   }
   console.log(`\n  Everyone else: ${BASE_HFA.toFixed(2)}`);

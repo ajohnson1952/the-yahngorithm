@@ -773,8 +773,9 @@ function YahnBreakdownPanel({
         (weight grows through the season — near zero this early).{" "}
         <em>Roster adj</em> = talent + returning production + transfer-portal
         net, and fades to zero by week 5. Home edge for this venue:{" "}
-        <span className="mono">{trim(yb.hfa)}</span> (2.7 base + altitude;
-        SP+/SRS use a flat 2.5). Weights are un-calibrated for now.
+        <span className="mono">{trim(yb.hfa)}</span> (2.7 base + altitude or a
+        hostile-venue bump; SP+/SRS use a flat 2.5). Weights are un-calibrated
+        for now.
       </p>
     </div>
   );
