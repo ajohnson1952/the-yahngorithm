@@ -3,7 +3,8 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { db } from "../../lib/db";
-import { currentSeason } from "../../lib/currentWeek";
+import { currentSeason, currentWeek } from "../../lib/currentWeek";
+import { recomputeYahnSpreads } from "../../lib/recomputeYahn";
 import {
   ADMIN_PASSWORD,
   ADMIN_COOKIE,
@@ -46,6 +47,12 @@ export async function saveRanking(
       data: ids.map((teamId, i) => ({ season, teamId, rank: i + 1 })),
     }),
   ]);
+  // push the change onto this week's board immediately
+  try {
+    await recomputeYahnSpreads(season, await currentWeek(season));
+  } catch {
+    /* board will catch up on the next model run */
+  }
   revalidatePath("/rankings");
   revalidatePath("/");
   return { ok: true };
