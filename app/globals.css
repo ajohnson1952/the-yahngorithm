@@ -161,6 +161,11 @@ a.card:hover .team-name { color: var(--blue); }
 }
 .team-name { font-weight: 600; font-size: 14px; }
 .team-name .conf { color: var(--text-faint); font-weight: 400; font-size: 11px; margin-left: 6px; }
+.team-name .tag-fcs {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
+  border: 1px solid var(--border-bright); border-radius: 4px;
+  padding: 0 4px; margin-left: 5px; vertical-align: 1px;
+}
 .team-score { margin-left: auto; font-family: var(--mono); font-weight: 700; font-size: 15px; }
 .team-score.win { color: var(--green); }
 .kick { color: var(--text-faint); font-size: 11.5px; margin-top: 2px; }

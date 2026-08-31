@@ -23,6 +23,7 @@ const prisma = new PrismaClient();
 interface CfbdTeam {
   school: string;
   abbreviation: string | null;
+  conference: string | null;
   color: string | null;
   alternateColor: string | null;
   logos: string[] | null;
@@ -79,21 +80,30 @@ async function main() {
     updated++;
   }
 
-  // --- abbreviations for every team, FCS opponents included (cheap, /teams
-  //     returns all divisions) — used in tight UI spots like the spread cell ---
+  // --- every team, FCS opponents included (/teams returns all divisions):
+  //     abbreviation + logo + colors + conference. FCS identity rows created by
+  //     pullGames only have a name, so this is what gives their cards a logo. ---
   const allCfbd = await cfbdGet<CfbdTeam[]>("/teams");
-  let abbrSet = 0;
+  let metaSet = 0;
   for (const t of allCfbd) {
-    if (!t.abbreviation) continue;
     const teamId = teams.resolve(t.school);
     if (!teamId) continue;
+    const logoLight = t.logos?.find((u) => u.includes("/logos/")) ?? null;
+    const logoDark = t.logos?.find((u) => u.includes("/logos-dark/")) ?? null;
     await prisma.team.update({
       where: { id: teamId },
-      data: { abbreviation: t.abbreviation },
+      data: {
+        abbreviation: t.abbreviation ?? undefined,
+        conference: t.conference ?? undefined,
+        color: t.color ?? undefined,
+        altColor: t.alternateColor ?? undefined,
+        logoLight: logoLight ?? undefined,
+        logoDark: logoDark ?? undefined,
+      },
     });
-    abbrSet++;
+    metaSet++;
   }
-  console.log(`Abbreviations set (all divisions): ${abbrSet}\n`);
+  console.log(`Team meta set (all divisions): ${metaSet}\n`);
 
   // --- ESPN team ids (for the injuries feed) ---
   const espnResolver = await buildTeamResolver(prisma, "espn");

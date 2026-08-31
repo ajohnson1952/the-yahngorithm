@@ -152,11 +152,9 @@ export function TeamRow({
       )}
       <span className="team-name">
         {team.name}
+        {team.conference && <span className="conf">{team.conference}</span>}
         {team.classification !== "fbs" && (
-          <span className="conf">{team.classification.toUpperCase()}</span>
-        )}
-        {team.classification === "fbs" && team.conference && (
-          <span className="conf">{team.conference}</span>
+          <span className="conf tag-fcs">{team.classification.toUpperCase()}</span>
         )}
       </span>
       {score != null && (
