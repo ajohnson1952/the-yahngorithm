@@ -1,0 +1,17 @@
+# Once a day: weather forecast + injury report. Both change slowly and
+# neither costs against a hard limit. ~13:00 UTC.
+name: Daily weather + injuries
+
+on:
+  schedule:
+    - cron: "0 13 * * *"
+  workflow_dispatch:
+
+jobs:
+  go:
+    uses: ./.github/workflows/_run.yml
+    secrets: inherit
+    with:
+      commands: >
+        npm run pull-weather &&
+        npm run pull-injuries

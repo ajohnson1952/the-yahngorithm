@@ -1,0 +1,34 @@
+# Reusable job: check out, install, and run a pipeline command string.
+# Called by the scheduler workflows. Needs repo secrets:
+#   DATABASE_URL, CFBD_API_KEY, ODDS_API_KEY
+name: run-pipeline
+
+on:
+  workflow_call:
+    inputs:
+      commands:
+        description: shell command(s) to run (npm scripts)
+        required: true
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - name: write .env
+        run: |
+          {
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"
+            echo "CFBD_API_KEY=${{ secrets.CFBD_API_KEY }}"
+            echo "ODDS_API_KEY=${{ secrets.ODDS_API_KEY }}"
+          } > .env
+      - name: run
+        run: ${{ inputs.commands }}

@@ -1,0 +1,24 @@
+# Tuesday: fresh SP+ / SRS / polls, this week's schedule, opening lines,
+# then flags + model + picks. ~14:00 UTC (mid-morning ET).
+name: Tue weekly refresh
+
+on:
+  schedule:
+    - cron: "0 14 * * 2"
+  workflow_dispatch:
+
+jobs:
+  go:
+    uses: ./.github/workflows/_run.yml
+    secrets: inherit
+    with:
+      commands: >
+        npm run pull-ratings &&
+        npm run pull-rankings &&
+        npm run pull-games &&
+        npm run pull-lines -- --type open &&
+        npm run pull-kalshi &&
+        npm run compute-flags &&
+        npm run compute-market-flags &&
+        npm run run-model &&
+        npm run generate-picks

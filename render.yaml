@@ -1,7 +1,7 @@
 # Render deployment (https://render.com/docs/blueprint-spec)
 # One web service: the Next.js dashboard. The data pipeline (scripts/*)
-# is run manually / by a scheduler for now — added here later once the
-# weekly cadence is settled.
+# runs on GitHub Actions cron (.github/workflows/*) — Render cron jobs
+# aren't free. Buttons on /admin also trigger any script on demand.
 services:
   - type: web
     name: the-yahngorithm

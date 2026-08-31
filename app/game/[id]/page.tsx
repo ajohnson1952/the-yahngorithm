@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getGameDetail } from "../../../lib/webData";
 import { median } from "../../../lib/consensus";
 import { HOME_FIELD_ADVANTAGE } from "../../../lib/modelConfig";
+import { probToSpread } from "../../../lib/winProb";
 import {
   TeamRow,
   FlagChip,
@@ -136,6 +137,8 @@ export default async function GamePage({
     awayApRank,
     homeTrend,
     awayTrend,
+    kalshi,
+    kalshiHistory,
   } = data;
 
   const home = g.homeTeam;
@@ -436,6 +439,22 @@ export default async function GamePage({
           ))}
         </ul>
       )}
+
+      {/* ---------- prediction market ---------- */}
+      <h2>
+        Prediction market{" "}
+        <span className="dim" style={{ fontWeight: 400, fontSize: 12 }}>
+          · Kalshi
+        </span>
+      </h2>
+      <KalshiPanel
+        away={awayShort}
+        home={homeShort}
+        pm={kalshi}
+        history={kalshiHistory}
+        bookHomeSpread={mktSpread}
+        spreadForm={spreadForm}
+      />
 
       {/* ---------- weather ---------- */}
       {!g.indoor && (
@@ -746,6 +765,134 @@ function TrendGrid({
         Amber = an outlier split (≥65% or ≤35% ATS on 8+ games). Trends are
         context, not a signal on their own.
       </p>
+    </>
+  );
+}
+
+interface PMRow {
+  capturedAt: Date;
+  homeWinProb: number;
+  homePrevProb: number | null;
+  homeYesPrice: number | null;
+  awayYesPrice: number | null;
+  homeBid: number | null;
+  homeAsk: number | null;
+  awayBid: number | null;
+  awayAsk: number | null;
+  homeVolume: number;
+  awayVolume: number;
+  homeOI: number;
+  awayOI: number;
+  volume: number;
+}
+
+const usd = (n: number) =>
+  n >= 1000 ? `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${Math.round(n)}`;
+
+function KalshiPanel({
+  away,
+  home,
+  pm,
+  history,
+  bookHomeSpread,
+  spreadForm,
+}: {
+  away: string;
+  home: string;
+  pm: PMRow | null;
+  history: PMRow[];
+  bookHomeSpread: number | null; // home spread, neg = home favored
+  spreadForm: (homeMargin: number) => string;
+}) {
+  if (!pm) {
+    return (
+      <p className="subhead">
+        No Kalshi market matched to this game (it may not be listed, or the teams
+        didn&apos;t resolve). Marquee games have the deepest markets.
+      </p>
+    );
+  }
+  const homeProb = pm.homeWinProb;
+  const awayProb = 1 - homeProb;
+  const kalshiHomeMargin = probToSpread(homeProb);
+  const bookHomeMargin = bookHomeSpread == null ? null : -bookHomeSpread;
+  const gap =
+    bookHomeMargin == null ? null : r1(kalshiHomeMargin - bookHomeMargin);
+  const thin = pm.volume < 500;
+
+  const bidAsk = (b: number | null, a: number | null) =>
+    b != null && a != null ? `${(b * 100).toFixed(0)}–${(a * 100).toFixed(0)}¢` : "–";
+
+  return (
+    <>
+      <div className="trend-grid">
+        <div className="trend-row trend-head">
+          <span />
+          <span>{away}</span>
+          <span>{home}</span>
+        </div>
+        <div className="trend-row">
+          <span className="trend-label">Win probability</span>
+          <span className="trend-cell">{(awayProb * 100).toFixed(0)}%</span>
+          <span className="trend-cell">{(homeProb * 100).toFixed(0)}%</span>
+        </div>
+        <div className="trend-row">
+          <span className="trend-label">$ traded</span>
+          <span className="trend-cell">{usd(pm.awayVolume)}</span>
+          <span className="trend-cell">{usd(pm.homeVolume)}</span>
+        </div>
+        <div className="trend-row">
+          <span className="trend-label">Open interest</span>
+          <span className="trend-cell">{usd(pm.awayOI)}</span>
+          <span className="trend-cell">{usd(pm.homeOI)}</span>
+        </div>
+        <div className="trend-row">
+          <span className="trend-label">Bid–ask</span>
+          <span className="trend-cell">{bidAsk(pm.awayBid, pm.awayAsk)}</span>
+          <span className="trend-cell">{bidAsk(pm.homeBid, pm.homeAsk)}</span>
+        </div>
+      </div>
+
+      <p className="subhead" style={{ marginTop: 10 }}>
+        Kalshi implies <strong>{spreadForm(kalshiHomeMargin)}</strong>
+        {bookHomeMargin != null && (
+          <>
+            {" "}
+            vs the book&apos;s <strong>{spreadForm(bookHomeMargin)}</strong> —{" "}
+            {gap != null && Math.abs(gap) < 1.5 ? (
+              "they agree."
+            ) : (
+              <>
+                a {Math.abs(gap!).toFixed(1)}-pt gap; the market has{" "}
+                {gap! > 0 ? home : away} stronger than the book does.
+              </>
+            )}
+          </>
+        )}
+        {thin && (
+          <>
+            {" "}
+            <span style={{ color: "var(--amber)" }}>
+              Thin market ({usd(pm.volume)} total) — read lightly.
+            </span>
+          </>
+        )}{" "}
+        Guide §9.
+      </p>
+
+      {history.length > 1 && (
+        <ul className="hist">
+          {history.map((h, i) => (
+            <li key={i}>
+              <span className="hist-when">{stampCT(h.capturedAt)}</span>
+              <span className="hist-vals mono">
+                <span>{home} {(h.homeWinProb * 100).toFixed(0)}%</span>
+                <span className="dim">{usd(h.volume)} vol</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </>
   );
 }

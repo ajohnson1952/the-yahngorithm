@@ -69,16 +69,23 @@ const num = (s: string | null | undefined) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-export interface KalshiGameMarket {
-  eventTicker: string;
-  teamA: string; // yes_sub_title of market A
-  teamB: string;
-  probA: number; // de-vigged win prob for team A
-  probB: number;
-  prevProbA: number | null;
-  volume: number; // event volume (sum of both sides' contracts)
+export interface KalshiSide {
+  team: string;
+  yesPrice: number; // raw "yes" last price (0..1)
+  bid: number | null;
+  ask: number | null;
+  volume: number; // contracts (~$1 each)
   volume24h: number;
   openInterest: number;
+}
+
+export interface KalshiGameMarket {
+  eventTicker: string;
+  a: KalshiSide;
+  b: KalshiSide;
+  probA: number; // de-vigged win prob for side A
+  probB: number;
+  prevProbA: number | null;
   closeTime: string;
 }
 
@@ -90,28 +97,32 @@ export function groupByEvent(markets: KalshiMarket[]): KalshiGameMarket[] {
     arr.push(m);
     byEvent.set(m.event_ticker, arr);
   }
+  const side = (m: KalshiMarket): KalshiSide => ({
+    team: m.yes_sub_title,
+    yesPrice: num(m.last_price_dollars),
+    bid: m.yes_bid_dollars ? num(m.yes_bid_dollars) : null,
+    ask: m.yes_ask_dollars ? num(m.yes_ask_dollars) : null,
+    volume: num(m.volume_fp),
+    volume24h: num(m.volume_24h_fp),
+    openInterest: num(m.open_interest_fp),
+  });
   const out: KalshiGameMarket[] = [];
   for (const [eventTicker, ms] of byEvent) {
     if (ms.length !== 2) continue;
-    const [a, b] = ms;
-    const rawA = num(a.last_price_dollars);
-    const rawB = num(b.last_price_dollars);
-    const sum = rawA + rawB;
+    const [a, b] = [side(ms[0]), side(ms[1])];
+    const sum = a.yesPrice + b.yesPrice;
     if (sum <= 0) continue;
-    const prevA = num(a.previous_price_dollars);
-    const prevB = num(b.previous_price_dollars);
+    const prevA = num(ms[0].previous_price_dollars);
+    const prevB = num(ms[1].previous_price_dollars);
     const prevSum = prevA + prevB;
     out.push({
       eventTicker,
-      teamA: a.yes_sub_title,
-      teamB: b.yes_sub_title,
-      probA: rawA / sum,
-      probB: rawB / sum,
+      a,
+      b,
+      probA: a.yesPrice / sum,
+      probB: b.yesPrice / sum,
       prevProbA: prevSum > 0 ? prevA / prevSum : null,
-      volume: num(a.volume_fp) + num(b.volume_fp),
-      volume24h: num(a.volume_24h_fp) + num(b.volume_24h_fp),
-      openInterest: num(a.open_interest_fp) + num(b.open_interest_fp),
-      closeTime: a.close_time,
+      closeTime: ms[0].close_time,
     });
   }
   return out;

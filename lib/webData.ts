@@ -345,12 +345,16 @@ export async function getGameDetail(id: string) {
     apRankMap(g.season, g.week),
   ]);
 
-  const trends = await db.teamTrend.findMany({
-    where: {
-      season: g.season,
-      teamId: { in: [g.homeTeamId, g.awayTeamId] },
-    },
-  });
+  const [trends, kalshi] = await Promise.all([
+    db.teamTrend.findMany({
+      where: { season: g.season, teamId: { in: [g.homeTeamId, g.awayTeamId] } },
+    }),
+    db.predictionMarket.findMany({
+      where: { gameId: id },
+      orderBy: { capturedAt: "desc" },
+      take: 12,
+    }),
+  ]);
 
   return {
     game: g,
@@ -362,6 +366,8 @@ export async function getGameDetail(id: string) {
     awayApRank: apRanks.get(g.awayTeamId) ?? null,
     homeTrend: trends.find((t) => t.teamId === g.homeTeamId)?.splits ?? null,
     awayTrend: trends.find((t) => t.teamId === g.awayTeamId)?.splits ?? null,
+    kalshi: kalshi[0] ?? null,
+    kalshiHistory: [...kalshi].reverse(), // oldest -> newest
   };
 }
 

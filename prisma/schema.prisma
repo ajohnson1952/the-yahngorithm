@@ -222,12 +222,29 @@ model PredictionMarket {
   gameId       String
   game         Game     @relation(fields: [gameId], references: [id])
   source       String   @default("kalshi")
+  capturedAt   DateTime @default(now())
+
   homeWinProb  Float // 0..1, de-vigged
   homePrevProb Float? // Kalshi's "previous_price" for the home side, for movement
-  volume       Float // total contracts traded on the event (~$ notional)
+
+  // per-side raw market state (contracts settle at $1, so volume ≈ $)
+  homeYesPrice Float?
+  awayYesPrice Float?
+  homeBid      Float?
+  homeAsk      Float?
+  awayBid      Float?
+  awayAsk      Float?
+  homeVolume   Float    @default(0)
+  awayVolume   Float    @default(0)
+  homeVol24h   Float    @default(0)
+  awayVol24h   Float    @default(0)
+  homeOI       Float    @default(0)
+  awayOI       Float    @default(0)
+
+  // totals (the RLM/steam flag logic reads these)
+  volume       Float
   volume24h    Float
   openInterest Float
-  capturedAt   DateTime @default(now())
 
   @@index([gameId])
 }

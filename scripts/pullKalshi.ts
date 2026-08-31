@@ -97,43 +97,52 @@ async function main() {
   const events = groupByEvent(markets);
   console.log(`Kalshi: ${markets.length} markets, ${events.length} game events.`);
 
-  const rows: {
-    gameId: string;
-    homeWinProb: number;
-    homePrevProb: number | null;
-    volume: number;
-    volume24h: number;
-    openInterest: number;
-  }[] = [];
+  const rows: import("@prisma/client").Prisma.PredictionMarketCreateManyInput[] =
+    [];
   const unmatched: string[] = [];
 
   for (const e of events as KalshiGameMarket[]) {
-    const idA = resolveTeam(e.teamA, byCanonical);
-    const idB = resolveTeam(e.teamB, byCanonical);
+    const idA = resolveTeam(e.a.team, byCanonical);
+    const idB = resolveTeam(e.b.team, byCanonical);
     if (!idA || !idB) {
-      unmatched.push(`${e.teamA} vs ${e.teamB}`);
+      unmatched.push(`${e.a.team} vs ${e.b.team}`);
       continue;
     }
     const gameId = gameByPair.get([idA, idB].sort().join("|"));
-    if (!gameId) continue; // not a game we have this week
+    if (!gameId) continue;
 
     const g = games.find((x) => x.id === gameId)!;
-    // orient probabilities to OUR home team
     const homeIsA = g.homeTeamId === idA;
+    const home = homeIsA ? e.a : e.b;
+    const away = homeIsA ? e.b : e.a;
+    const prevA = e.prevProbA;
+
     rows.push({
       gameId,
+      source: "kalshi",
       homeWinProb: homeIsA ? e.probA : e.probB,
-      homePrevProb: homeIsA ? e.prevProbA : e.prevProbA == null ? null : 1 - e.prevProbA,
-      volume: e.volume,
-      volume24h: e.volume24h,
-      openInterest: e.openInterest,
+      homePrevProb:
+        prevA == null ? null : homeIsA ? prevA : 1 - prevA,
+      homeYesPrice: home.yesPrice,
+      awayYesPrice: away.yesPrice,
+      homeBid: home.bid,
+      homeAsk: home.ask,
+      awayBid: away.bid,
+      awayAsk: away.ask,
+      homeVolume: home.volume,
+      awayVolume: away.volume,
+      homeVol24h: home.volume24h,
+      awayVol24h: away.volume24h,
+      homeOI: home.openInterest,
+      awayOI: away.openInterest,
+      volume: home.volume + away.volume,
+      volume24h: home.volume24h + away.volume24h,
+      openInterest: home.openInterest + away.openInterest,
     });
   }
 
   if (rows.length) {
-    await prisma.predictionMarket.createMany({
-      data: rows.map((r) => ({ ...r, source: "kalshi" })),
-    });
+    await prisma.predictionMarket.createMany({ data: rows });
   }
 
   console.log("\n============================================================");

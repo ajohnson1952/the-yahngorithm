@@ -105,6 +105,21 @@ a.inline-link:hover { color: var(--blue); }
   border-radius: 5px; padding: 1px 6px;
 }
 
+.board-controls {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin: 0 0 20px;
+}
+.sort-toggle {
+  display: inline-flex; border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; flex-shrink: 0;
+}
+.sort-toggle a {
+  padding: 5px 11px; font-size: 12px; font-weight: 600; color: var(--text-dim);
+}
+.sort-toggle a:hover { background: var(--panel); color: var(--text); }
+.sort-toggle a.on { background: var(--panel-2); color: var(--text); }
+.sort-toggle a + a { border-left: 1px solid var(--border); }
+
 /* ---------- headings ---------- */
 h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 26px 0 4px; }
 h2 { font-size: 15px; font-weight: 650; margin: 28px 0 12px; letter-spacing: -0.01em; }

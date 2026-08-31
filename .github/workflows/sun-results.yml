@@ -1,0 +1,19 @@
+# Sunday: pull final scores, grade picks, refresh team trends. ~16:00 UTC.
+name: Sun results
+
+on:
+  schedule:
+    - cron: "0 16 * * 0"
+  workflow_dispatch:
+
+jobs:
+  go:
+    uses: ./.github/workflows/_run.yml
+    secrets: inherit
+    with:
+      commands: >
+        npm run pull-games &&
+        npm run grade-picks &&
+        npm run compute-trends &&
+        npm run compute-market-flags &&
+        npm run run-model
