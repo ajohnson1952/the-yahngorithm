@@ -20,9 +20,22 @@ model Team {
   id            String   @id @default(cuid())
   canonicalName String   @unique
   conference    String?
+  // 'fbs' for teams we rate and predict; 'fcs' / 'ii' / 'iii' for opponents
+  // that only exist here so FBS-vs-lower-division games have real team IDs.
+  // Non-fbs teams never get ratings or predictions.
+  classification String  @default("fbs")
+  // home-stadium location + metadata, backfilled from CFBD /teams (scripts/backfillTeamMeta.ts).
+  // lat/lng/timezone feed the situational 'travel' flag; elevation may matter for totals later.
   timezone      String?
   lat           Float?
   lng           Float?
+  elevationM    Float?
+  // brand assets for the eventual web UI
+  logoLight     String?
+  logoDark      String?
+  color         String?
+  altColor      String?
+  espnId        Int?      // ESPN's numeric team id — for the injuries feed
 
   aliases         TeamSourceAlias[]
   ratingsWeekly   TeamRatingWeekly[]
@@ -75,6 +88,12 @@ model TeamRatingWeekly {
   spPlusOverall          Float?
   spPlusOffense          Float?
   spPlusDefense          Float?
+  // SRS (Simple Rating System, CFBD /ratings/srs): opponent-adjusted scoring
+  // margin on the same points scale as spPlusOverall. Single number — SRS has
+  // no offense/defense split, so it feeds the spread model only, not totals.
+  // Kept alongside SP+ on purpose: where the two disagree is itself a signal
+  // (see docs/INTERPRETATION_GUIDE.md).
+  srs                    Float?
   avgPossessionsPerGame  Float?
   pulledAt               DateTime @default(now())
 
@@ -93,9 +112,12 @@ model Game {
   awayTeamId  String
   awayTeam    Team     @relation("AwayTeam", fields: [awayTeamId], references: [id])
   kickoffTime DateTime
+  neutralSite Boolean  @default(false) // true -> spread model applies NO home-field advantage
   venue       String?
+  venueId     Int?
   venueLat    Float?
   venueLng    Float?
+  indoor      Boolean  @default(false) // dome/retractable-closed -> weather doesn't apply
   homeScore   Int?
   awayScore   Int?
   status      String   @default("scheduled") // 'scheduled' | 'final'
@@ -110,6 +132,8 @@ model Game {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // natural key: one game per matchup per week. Makes the schedule pull idempotent.
+  @@unique([season, week, homeTeamId, awayTeamId])
   @@index([season, week])
 }
 
@@ -166,8 +190,11 @@ model ModelPrediction {
   id                    String   @id @default(cuid())
   gameId                String
   game                  Game     @relation(fields: [gameId], references: [id])
-  predictedSpread       Float?
-  predictedTotal        Float?
+  // Two independent spread models, both stored every pull so they can be
+  // compared to each other and to the market (see docs/INTERPRETATION_GUIDE.md).
+  predictedSpreadSpPlus Float?   // (home_SP+overall - away_SP+overall) + HFA
+  predictedSpreadSrs    Float?   // (home_SRS       - away_SRS)         + HFA
+  predictedTotal        Float?   // SP+ efficiency -> points-per-possession -> pace
   homeExpectedPpp       Float?
   awayExpectedPpp       Float?
   predictedPossessions  Float?
@@ -197,6 +224,7 @@ model Pick {
   gameId        String
   game          Game      @relation(fields: [gameId], references: [id])
   market        String    // 'spread' | 'total'
+  method        String    @default("sp_plus") // 'sp_plus' | 'srs' | 'consensus' — which model produced modelLine
   modelLine     Float
   marketLine    Float
   edge          Float
@@ -208,5 +236,7 @@ model Pick {
   atsResult     String?   // 'win' | 'loss' | 'push'
   gradedAt      DateTime?
 
+  // one logged pick per game per market — first time it qualifies, captured as-is
+  @@unique([gameId, market])
   @@index([gameId])
 }

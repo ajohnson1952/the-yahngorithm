@@ -33,15 +33,29 @@ if (!CFBD_API_KEY || !ODDS_API_KEY) {
 
 // ---------- Step 1: Pull the canonical team list from CFBD ----------
 
-async function fetchCfbdTeams(): Promise<{ school: string; conference: string | null }[]> {
+interface CfbdTeam {
+  school: string;
+  conference: string | null;
+  mascot: string | null;
+  alternateNames: string[];
+}
+
+async function fetchCfbdTeams(): Promise<CfbdTeam[]> {
   const res = await fetch("https://api.collegefootballdata.com/teams/fbs", {
     headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
   });
   if (!res.ok) {
     throw new Error(`CFBD teams request failed: ${res.status} ${res.statusText}`);
   }
-  const data = await res.json();
-  return data.map((t: any) => ({ school: t.school, conference: t.conference ?? null }));
+  const data: any = await res.json();
+  return data.map((t: any) => ({
+    school: t.school,
+    conference: t.conference ?? null,
+    // mascot + alternateNames are what let the matcher tell "Alabama"
+    // apart from "North Alabama" — see lib/nameMatching.ts.
+    mascot: t.mascot ?? null,
+    alternateNames: Array.isArray(t.alternateNames) ? t.alternateNames : [],
+  }));
 }
 
 // ---------- Step 2: Pull team names as The Odds API sees them ----------
@@ -56,7 +70,7 @@ async function fetchOddsApiTeamNames(): Promise<string[]> {
   if (!res.ok) {
     throw new Error(`Odds API request failed: ${res.status} ${res.statusText}`);
   }
-  const data = await res.json();
+  const data: any = await res.json();
   const names = new Set<string>();
   for (const game of data) {
     names.add(game.home_team);
@@ -70,13 +84,16 @@ async function fetchOddsApiTeamNames(): Promise<string[]> {
 // FBS teams list.
 
 async function fetchEspnTeamNames(): Promise<string[]> {
+  // limit=900 returns ESPN's entire CFB team list (~760, all divisions).
+  // We WANT the wide net: names that aren't FBS simply won't match the
+  // canonical list. A smaller limit silently drops real FBS teams.
   const res = await fetch(
-    "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams?limit=200"
+    "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams?limit=900"
   );
   if (!res.ok) {
     throw new Error(`ESPN request failed: ${res.status} ${res.statusText}`);
   }
-  const data = await res.json();
+  const data: any = await res.json();
   const teams = data.sports?.[0]?.leagues?.[0]?.teams ?? [];
   return teams.map((t: any) => t.team.displayName as string);
 }
@@ -96,7 +113,12 @@ async function main() {
       update: { conference: t.conference ?? undefined },
       create: { canonicalName: t.school, conference: t.conference ?? undefined },
     });
-    canonicalTeams.push({ id: team.id, canonicalName: team.canonicalName });
+    canonicalTeams.push({
+      id: team.id,
+      canonicalName: team.canonicalName,
+      mascot: t.mascot,
+      altNames: t.alternateNames,
+    });
 
     // The team's own CFBD name is a confirmed alias of itself.
     await prisma.teamSourceAlias.upsert({
@@ -114,7 +136,15 @@ async function main() {
   const espnNames = await fetchEspnTeamNames();
   console.log(`  -> ${espnNames.length} unique names found.`);
 
-  const needsReview: { source: string; sourceName: string; candidates: string[] }[] = [];
+  // Two very different situations, kept apart in the report:
+  //  - ambiguous: we DID match a team but couldn't do it confidently
+  //    (two canonical teams fit equally well). Always worth a human look.
+  //  - unmatched: no canonical team fit at all. Usually just a non-FBS
+  //    opponent showing up on the odds board / in ESPN's all-divisions
+  //    list — expected noise, not a bug.
+  const ambiguous: { source: string; sourceName: string; candidates: string[] }[] = [];
+  const unmatched: { source: string; sourceName: string }[] = [];
+  let autoMatched = 0;
 
   async function matchAndStore(source: "odds_api" | "espn", names: string[]) {
     for (const name of names) {
@@ -126,10 +156,10 @@ async function main() {
           update: { teamId: result.teamId, confidence: result.confidence },
           create: { teamId: result.teamId, source, sourceName: name, confidence: result.confidence },
         });
-      }
-
-      if (result.confidence === "needs_review") {
-        needsReview.push({ source, sourceName: name, candidates: result.candidatesConsidered });
+        if (result.confidence === "auto_matched") autoMatched++;
+        else ambiguous.push({ source, sourceName: name, candidates: result.candidatesConsidered });
+      } else {
+        unmatched.push({ source, sourceName: name });
       }
     }
   }
@@ -147,26 +177,47 @@ async function main() {
   console.log(`  Canonical teams (from CFBD): ${canonicalTeams.length}`);
   console.log(`  Odds API names processed:    ${oddsNames.length}`);
   console.log(`  ESPN names processed:        ${espnNames.length}`);
-  console.log(`  Flagged for manual review:   ${needsReview.length}`);
+  console.log(`  Auto-matched confidently:    ${autoMatched}`);
+  console.log(`  Ambiguous (need a decision): ${ambiguous.length}`);
+  console.log(`  No match (likely non-FBS):   ${unmatched.length}`);
   console.log("============================================================\n");
 
-  if (needsReview.length > 0) {
-    console.log("These need a human look before they're trusted:\n");
-    for (const item of needsReview) {
+  if (ambiguous.length > 0) {
+    console.log(">> AMBIGUOUS — matched, but not confidently. Check each one:\n");
+    for (const item of ambiguous) {
       console.log(
-        `  [${item.source}] "${item.sourceName}" -> no clean match. ` +
-          (item.candidates.length
-            ? `Ambiguous between: ${item.candidates.join(", ")}`
-            : "No candidates found at all.")
+        `  [${item.source}] "${item.sourceName}" -> could be: ${item.candidates.join(", ")}`
       );
     }
     console.log(
-      "\nFix these by hand in team_source_aliases (set confidence to 'confirmed' " +
-        "once you've picked the right team_id), or adjust the source name and re-run this script."
+      "\nResolve in team_source_aliases: pick the right team_id and set confidence to 'confirmed'.\n"
     );
   } else {
-    console.log("Everything matched cleanly. No manual review needed this run.");
+    console.log("No ambiguous matches this run.\n");
   }
+
+  // Odds API unmatched = teams in real betting games we couldn't identify.
+  // Worth reading every one. ESPN unmatched = mostly its full lower-division
+  // team list (D2/D3), which is expected noise — just show the count.
+  const oddsUnmatched = unmatched.filter((u) => u.source === "odds_api");
+  const espnUnmatched = unmatched.filter((u) => u.source === "espn");
+
+  if (oddsUnmatched.length > 0) {
+    console.log(
+      `>> ODDS API — NO MATCH (${oddsUnmatched.length}). These are teams in live betting games.`
+    );
+    console.log("   Each should be a non-FBS opponent (FBS-vs-FCS game). If you see a real");
+    console.log("   FBS team here, it's a name format the matcher doesn't handle yet:\n");
+    for (const item of oddsUnmatched) {
+      console.log(`  "${item.sourceName}"`);
+    }
+    console.log("");
+  }
+
+  console.log(
+    `>> ESPN — NO MATCH (${espnUnmatched.length}). Expected: ESPN's team list spans all` +
+      " divisions;\n   the non-FBS ones don't match by design. Not a problem."
+  );
 
   await prisma.$disconnect();
 }

@@ -3,9 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "match-aliases": "tsx scripts/matchTeamAliases.ts",
+    "match-aliases": "tsx --env-file=.env scripts/matchTeamAliases.ts",
+    "pull-ratings": "tsx --env-file=.env scripts/pullRatings.ts",
+    "pull-games": "tsx --env-file=.env scripts/pullGames.ts",
+    "backfill-team-meta": "tsx --env-file=.env scripts/backfillTeamMeta.ts",
+    "pull-lines": "tsx --env-file=.env scripts/pullLines.ts",
+    "pull-weather": "tsx --env-file=.env scripts/pullWeather.ts",
+    "pull-injuries": "tsx --env-file=.env scripts/pullInjuries.ts",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "run-model": "tsx --env-file=.env scripts/runModel.ts",
+    "generate-picks": "tsx --env-file=.env scripts/generatePicks.ts",
+    "grade-picks": "tsx --env-file=.env scripts/gradePicks.ts",
+    "seed-rivalries": "tsx --env-file=.env scripts/seedRivalries.ts",
+    "compute-flags": "tsx --env-file=.env scripts/computeFlags.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0"
@@ -15,5 +26,11 @@
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "@types/node": "^22.7.0"
+  },
+  "allowScripts": {
+    "prisma@5.22.0": true,
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "esbuild@0.28.2": true
   }
 }
