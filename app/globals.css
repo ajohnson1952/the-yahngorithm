@@ -70,9 +70,16 @@ a.inline-link:hover { color: var(--blue); }
 .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); flex-shrink: 0; }
 .brand-avatar {
   width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-  object-fit: cover; object-position: 48% 14%;
+  overflow: hidden; display: block;
   border: 1px solid var(--border-bright);
   background: var(--panel-2);
+}
+.brand-avatar img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: 46% 16%;
+  transform: scale(1.55);
+  transform-origin: 46% 16%;
 }
 .nav { display: flex; gap: 4px; margin-left: auto; flex-shrink: 0; }
 @media (max-width: 400px) {
