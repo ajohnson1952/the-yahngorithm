@@ -125,16 +125,33 @@ obvious market mispricings, not rating edges.
 How it's built (`ModelPrediction.predictedTotal`):
 
 ```
-each team's expected points = midpoint of (its SP+ offense) and
-                              (opponent's SP+ defense), at average pace
+combined points at avg pace = (home_off + away_def)/2 + (away_off + home_def)/2
 expected possessions        = home pace + away pace   (drives/game, ~11.6 each)
                               blended: prior season early, current season as it accrues
-predicted total = (home pts + away pts) × (possessions / league-average)
-                  − wind adjustment
+predicted total = combined points × (possessions / league-average) − wind adj
 ```
 
-`predictedPossessions` and each team's `homeExpectedPpp` / `awayExpectedPpp`
-(points per possession) are stored alongside the total.
+### The total and the spread agree
+
+The offense/defense split is only good at estimating the **combined** total —
+not the margin. So the margin comes from the **spread model** (SP+), and the
+total is split around it:
+
+```
+home expected points = (total + spread margin) / 2
+away expected points = (total − spread margin) / 2
+```
+
+That means the per-team scores on a game page always add up to the total **and**
+differ by exactly the spread. If the spread says home −7.5, the projected score
+is 7.5 apart.
+
+**Caveat for big favorites:** the split assumes the favorite scores exactly its
+share. In reality a big favorite's real margin is a touch less than its raw
+rating edge (starters rest, clock runs, garbage time feeds the dog) — the same
+reason books shade favorites down (§2). On lopsided games the underdog's score
+is floored at ~7 and the implied margin compresses a bit, which is the right
+direction. Trust the per-team scores most on competitive games.
 
 - **Only SP+ feeds this** (it needs the offense/defense split; SRS is one number).
 - **It's noisier than the spread model** — the brief says so and it's true. Use a

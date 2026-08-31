@@ -181,6 +181,7 @@ async function main() {
         awayOffense: ar.spPlusOffense,
         awayDefense: ar.spPlusDefense,
         awayPace: ar.avgPossessionsPerGame ?? LEAGUE_AVG_POSSESSIONS_PER_TEAM,
+        spreadMargin: mSp, // spread model owns the margin; totals owns the total
         windMph: windByGame.get(g.id) ?? null,
       });
     }

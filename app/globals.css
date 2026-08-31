@@ -68,6 +68,12 @@ a.inline-link:hover { color: var(--blue); }
   flex-shrink: 0;
 }
 .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); flex-shrink: 0; }
+.brand-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  object-fit: cover; object-position: 48% 14%;
+  border: 1px solid var(--border-bright);
+  background: var(--panel-2);
+}
 .nav { display: flex; gap: 4px; margin-left: auto; flex-shrink: 0; }
 @media (max-width: 400px) {
   .nav a { padding: 6px 8px; }
