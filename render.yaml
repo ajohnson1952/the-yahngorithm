@@ -9,7 +9,9 @@ services:
     plan: free
     region: ohio
     branch: pipeline
-    buildCommand: npm ci && npm run build
+    # migrate deploy applies any pending Prisma migrations to the Neon DB
+    # (idempotent — no-op when there's nothing new)
+    buildCommand: npm ci && npx prisma migrate deploy && npm run build
     startCommand: npm run start
     healthCheckPath: /
     envVars:
