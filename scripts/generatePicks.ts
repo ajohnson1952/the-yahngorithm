@@ -36,9 +36,12 @@ import { consensusByGame } from "../lib/consensus";
 
 const prisma = new PrismaClient();
 
-// a flag on a team either hurts that team (bet against) or helps it (bet for)
-const FLAG_HURTS = new Set(["short_week", "travel", "lookahead", "letdown"]);
-const FLAG_HELPS = new Set(["off_bye", "revenge"]);
+// Flags that count as the 2nd independent signal for a pick. Trimmed to
+// the ones the 2021-25 backtest respects (docs/CALIBRATION.md): short_week
+// corroboration graded ~39% ATS and off_bye ~50%, so both were dropped —
+// they still display on the board, they just don't corroborate a pick.
+const FLAG_HURTS = new Set(["travel", "lookahead", "letdown"]);
+const FLAG_HELPS = new Set(["revenge"]);
 
 function parseArgs(): { season?: number; week?: number } {
   const args = process.argv.slice(2);

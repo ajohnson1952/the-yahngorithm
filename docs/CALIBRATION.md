@@ -93,10 +93,17 @@ Completely dead.
 |---|---|---|---|---|
 | edge only | 49.8% | 47.5–52.1 | 1757 | — |
 | + any flag corroboration | 52.8% | 49.0–56.7 | 634 | 2021 44%, 2022 61%, 2023 50%, 2024 58%, 2025 48% |
+| **+ refined corrob** (travel / lookahead / letdown / revenge only) | **56.4%** | 51.8–60.9 | 456 | |
 | …corrob by **travel** | 59.6% | 50.2–69.0 | 104 | |
 | …corrob by **revenge** | 55.7% | 50.3–61.1 | 323 | |
 | …corrob by **short_week** | **38.6%** | 24.2–53.0 | 44 | |
 | …corrob by off_bye | 49.5% | 42.8–56.3 | 210 | |
+
+**Applied (commit after df6bc38):** `generate-picks` now corroborates only on
+`travel` / `lookahead` / `letdown` / `revenge`. All six flags still display on
+the board — `short_week` and `off_bye` just no longer count as the 2nd signal.
+The refined logic backtests at **56.4%** vs 52.8% for the old set — a real
+lift, though n drops to ~90/season and it still isn't multi-season-stable.
 
 ### Verdict
 
@@ -120,15 +127,14 @@ Completely dead.
 
 ## 4. Recommendations
 
-**Do now (low risk):**
+**Done:**
 1. Keep Yahn displayed; don't weight it, don't make it a corroborator.
-2. In `generate-picks`, **drop `short_week` and `off_bye` from the
-   corroboration set**; keep `travel`, `revenge`, `letdown`, `lookahead`.
-   (Recommended — needs a one-line change + a re-run. Small sample, so
-   frame it as a tweak, not gospel.)
-3. Add a standalone **"bad spot" lean** on the board — flag when a team has
-   any fade flag, especially `travel`. ~53% historical, worth a look even
-   without a rating edge.
+2. `generate-picks` corroboration set trimmed to `travel` / `lookahead` /
+   `letdown` / `revenge` (`short_week` + `off_bye` dropped). Backtests 56.4%
+   vs 52.8%. All six flags still shown on the board.
+
+**Do next:**
+3. Add a standalone **"bad spot" lean** on the board — see below.
 
 **Consider:**
 4. The `travel` + `revenge` corroboration cells are the only thing that

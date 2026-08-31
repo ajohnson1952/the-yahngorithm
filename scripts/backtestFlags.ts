@@ -215,6 +215,7 @@ async function main() {
   const moveFade: number[] = [];
   const pickEdgeOnly: number[] = [];
   const pickCorrob: number[] = [];
+  const pickCorrobRefined: number[] = []; // travel/lookahead/letdown/revenge only
   const corrobBy: Record<string, number[]> = {};
   const anyFadeBySeason: Record<number, number[]> = {};
   const corrobBySeason: Record<number, number[]> = {};
@@ -295,6 +296,8 @@ async function main() {
           (corrobBySeason[g.season] ??= []).push(win);
           for (const cf of corrobFlags) (corrobBy[cf] ??= []).push(win);
         }
+        const REFINED = new Set(["travel", "lookahead", "letdown", "revenge"]);
+        if (corrobFlags.some((f) => REFINED.has(f))) pickCorrobRefined.push(win);
       }
     }
   }
@@ -320,8 +323,10 @@ async function main() {
   console.log(`  fade the move     ${fmt(record(moveFade))}`);
 
   console.log("\nSIMULATED SPREAD PICKS (as-of margin vs close, |edge| ≥ 2.5, spread ≤ 20)\n");
-  console.log(`  edge only               ${fmt(record(pickEdgeOnly))}`);
-  console.log(`  + any flag corroboration ${fmt(record(pickCorrob))}`);
+  console.log(`  edge only                    ${fmt(record(pickEdgeOnly))}`);
+  console.log(`  + any-flag corroboration      ${fmt(record(pickCorrob))}`);
+  console.log(`  + refined corrob (trav/look/  ${fmt(record(pickCorrobRefined))}`);
+  console.log(`      letdown/revenge only)`);
   for (const f of Object.keys(corrobBy).sort())
     console.log(`     corrob by ${f.padEnd(11)} ${fmt(record(corrobBy[f]))}`);
   console.log(`     corrob picks by season: ` +
