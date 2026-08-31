@@ -19,6 +19,7 @@
     "pull-portal": "tsx --env-file=.env scripts/pullPortal.ts",
     "pull-advanced": "tsx --env-file=.env scripts/pullAdvanced.ts",
     "compute-team-hfa": "tsx --env-file=.env scripts/computeTeamHfa.ts",
+    "backtest-yahn": "tsx --env-file=.env scripts/backtestYahn.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "run-model": "tsx --env-file=.env scripts/runModel.ts",
