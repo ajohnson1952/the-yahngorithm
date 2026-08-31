@@ -13,6 +13,7 @@ jobs:
     with:
       commands: >
         npm run pull-games &&
+        npm run pull-advanced &&
         npm run grade-picks &&
         npm run compute-trends &&
         npm run compute-market-flags &&

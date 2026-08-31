@@ -71,4 +71,31 @@ export const RUNNABLE: Record<
     label: "Recompute team trends (ATS / SU / O-U)",
     note: "No API. Sundays after grade-picks.",
   },
+
+  // --- Yahn model v2 factor feeds ---
+  "pull-talent": {
+    file: "scripts/pullTalent.ts",
+    label: "Pull team talent composite (247)",
+    note: "CFBD — 1 call. Preseason; static through the year.",
+  },
+  "pull-returning": {
+    file: "scripts/pullReturning.ts",
+    label: "Pull returning production",
+    note: "CFBD — 1 call. Preseason roster stability score.",
+  },
+  "pull-portal": {
+    file: "scripts/pullPortal.ts",
+    label: "Pull transfer portal + net rollup",
+    note: "CFBD — 1 call. Refresh through the portal windows.",
+  },
+  "pull-advanced": {
+    file: "scripts/pullAdvanced.ts",
+    label: "Pull advanced stats + EPA (weekly)",
+    note: "CFBD — 2 calls. After games each week.",
+  },
+  "compute-team-hfa": {
+    file: "scripts/computeTeamHfa.ts",
+    label: "Recompute per-team home-field advantage",
+    note: "CFBD — ~3 calls (historical SP+). Rare; run once a year.",
+  },
 };

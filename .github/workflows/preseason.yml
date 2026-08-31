@@ -1,0 +1,20 @@
+# Annual / preseason refresh of the slow-moving Yahn model factor feeds:
+# team talent composite, returning production, transfer portal, and the
+# per-team home-field-advantage recompute. Manual trigger — run it once
+# in the preseason and again after the spring/summer portal windows.
+#   CFBD cost: ~6 calls total. No schedule.
+name: Preseason factor refresh
+
+on:
+  workflow_dispatch:
+
+jobs:
+  go:
+    uses: ./.github/workflows/_run.yml
+    secrets: inherit
+    with:
+      commands: >
+        npm run pull-talent &&
+        npm run pull-returning &&
+        npm run pull-portal &&
+        npm run compute-team-hfa

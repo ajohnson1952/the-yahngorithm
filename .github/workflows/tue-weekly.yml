@@ -16,6 +16,7 @@ jobs:
         npm run pull-ratings &&
         npm run pull-rankings &&
         npm run pull-games &&
+        npm run pull-advanced &&
         npm run pull-lines -- --type open &&
         npm run pull-kalshi &&
         npm run compute-flags &&

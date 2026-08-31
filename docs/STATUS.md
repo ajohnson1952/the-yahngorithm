@@ -32,6 +32,20 @@ Living checklist. See `README.md` for the architecture overview.
 - [ ] Add `CFBD_API_KEY` + `ODDS_API_KEY` to the Render service env
 - [ ] Set a real Top 25 at `/rankings` (currently seeded from the AP poll)
 
+## Yahn model v2 (multi-factor rating)
+
+- [x] **Build 1 — data layer.** Factor feeds landed (no model change yet):
+      `pull-talent` (247 composite), `pull-returning` (roster stability),
+      `pull-portal` (transfer net rollup), `pull-advanced` (success rate,
+      explosiveness, havoc, PPO, field position, EPA), `compute-team-hfa`
+      (per-team home edge). New tables + `/admin` buttons + `preseason.yml`.
+- [ ] Build 2 — wire the heuristic composite into `predictedSpreadYahn`
+      (SP+ backbone + EPA + roster block that decays wks 0–3), component
+      breakdown on the game page. Top 25 stays OUT of the model.
+- [ ] Build 3 — calibration harness (historical backfill + regression vs
+      closing lines); re-evaluate per-team HFA (marginal on 3 seasons).
+- [ ] Build 4 — Top-25 bounded-prior toggle (off by default) + preview.
+
 ## Open — build backlog
 
 - [ ] Make Yahn a formal pick corroborator (2-of-3 model agreement) — calibrate first

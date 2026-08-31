@@ -51,6 +51,14 @@ model Team {
   gameFlags       GameFlag[]
   rivalriesAsA    Rivalry[]           @relation("RivalryTeamA")
   rivalriesAsB    Rivalry[]           @relation("RivalryTeamB")
+  // --- Yahn model v2 factor inputs (see docs + scripts/pull*) ---
+  talent          TeamTalent[]
+  returning       TeamReturningProduction[]
+  advancedWeekly  TeamAdvancedWeekly[]
+  portalNet       TeamPortalNet[]
+  portalIn        PortalEntry[]       @relation("PortalDestination")
+  portalOut       PortalEntry[]       @relation("PortalOrigin")
+  hfa             TeamHfa?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -336,4 +344,124 @@ model Pick {
   // one logged pick per game per market — first time it qualifies, captured as-is
   @@unique([gameId, market])
   @@index([gameId])
+}
+
+// ============================================================
+// YAHN MODEL v2 — factor inputs
+// ============================================================
+// Raw stat feeds for the multi-factor Yahn rating. Build 1 just lands
+// the data (pulled by scripts/pull*, fired from /admin); the model
+// wiring comes in build 2. See memory: yahn-model-v2-plan.
+// ============================================================
+
+// 247 team talent composite — CFBD /talent. One number per team per season.
+model TeamTalent {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  season    Int
+  talent    Float
+  pulledAt  DateTime @default(now())
+
+  @@unique([teamId, season])
+  @@index([season])
+}
+
+// Returning production — CFBD /player/returning. percentPPA is the
+// "stability score": share of last year's production (by PPA) coming back.
+model TeamReturningProduction {
+  id                  String   @id @default(cuid())
+  teamId              String
+  team                Team     @relation(fields: [teamId], references: [id])
+  season              Int
+  percentPPA          Float?
+  percentPassingPPA   Float?
+  percentReceivingPPA Float?
+  percentRushingPPA   Float?
+  totalPPA            Float?
+  usage               Float?
+  pulledAt            DateTime @default(now())
+
+  @@unique([teamId, season])
+  @@index([season])
+}
+
+// Cumulative opponent-context stats through a given week — CFBD
+// /stats/season/advanced (success/explosiveness/havoc/PPO/field pos)
+// merged with /ppa/teams (EPA per play). Snapshotted weekly.
+model TeamAdvancedWeekly {
+  id           String   @id @default(cuid())
+  teamId       String
+  team         Team     @relation(fields: [teamId], references: [id])
+  season       Int
+  week         Int
+
+  offSuccess   Float?
+  defSuccess   Float?
+  offExplosive Float?
+  defExplosive Float?
+  offPPA       Float?   // EPA / play (offense)
+  defPPA       Float?   // EPA / play allowed (lower = better defense)
+  offPPO       Float?   // points per scoring opportunity (drive inside opp 40)
+  defPPO       Float?
+  offHavoc     Float?
+  defHavoc     Float?
+  offFieldPos  Float?   // avg predicted points of own starting field position
+  defFieldPos  Float?   // ...of opponent's, when defending
+  pulledAt     DateTime @default(now())
+
+  @@unique([teamId, season, week])
+  @@index([season, week])
+}
+
+// Raw transfer-portal entries — CFBD /player/portal. Kept raw so the
+// per-team rollup weighting can change without re-pulling.
+model PortalEntry {
+  id           String    @id @default(cuid())
+  season       Int
+  playerName   String
+  position     String?
+  origin       String?
+  originTeamId String?
+  originTeam   Team?     @relation("PortalOrigin", fields: [originTeamId], references: [id])
+  destination  String?
+  destTeamId   String?
+  destTeam     Team?     @relation("PortalDestination", fields: [destTeamId], references: [id])
+  rating       Float?    // 247-style 0..1 player rating (often null)
+  stars        Int?
+  eligibility  String?
+  transferDate DateTime?
+
+  @@unique([season, playerName, position, origin])
+  @@index([season])
+  @@index([destTeamId])
+  @@index([originTeamId])
+}
+
+// Per-team seasonal portal balance, recomputed from PortalEntry.
+model TeamPortalNet {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  season    Int
+  inCount   Int      @default(0)
+  outCount  Int      @default(0)
+  inScore   Float    @default(0) // sum of incoming player scores (rating, else stars-derived)
+  outScore  Float    @default(0)
+  netScore  Float    @default(0)
+  computedAt DateTime @default(now())
+
+  @@unique([teamId, season])
+  @@index([season])
+}
+
+// Per-team home-field advantage in points, from historical home-margin
+// vs SP+ expectation, regressed toward the league prior. computeTeamHfa.ts.
+model TeamHfa {
+  id         String   @id @default(cuid())
+  teamId     String   @unique
+  team       Team     @relation(fields: [teamId], references: [id])
+  hfa        Float
+  sampleSize Int
+  computedAt DateTime @default(now())
 }
