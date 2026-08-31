@@ -92,6 +92,13 @@ export default async function Home({
 
   return (
     <>
+      <p className="board-meta">
+        {board.length} game{board.length === 1 ? "" : "s"} ·{" "}
+        {pickCount === 0
+          ? "no picks this week"
+          : `${pickCount} pick${pickCount > 1 ? "s" : ""} logged`}
+      </p>
+
       <div className="weeknav">
         <div className="weeknav-ctl">
           {prev != null ? (
@@ -122,15 +129,6 @@ export default async function Home({
             ↩ this week ({thisWeek})
           </a>
         )}
-      </div>
-
-      <div className="board-controls">
-        <p className="subhead" style={{ margin: 0 }}>
-          {board.length} games ·{" "}
-          {pickCount === 0
-            ? "no picks this week"
-            : `${pickCount} pick${pickCount > 1 ? "s" : ""} logged`}
-        </p>
         <div className="sort-toggle">
           <a
             href={qs({ week: sp.week ? week : undefined })}
