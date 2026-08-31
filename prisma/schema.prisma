@@ -109,6 +109,10 @@ model TeamRatingWeekly {
   spPlusOverall          Float?
   spPlusOffense          Float?
   spPlusDefense          Float?
+  // where the SP+ numbers came from: 'cfbd' (ESPN FBS feed) or 'billc'
+  // (Connelly's full-universe sheet, re-centered onto CFBD's scale — used
+  // for FCS teams CFBD doesn't rate). See scripts/loadBillcRatings.ts.
+  spPlusSource           String?
   // SRS (Simple Rating System, CFBD /ratings/srs): opponent-adjusted scoring
   // margin on the same points scale as spPlusOverall. Single number — SRS has
   // no offense/defense split, so it feeds the spread model only, not totals.

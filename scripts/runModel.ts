@@ -67,8 +67,13 @@ async function main() {
     where: {
       season,
       week,
-      homeTeam: { classification: "fbs" },
-      awayTeam: { classification: "fbs" },
+      // at least one FBS team — FBS-vs-FCS now gets a prediction too, since
+      // the FCS side has an SP+ rating from the Bill C sheet (load-billc).
+      // FCS-vs-FCS is still skipped.
+      OR: [
+        { homeTeam: { classification: "fbs" } },
+        { awayTeam: { classification: "fbs" } },
+      ],
     },
     include: { homeTeam: true, awayTeam: true },
   });

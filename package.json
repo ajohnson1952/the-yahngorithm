@@ -6,6 +6,7 @@
     "match-aliases": "tsx --env-file=.env scripts/matchTeamAliases.ts",
     "pull-ratings": "tsx --env-file=.env scripts/pullRatings.ts",
     "pull-rankings": "tsx --env-file=.env scripts/pullRankings.ts",
+    "load-billc": "tsx --env-file=.env scripts/loadBillcRatings.ts",
     "pull-games": "tsx --env-file=.env scripts/pullGames.ts",
     "backfill-team-meta": "tsx --env-file=.env scripts/backfillTeamMeta.ts",
     "pull-lines": "tsx --env-file=.env scripts/pullLines.ts",
