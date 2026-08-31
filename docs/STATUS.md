@@ -39,11 +39,16 @@ Living checklist. See `README.md` for the architecture overview.
       `pull-portal` (transfer net rollup), `pull-advanced` (success rate,
       explosiveness, havoc, PPO, field position, EPA), `compute-team-hfa`
       (per-team home edge). New tables + `/admin` buttons + `preseason.yml`.
-- [ ] Build 2 — wire the heuristic composite into `predictedSpreadYahn`
-      (SP+ backbone + EPA + roster block that decays wks 0–3), component
-      breakdown on the game page. Top 25 stays OUT of the model.
+- [x] **Build 2 — Yahn v2 composite** wired into `predictedSpreadYahn`:
+      SP+ backbone + EPA adj (ramps up through season) + roster adj (talent
+      z-score nudge + returning + portal net, decays to 0 by wk 5) + per-team
+      HFA. `lib/yahnModel.ts`; breakdown stored (`ModelPrediction.yahnBreakdown`)
+      and shown on the game page. Top 25 no longer feeds the model. Portal
+      rollup switched to value-over-replacement + ±6 cap; HFA regressed hard
+      (PRIOR_N 150, clamp 2.2–4.0) so ~78% of teams land 2.75–3.5.
 - [ ] Build 3 — calibration harness (historical backfill + regression vs
-      closing lines); re-evaluate per-team HFA (marginal on 3 seasons).
+      closing lines); tune all `lib/yahnModel.ts` weights; re-evaluate
+      per-team HFA (still noisy on 3 seasons — backfill 2019–22 games).
 - [ ] Build 4 — Top-25 bounded-prior toggle (off by default) + preview.
 
 ## Open — build backlog

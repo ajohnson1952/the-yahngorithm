@@ -39,6 +39,19 @@ interface TLRow {
   books: number;
 }
 
+interface YahnSide {
+  spBase: number;
+  epaAdj: number;
+  rosterAdj: number;
+  rating: number;
+}
+interface YahnBreak {
+  home: YahnSide;
+  away: YahnSide;
+  hfa: number;
+  week: number;
+}
+
 /** bucket lines into pull-runs (90-min windows), newest first */
 function lineTimeline(lines: LineRowLite[], market: string): TLRow[] {
   const rows = lines
@@ -160,6 +173,7 @@ export default async function GamePage({
   const modelSrs = pred?.predictedSpreadSrs ?? null;
   const modelYahn = pred?.predictedSpreadYahn ?? null;
   const modelTotal = pred?.predictedTotal ?? null;
+  const yb = (pred?.yahnBreakdown ?? null) as YahnBreak | null;
 
   const spEdge =
     modelSp != null && mktHomeMargin != null ? r1(modelSp - mktHomeMargin) : null;
@@ -286,14 +300,21 @@ export default async function GamePage({
             {modelYahn != null && (
               <ModelRow
                 name="Yahn"
-                tag="eye-test tiers"
-                calc="your ranking → tier ratings (edit at /rankings)"
+                tag="SP+ + EPA + roster"
+                calc={
+                  yb
+                    ? `${awayShort} ${signed(yb.away.rating)} vs ${homeShort} ${signed(
+                        yb.home.rating
+                      )} + ${trim(yb.hfa)} HFA`
+                    : "multi-factor composite"
+                }
                 model={spreadForm(modelYahn)}
                 market={mktSpread == null ? null : spreadForm(-mktSpread)}
                 edge={yahnEdge}
               />
             )}
           </div>
+          {yb && <YahnBreakdownPanel yb={yb} away={awayShort} home={homeShort} />}
           <p className="subhead" style={{ marginTop: 12 }}>
             {modelSrs == null
               ? "The spread signal is SP+ only right now."
@@ -714,6 +735,47 @@ function ModelRow({
           <span className="dim">{calc}</span>
         )}
       </div>
+    </div>
+  );
+}
+
+function YahnBreakdownPanel({
+  yb,
+  away,
+  home,
+}: {
+  yb: YahnBreak;
+  away: string;
+  home: string;
+}) {
+  const adj = (n: number) => (n === 0 ? "—" : signed(r1(n)));
+  const row = (label: string, s: YahnSide) => (
+    <div className="mrow">
+      <div className="mrow-top">
+        <strong>{label}</strong>
+        <span className="mono" style={{ marginLeft: "auto" }}>
+          rating <strong>{signed(r1(s.rating))}</strong>
+        </span>
+      </div>
+      <div className="mrow-body mono">
+        <span className="dim">SP+ base</span> {signed(r1(s.spBase))}
+        &nbsp;·&nbsp; <span className="dim">EPA adj</span> {adj(s.epaAdj)}
+        &nbsp;·&nbsp; <span className="dim">roster adj</span> {adj(s.rosterAdj)}
+      </div>
+    </div>
+  );
+  return (
+    <div className="mrows" style={{ marginTop: 10 }}>
+      {row(away, yb.away)}
+      {row(home, yb.home)}
+      <p className="subhead" style={{ margin: "4px 2px 0" }}>
+        SP+ is the backbone. <em>EPA adj</em> nudges toward raw efficiency
+        (weight grows through the season — near zero this early).{" "}
+        <em>Roster adj</em> = talent + returning production + transfer-portal
+        net, and fades to zero by week 5. Home edge for this venue:{" "}
+        <span className="mono">{trim(yb.hfa)}</span> (vs the flat 2.5 SP+/SRS
+        use). Weights are un-calibrated for now.
+      </p>
     </div>
   );
 }

@@ -22,20 +22,20 @@ import { buildTeamResolver } from "../lib/teamResolver";
 
 const prisma = new PrismaClient();
 
-// Per-team samples are small (~15-20 home games over 3 seasons), so we
-// regress HARD toward the league mean — which we compute from the data
-// itself rather than assume. Only a venue with a big, consistent,
-// multi-season residual moves off the average by more than ~1 pt.
-const PRIOR_N = 55; // "phantom games" at the league mean
-const HFA_MIN = 1.5; // true per-team HFA spread is small; clamp the noise
+// Per-team samples are tiny (~15-20 home games over 3 seasons) and the
+// TRUE spread of per-team HFA is small — the literature says almost every
+// program sits within ~1 pt of the league mean, with altitude and a few
+// genuinely hostile venues the only reliable outliers. So we regress very
+// hard toward the league mean (computed from the data, not assumed): a
+// team's own record gets only ~n/(n+PRIOR_N) ≈ 11% of the weight.
+const PRIOR_N = 150; // "phantom games" at the league mean
+const HFA_MIN = 2.2;
 const HFA_MAX = 4.0;
-const PRIOR_FALLBACK = 2.6; // used only if the sample is tiny/degenerate
+const PRIOR_FALLBACK = 2.8; // used only if the sample is tiny/degenerate
 
-// NOTE (v1): uses end-of-season SP+ as the baseline (that's all we store
-// historically). Fine for a residual averaged over many games, but the
-// per-team numbers still carry small-sample noise — teams sitting on the
-// clamp are being pinned by variance, not a proven home edge. Revisit in
-// the calibration pass with more seasons and/or as-of-week ratings.
+// NOTE (v1): baseline is end-of-season SP+ (all we store historically).
+// Fine for a residual averaged over many games. Revisit in the calibration
+// pass with more seasons loaded and/or as-of-week ratings.
 
 interface SpRow {
   year: number;
@@ -132,21 +132,28 @@ async function main() {
     (
       await prisma.team.findMany({
         where: { id: { in: rows.map((r) => r.teamId) } },
-        select: { id: true, canonicalName: true },
+        select: { id: true, canonicalName: true, classification: true },
       })
-    ).map((t) => [t.id, t.canonicalName])
+    ).map((t) => [t.id, { name: t.canonicalName, cls: t.classification }])
   );
-  const sorted = [...rows].sort((a, b) => b.hfa - a.hfa);
+  const sorted = [...rows]
+    .filter((r) => nameById.get(r.teamId)?.cls === "fbs")
+    .sort((a, b) => b.hfa - a.hfa);
+
+  const hist: Record<string, number> = {};
+  for (const r of sorted) {
+    const b = (Math.floor(r.hfa * 4) / 4).toFixed(2);
+    hist[b] = (hist[b] ?? 0) + 1;
+  }
 
   console.log("\n============================================================");
   console.log(`Games used: ${allResiduals.length}   league mean residual: ${leagueMean.toFixed(2)}`);
-  console.log(`TeamHfa rows written: ${rows.length}  (prior ${prior.toFixed(2)} @ n=${PRIOR_N})`);
-  console.log("\n  Strongest home fields:");
-  for (const r of sorted.slice(0, 8))
-    console.log(`    ${(nameById.get(r.teamId) ?? r.teamId).padEnd(22)} ${r.hfa.toFixed(2)}  (n=${r.sampleSize})`);
-  console.log("  Weakest:");
-  for (const r of sorted.slice(-6).reverse())
-    console.log(`    ${(nameById.get(r.teamId) ?? r.teamId).padEnd(22)} ${r.hfa.toFixed(2)}  (n=${r.sampleSize})`);
+  console.log(`TeamHfa rows written: ${rows.length}  (prior ${prior.toFixed(2)} @ n=${PRIOR_N}, clamp ${HFA_MIN}-${HFA_MAX})`);
+  console.log(`\nDistribution (FBS): ${JSON.stringify(hist)}`);
+  console.log("\n  Full FBS list, strongest home field first:\n");
+  const col = (r: (typeof sorted)[number]) =>
+    `    ${(nameById.get(r.teamId)?.name ?? r.teamId).padEnd(24)} ${r.hfa.toFixed(2)}  (n=${r.sampleSize})`;
+  for (const r of sorted) console.log(col(r));
   console.log("============================================================");
 
   await prisma.$disconnect();

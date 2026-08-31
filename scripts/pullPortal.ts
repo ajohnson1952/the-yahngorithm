@@ -39,14 +39,22 @@ function parseArgs(): { season?: number } {
   return { season: i >= 0 && args[i + 1] ? Number(args[i + 1]) : undefined };
 }
 
-// a 0..1 "quality" score for one entry: prefer the composite rating,
-// fall back to a star-derived value, else a replacement-level default.
-const STAR_SCORE: Record<number, number> = { 5: 0.98, 4: 0.89, 3: 0.8, 2: 0.72, 1: 0.66 };
-function entryScore(rating: number | null, stars: number | null): number {
-  if (rating != null && Number.isFinite(rating) && rating > 0) return rating;
-  if (stars != null && STAR_SCORE[stars] != null) return STAR_SCORE[stars];
-  return 0.77; // unrated portal player ≈ low-3-star
+// Value OVER REPLACEMENT for one portal entry, so shedding depth pieces
+// nets ~0 and only real talent moves the needle. The raw quality score is
+// the 247 composite (0..1) if present, else star-derived, else replacement
+// level. We then subtract replacement and floor at 0 — a below-average
+// portal body leaving or arriving shouldn't swing a team's rating.
+const STAR_SCORE: Record<number, number> = { 5: 0.98, 4: 0.92, 3: 0.85, 2: 0.79, 1: 0.75 };
+const REPLACEMENT = 0.8; // ~low-3-star; the floor a roster refills from
+function entryVOR(rating: number | null, stars: number | null): number {
+  let q: number;
+  if (rating != null && Number.isFinite(rating) && rating > 0) q = rating;
+  else if (stars != null && STAR_SCORE[stars] != null) q = STAR_SCORE[stars];
+  else q = 0.8; // unrated ≈ low-3-star
+  return Math.max(0, q - REPLACEMENT);
 }
+
+const NET_CAP = 6; // clamp the per-team net so the portal can't dominate
 
 async function main() {
   const season = parseArgs().season ?? seasonForDate();
@@ -96,7 +104,7 @@ async function main() {
     return a;
   };
   for (const e of entries) {
-    const s = entryScore(e.rating ?? null, e.stars ?? null);
+    const s = entryVOR(e.rating ?? null, e.stars ?? null);
     if (e.destTeamId) {
       const a = bump(e.destTeamId);
       a.inC++;
@@ -118,6 +126,7 @@ async function main() {
     outScore: number;
     netScore: number;
   }
+  const clampNet = (x: number) => Math.max(-NET_CAP, Math.min(NET_CAP, x));
   const netRows: NetRow[] = [...agg.entries()].map(([teamId, a]) => ({
     teamId,
     season,
@@ -125,7 +134,7 @@ async function main() {
     outCount: a.outC,
     inScore: Math.round(a.inS * 100) / 100,
     outScore: Math.round(a.outS * 100) / 100,
-    netScore: Math.round((a.inS - a.outS) * 100) / 100,
+    netScore: Math.round(clampNet(a.inS - a.outS) * 100) / 100,
   }));
 
   await prisma.$transaction([

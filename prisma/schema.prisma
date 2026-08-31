@@ -298,7 +298,10 @@ model ModelPrediction {
   // compared to each other and to the market (see docs/INTERPRETATION_GUIDE.md).
   predictedSpreadSpPlus Float?   // (home_SP+overall - away_SP+overall) + HFA
   predictedSpreadSrs    Float?   // (home_SRS       - away_SRS)         + HFA
-  predictedSpreadYahn   Float?   // (home_yahn      - away_yahn)        + HFA — eye-test tiers
+  predictedSpreadYahn   Float?   // multi-factor Yahn composite + per-team HFA
+  // per-side Yahn component breakdown for the game page:
+  // { home:{spBase,epaAdj,rosterAdj,rating}, away:{...}, hfa, week }
+  yahnBreakdown         Json?
   predictedTotal        Float?   // SP+ efficiency -> points-per-possession -> pace
   homeExpectedPpp       Float?
   awayExpectedPpp       Float?

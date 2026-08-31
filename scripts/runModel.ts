@@ -31,7 +31,11 @@ import {
 } from "../lib/modelConfig";
 import { consensusByGame } from "../lib/consensus";
 import { totalsModel } from "../lib/totals";
-import { tierRatings, yahnRating } from "../lib/yahn";
+import {
+  yahnLeagueContext,
+  yahnTeamRating,
+  type YahnTeamInputs,
+} from "../lib/yahnModel";
 
 const prisma = new PrismaClient();
 
@@ -92,23 +96,47 @@ async function main() {
   });
   const ratingByTeam = new Map(ratings.map((x) => [x.teamId, x]));
 
-  // --- Yahn eye-test: rank -> tier -> rating (3rd spread model) ---
-  const yahn = await prisma.yahnRanking.findMany({
-    where: { season },
-    select: { teamId: true, rank: true },
-  });
-  const yahnRankByTeam = new Map(yahn.map((y) => [y.teamId, y.rank]));
-  const tierRates = tierRatings(
-    ratings
-      .map((r) => r.spPlusOverall)
-      .filter((x): x is number => x != null)
+  // --- Yahn v2: multi-factor composite (SP+ backbone + EPA + roster), then
+  //     per-team HFA. See lib/yahnModel.ts. ---
+  const [advRows, talentRows, returningRows, portalRows, hfaRows] =
+    await Promise.all([
+      prisma.teamAdvancedWeekly.findMany({
+        where: { season },
+        orderBy: { week: "desc" },
+      }),
+      prisma.teamTalent.findMany({ where: { season }, select: { teamId: true, talent: true } }),
+      prisma.teamReturningProduction.findMany({
+        where: { season },
+        select: { teamId: true, percentPPA: true },
+      }),
+      prisma.teamPortalNet.findMany({
+        where: { season },
+        select: { teamId: true, netScore: true },
+      }),
+      prisma.teamHfa.findMany({ select: { teamId: true, hfa: true } }),
+    ]);
+
+  const advByTeam = new Map<string, (typeof advRows)[number]>();
+  for (const a of advRows) if (!advByTeam.has(a.teamId)) advByTeam.set(a.teamId, a); // latest week
+  const talentByTeam = new Map(talentRows.map((r) => [r.teamId, r.talent]));
+  const returningByTeam = new Map(returningRows.map((r) => [r.teamId, r.percentPPA]));
+  const portalByTeam = new Map(portalRows.map((r) => [r.teamId, r.netScore]));
+  const hfaByTeam = new Map(hfaRows.map((r) => [r.teamId, r.hfa]));
+
+  const yahnInputs = (teamId: string): YahnTeamInputs => {
+    const a = advByTeam.get(teamId);
+    return {
+      spPlusOverall: ratingByTeam.get(teamId)?.spPlusOverall ?? null,
+      offPPA: a?.offPPA ?? null,
+      defPPA: a?.defPPA ?? null,
+      talent: talentByTeam.get(teamId) ?? null,
+      returningPct: returningByTeam.get(teamId) ?? null,
+      portalNet: portalByTeam.get(teamId) ?? null,
+    };
+  };
+  const yahnCtx = yahnLeagueContext(
+    [...ratingByTeam.keys()].map((id) => yahnInputs(id))
   );
-  const yahnFor = (teamId: string) =>
-    yahnRating(
-      yahnRankByTeam.get(teamId) ?? null,
-      ratingByTeam.get(teamId)?.spPlusOverall ?? null,
-      tierRates
-    );
 
   const lines = await prisma.line.findMany({
     where: { game: { season, week } },
@@ -136,6 +164,7 @@ async function main() {
     label: string;
     mSp: number;
     mSrs: number | null;
+    mYahn: number | null;
     mkt: number | null;
     edgeSp: number | null;
     edgeSrs: number | null;
@@ -162,9 +191,18 @@ async function main() {
     const mSp = hr.spPlusOverall - ar.spPlusOverall + hfa;
     const mSrs =
       hr.srs != null && ar.srs != null ? hr.srs - ar.srs + hfa : null;
-    const hYahn = yahnFor(g.homeTeamId);
-    const aYahn = yahnFor(g.awayTeamId);
-    const mYahn = hYahn != null && aYahn != null ? hYahn - aYahn + hfa : null;
+
+    // Yahn v2 — composite ratings + per-team HFA (SP+/SRS keep the flat HFA)
+    const yh = yahnTeamRating(yahnInputs(g.homeTeamId), yahnCtx, week);
+    const ya = yahnTeamRating(yahnInputs(g.awayTeamId), yahnCtx, week);
+    const yahnHfa = g.neutralSite
+      ? 0
+      : hfaByTeam.get(g.homeTeamId) ?? HOME_FIELD_ADVANTAGE;
+    const mYahn = yh && ya ? r1(yh.rating - ya.rating + yahnHfa) : null;
+    const yahnBreakdown =
+      yh && ya
+        ? { home: yh, away: ya, hfa: Math.round(yahnHfa * 100) / 100, week }
+        : undefined;
 
     // --- totals (only if we have the offense/defense split) ---
     let totals: ReturnType<typeof totalsModel> | null = null;
@@ -191,6 +229,7 @@ async function main() {
       predictedSpreadSpPlus: mSp,
       predictedSpreadSrs: mSrs,
       predictedSpreadYahn: mYahn,
+      yahnBreakdown: yahnBreakdown as Prisma.InputJsonValue | undefined,
       predictedTotal: totals?.predictedTotal ?? null,
       homeExpectedPpp: totals?.homeExpectedPpp ?? null,
       awayExpectedPpp: totals?.awayExpectedPpp ?? null,
@@ -206,6 +245,7 @@ async function main() {
       label,
       mSp,
       mSrs,
+      mYahn,
       mkt: mktMargin,
       edgeSp: mktMargin != null ? mSp - mktMargin : null,
       edgeSrs: mktMargin != null && mSrs != null ? mSrs - mktMargin : null,
@@ -239,9 +279,9 @@ async function main() {
   console.log("SPREADS — model vs market (home margin, + = home favored)\n");
   console.log(
     "  " + "matchup".padEnd(34) + "SP+".padStart(7) + "SRS".padStart(7) +
-      "market".padStart(8) + "edge".padStart(7) + "  lean"
+      "Yahn".padStart(7) + "market".padStart(8) + "edge".padStart(7) + "  lean"
   );
-  console.log("  " + "-".repeat(72));
+  console.log("  " + "-".repeat(79));
   for (const x of sWithMkt) {
     const big = x.edgeSp != null && Math.abs(x.edgeSp) >= SPREAD_EDGE_THRESHOLD;
     const lean = !big
@@ -253,6 +293,7 @@ async function main() {
       "  " + x.label.padEnd(34) +
         String(r1(x.mSp)).padStart(7) +
         String(x.mSrs == null ? "-" : r1(x.mSrs)).padStart(7) +
+        String(x.mYahn == null ? "-" : r1(x.mYahn)).padStart(7) +
         String(r1(x.mkt!)).padStart(8) +
         String(x.edgeSp == null ? "-" : r1(x.edgeSp)).padStart(7) +
         "  " + lean + (big ? " *" : "")

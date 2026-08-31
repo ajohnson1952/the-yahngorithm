@@ -109,9 +109,10 @@ export default async function RankingsPage() {
     <>
       <h1>My Top 25</h1>
       <p className="subhead">
-        Drag to reorder. Tier bands turn your ranking into a rating: every team in
-        a tier gets that tier&apos;s number (shown on the right). Unranked teams
-        keep their SP+ number. Guide §1.
+        Drag to reorder. Your eye-test board — a reference list for now. The
+        Yahn spread model currently runs on stats only (SP+ + EPA + roster);
+        an opt-in way to fold this ranking in is coming. Tier numbers below
+        preview what each slot would be worth.
       </p>
       {seeded && (
         <p className="subhead" style={{ color: "var(--amber)" }}>
