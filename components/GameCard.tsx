@@ -86,6 +86,9 @@ export function GameCard({ g }: { g: GameView }) {
                   {g.modelSpreadSrs != null
                     ? ` · srs ${signed(-g.modelSpreadSrs)}`
                     : ""}
+                  {g.modelSpreadYahn != null
+                    ? ` · yahn ${signed(-g.modelSpreadYahn)}`
+                    : ""}
                 </span>
               </span>
               <EdgeTag

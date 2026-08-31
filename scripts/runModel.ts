@@ -31,6 +31,7 @@ import {
 } from "../lib/modelConfig";
 import { consensusByGame } from "../lib/consensus";
 import { totalsModel } from "../lib/totals";
+import { tierRatings, yahnRating } from "../lib/yahn";
 
 const prisma = new PrismaClient();
 
@@ -91,6 +92,24 @@ async function main() {
   });
   const ratingByTeam = new Map(ratings.map((x) => [x.teamId, x]));
 
+  // --- Yahn eye-test: rank -> tier -> rating (3rd spread model) ---
+  const yahn = await prisma.yahnRanking.findMany({
+    where: { season },
+    select: { teamId: true, rank: true },
+  });
+  const yahnRankByTeam = new Map(yahn.map((y) => [y.teamId, y.rank]));
+  const tierRates = tierRatings(
+    ratings
+      .map((r) => r.spPlusOverall)
+      .filter((x): x is number => x != null)
+  );
+  const yahnFor = (teamId: string) =>
+    yahnRating(
+      yahnRankByTeam.get(teamId) ?? null,
+      ratingByTeam.get(teamId)?.spPlusOverall ?? null,
+      tierRates
+    );
+
   const lines = await prisma.line.findMany({
     where: { game: { season, week } },
     select: {
@@ -143,6 +162,9 @@ async function main() {
     const mSp = hr.spPlusOverall - ar.spPlusOverall + hfa;
     const mSrs =
       hr.srs != null && ar.srs != null ? hr.srs - ar.srs + hfa : null;
+    const hYahn = yahnFor(g.homeTeamId);
+    const aYahn = yahnFor(g.awayTeamId);
+    const mYahn = hYahn != null && aYahn != null ? hYahn - aYahn + hfa : null;
 
     // --- totals (only if we have the offense/defense split) ---
     let totals: ReturnType<typeof totalsModel> | null = null;
@@ -167,6 +189,7 @@ async function main() {
       gameId: g.id,
       predictedSpreadSpPlus: mSp,
       predictedSpreadSrs: mSrs,
+      predictedSpreadYahn: mYahn,
       predictedTotal: totals?.predictedTotal ?? null,
       homeExpectedPpp: totals?.homeExpectedPpp ?? null,
       awayExpectedPpp: totals?.awayExpectedPpp ?? null,

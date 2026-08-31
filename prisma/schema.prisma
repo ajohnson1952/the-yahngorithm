@@ -43,6 +43,7 @@ model Team {
   aliases         TeamSourceAlias[]
   ratingsWeekly   TeamRatingWeekly[]
   rankings        Ranking[]
+  yahnRankings    YahnRanking[]
   trends          TeamTrend[]
   homeGames       Game[]              @relation("HomeTeam")
   awayGames       Game[]              @relation("AwayTeam")
@@ -80,6 +81,20 @@ model Rivalry {
   teamBId  String
   teamB    Team   @relation("RivalryTeamB", fields: [teamBId], references: [id])
   name     String // e.g. "Iron Bowl"
+}
+
+// ---------- YAHN EYE-TEST RANKING (the "my top 25", drives a 3rd spread model) ----------
+
+model YahnRanking {
+  id        String   @id @default(cuid())
+  season    Int
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  rank      Int // 1..25
+  updatedAt DateTime @updatedAt
+
+  @@unique([season, teamId])
+  @@unique([season, rank])
 }
 
 // ---------- TEAM TRENDS (ATS / SU / O-U splits, recomputed weekly) ----------
@@ -240,6 +255,7 @@ model ModelPrediction {
   // compared to each other and to the market (see docs/INTERPRETATION_GUIDE.md).
   predictedSpreadSpPlus Float?   // (home_SP+overall - away_SP+overall) + HFA
   predictedSpreadSrs    Float?   // (home_SRS       - away_SRS)         + HFA
+  predictedSpreadYahn   Float?   // (home_yahn      - away_yahn)        + HFA — eye-test tiers
   predictedTotal        Float?   // SP+ efficiency -> points-per-possession -> pace
   homeExpectedPpp       Float?
   awayExpectedPpp       Float?

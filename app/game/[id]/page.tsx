@@ -155,6 +155,7 @@ export default async function GamePage({
 
   const modelSp = pred?.predictedSpreadSpPlus ?? null;
   const modelSrs = pred?.predictedSpreadSrs ?? null;
+  const modelYahn = pred?.predictedSpreadYahn ?? null;
   const modelTotal = pred?.predictedTotal ?? null;
 
   const spEdge =
@@ -162,6 +163,10 @@ export default async function GamePage({
   const srsEdge =
     modelSrs != null && mktHomeMargin != null
       ? r1(modelSrs - mktHomeMargin)
+      : null;
+  const yahnEdge =
+    modelYahn != null && mktHomeMargin != null
+      ? r1(modelYahn - mktHomeMargin)
       : null;
   const totEdge =
     modelTotal != null && mktTotal != null ? r1(modelTotal - mktTotal) : null;
@@ -245,6 +250,16 @@ export default async function GamePage({
               }
               edge={srsEdge}
             />
+            {modelYahn != null && (
+              <ModelRow
+                name="Yahn"
+                tag="eye-test tiers"
+                calc="your ranking → tier ratings (edit at /rankings)"
+                model={spreadForm(modelYahn)}
+                market={mktSpread == null ? null : spreadForm(-mktSpread)}
+                edge={yahnEdge}
+              />
+            )}
           </div>
           <p className="subhead" style={{ marginTop: 12 }}>
             {modelSrs == null

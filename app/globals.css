@@ -367,5 +367,74 @@ tr:hover td { background: var(--panel); }
 .prose blockquote { border-left: 2px solid var(--border-bright); margin: 14px 0; padding-left: 14px; color: var(--text-faint); }
 .prose pre { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 12px; }
 
+/* ---------- rankings editor ---------- */
+.login-form {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin: 20px 0; max-width: 420px;
+}
+.login-form label { font-size: 12px; color: var(--text-dim); }
+.login-form input {
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  border-radius: 7px; padding: 8px 10px; font-size: 14px; font-family: var(--sans);
+  flex: 1; min-width: 140px;
+}
+.login-form button, .rk-save, .rk-reset, .admin-btn {
+  background: var(--panel-2); border: 1px solid var(--border-bright); color: var(--text);
+  border-radius: 7px; padding: 8px 14px; font-size: 13px; font-weight: 600;
+  font-family: var(--sans); cursor: pointer;
+}
+.login-form button:hover, .rk-save:hover, .admin-btn:hover { border-color: var(--blue); }
+.rk-save:disabled { opacity: 0.5; cursor: default; }
+.login-err { color: var(--red); font-size: 12px; }
+.rk-ok { color: var(--green); font-size: 12px; font-weight: 600; }
+
+.rk-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 22px; align-items: start; }
+@media (max-width: 780px) { .rk-wrap { grid-template-columns: 1fr; } }
+
+.rk-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.rk-count { margin-left: auto; color: var(--text-faint); font-family: var(--mono); font-size: 12px; }
+
+.rk-list { list-style: none; margin: 0; padding: 0; }
+.rk-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 9px; padding: 8px 10px; margin-bottom: 6px;
+}
+.rk-row.rk-dragging { border-color: var(--blue); opacity: 0.9; z-index: 5; }
+.rk-grip { cursor: grab; color: var(--text-faint); font-size: 14px; touch-action: none; }
+.rk-grip:active { cursor: grabbing; }
+.rk-rank { font-family: var(--mono); font-weight: 700; width: 22px; text-align: right; color: var(--text-dim); }
+.rk-logo { width: 20px; height: 20px; object-fit: contain; border-radius: 4px; flex-shrink: 0; }
+.rk-name { font-weight: 600; font-size: 13.5px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk-rating { color: var(--purple); font-size: 12px; font-weight: 700; }
+.rk-x { background: none; border: none; color: var(--text-faint); font-size: 16px; cursor: pointer; padding: 0 2px; }
+.rk-x:hover { color: var(--red); }
+
+.rk-sep {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--purple); margin: 10px 2px 4px; padding-top: 4px;
+  border-top: 1px dashed color-mix(in srgb, var(--purple) 40%, var(--border));
+}
+
+.rk-side { display: flex; flex-direction: column; gap: 16px; }
+.rk-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+.rk-panel-h { font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 8px; }
+.rk-search {
+  width: 100%; background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 6px; padding: 6px 8px; font-size: 13px; margin-bottom: 6px;
+}
+.rk-add {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  background: none; border: none; color: var(--text); cursor: pointer;
+  padding: 5px 4px; border-radius: 6px; font-size: 12.5px; font-family: var(--sans);
+}
+.rk-add:hover:not(:disabled) { background: var(--panel-2); }
+.rk-add:disabled, .rk-add.rk-in { color: var(--text-faint); cursor: default; }
+.rk-add span:nth-of-type(1):not(.rk-ap-rank) { flex: 1; }
+.rk-add > span:not(.rk-ap-rank):not(.rk-add-plus) { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk-ap-rank { font-family: var(--mono); font-size: 10px; color: var(--amber); width: 18px; }
+.rk-add-plus { color: var(--text-faint); font-weight: 700; }
+
 .empty { color: var(--text-faint); padding: 40px 0; text-align: center; }
 .foot { color: var(--text-faint); font-size: 12px; margin: 40px 0 30px; padding-top: 14px; border-top: 1px solid var(--border); }

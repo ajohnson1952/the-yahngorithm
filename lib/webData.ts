@@ -61,6 +61,7 @@ export interface GameView {
 
   modelSpreadSp: number | null; // predicted home margin
   modelSpreadSrs: number | null;
+  modelSpreadYahn: number | null;
   modelTotal: number | null;
   predictedPossessions: number | null;
 
@@ -196,6 +197,7 @@ export async function getWeekBoard(
     const marketHomeMargin = marketSpread != null ? -marketSpread : null;
     const modelSpreadSp = pred?.predictedSpreadSpPlus ?? null;
     const modelSpreadSrs = pred?.predictedSpreadSrs ?? null;
+    const modelSpreadYahn = pred?.predictedSpreadYahn ?? null;
     const modelTotal = pred?.predictedTotal ?? null;
     const marketTotal = c?.total ?? null;
 
@@ -276,6 +278,7 @@ export async function getWeekBoard(
       books: c?.books ?? 0,
       modelSpreadSp: modelSpreadSp != null ? r1(modelSpreadSp) : null,
       modelSpreadSrs: modelSpreadSrs != null ? r1(modelSpreadSrs) : null,
+      modelSpreadYahn: modelSpreadYahn != null ? r1(modelSpreadYahn) : null,
       modelTotal: modelTotal != null ? r1(modelTotal) : null,
       predictedPossessions:
         pred?.predictedPossessions != null ? r1(pred.predictedPossessions) : null,

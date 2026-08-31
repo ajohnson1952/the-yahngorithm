@@ -12,25 +12,39 @@ happened" — nothing more.
 
 ---
 
-## 1. The two spread models: SP+ and SRS
+## 1. The three spread models: SP+, SRS, and Yahn
 
-We run **two independent power-rating spread models** on every game and store both
-(`ModelPrediction.predictedSpreadSpPlus`, `ModelPrediction.predictedSpreadSrs`).
+We run **three independent power-rating spread models** on every game and store all
+three (`predictedSpreadSpPlus`, `predictedSpreadSrs`, `predictedSpreadYahn`).
 
-| | SP+ | SRS |
-|---|---|---|
-| Source | CFBD `/ratings/sp` | CFBD `/ratings/srs` |
-| What it measures | Opponent-adjusted **play-by-play efficiency** | Opponent-adjusted **scoring margin** |
-| Built to | Predict future performance | Describe what happened |
-| Coverage | FBS only | FBS + most FCS |
-| Offense/defense split | Yes (feeds the totals model too) | No — single number, spread only |
+| | SP+ | SRS | Yahn |
+|---|---|---|---|
+| Source | CFBD `/ratings/sp` (+ Bill C sheet for FCS) | CFBD `/ratings/srs` | your "My Top 25" (`/rankings`) |
+| What it measures | Opponent-adjusted **play-by-play efficiency** | Opponent-adjusted **scoring margin** | **your eye test**, in tiers |
+| Built to | Predict future performance | Describe what happened | Encode a human read the numbers can miss |
+| Coverage | FBS + FCS | FBS + most FCS (once games are played) | whatever you rank; unranked teams fall back to SP+ |
+| Offense/defense split | Yes (feeds the totals model too) | No | No — spread only |
 
-Both are on the same scale ("points better than an average team"), so both models
-are just:
+All three are on the same scale ("points better than an average team"), so each is
+just:
 
 ```
 predicted_margin = home_rating - away_rating + home_field_advantage
 ```
+
+### The Yahn model
+
+You rank your top 25 on `/rankings`. The list is split into fixed tiers (1–4, 5–10,
+11–16, 17–25). **Every team in a tier gets that tier's rating** — the average of the
+SP+ ratings that normally sit in that rank range. Order *within* a tier doesn't move
+the number; that's deliberate ("these four are all elite, I'm not sure of the exact
+order"). Teams you don't rank keep their real SP+ number, so Yahn only diverges from
+SP+ on games involving a team you've ranked.
+
+Because the top tier is flattened, Yahn **pulls the very best teams toward each other**
+— it won't project a 60-point blowout the way raw SP+ will. Where Yahn and SP+
+disagree by a lot, it means your ranking and the efficiency numbers see that team
+differently — treat it like the SP+/SRS gap below: lower confidence, look at why.
 
 ### How to read them together
 
