@@ -76,27 +76,34 @@ export default async function Home({
   return (
     <>
       <div className="weeknav">
-        {prev != null ? (
-          <a href={qs({ week: prev, sort: sp.sort })}>← Week {prev}</a>
-        ) : (
-          <span className="disabled">&nbsp;</span>
-        )}
-        <span className="weeknav-cur">
-          Week {week}
-          <span style={{ color: "var(--text-faint)", fontWeight: 400 }}>
-            {" "}
-            · {season}
-          </span>
-          {week !== thisWeek && (
-            <a href={qs({ sort: sp.sort })} className="weeknav-jump">
-              this week ({thisWeek})
+        <div className="weeknav-ctl">
+          {prev != null ? (
+            <a href={qs({ week: prev, sort: sp.sort })} aria-label={`week ${prev}`}>
+              ‹
             </a>
+          ) : (
+            <span className="off" aria-hidden>
+              ‹
+            </span>
           )}
-        </span>
-        {next != null ? (
-          <a href={qs({ week: next, sort: sp.sort })}>Week {next} →</a>
-        ) : (
-          <span className="disabled">&nbsp;</span>
+          <span className="weeknav-cur">
+            Week {week}
+            <span className="yr">· {season}</span>
+          </span>
+          {next != null ? (
+            <a href={qs({ week: next, sort: sp.sort })} aria-label={`week ${next}`}>
+              ›
+            </a>
+          ) : (
+            <span className="off" aria-hidden>
+              ›
+            </span>
+          )}
+        </div>
+        {week !== thisWeek && (
+          <a href={qs({ sort: sp.sort })} className="weeknav-jump">
+            ↩ this week ({thisWeek})
+          </a>
         )}
       </div>
 

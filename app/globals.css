@@ -91,25 +91,35 @@ a.inline-link:hover { color: var(--blue); }
 
 /* ---------- week nav ---------- */
 .weeknav {
-  display: flex; align-items: baseline; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap;
-  margin: 26px 0 4px;
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 8px 12px; margin: 24px 0 6px;
 }
-.weeknav > a, .weeknav > .disabled {
-  font-size: 13px; font-weight: 500; color: var(--text-dim);
-  padding: 4px 8px; border-radius: 6px;
+/* fixed-width segmented pill so the layout never shifts between weeks */
+.weeknav-ctl {
+  display: inline-flex; align-items: stretch;
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  background: var(--panel);
 }
-.weeknav > a:hover { background: var(--panel); color: var(--text); }
-.weeknav > .disabled { color: var(--text-faint); opacity: 0.4; pointer-events: none; }
+.weeknav-ctl > a,
+.weeknav-ctl > .off {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; font-size: 17px; line-height: 1;
+  color: var(--text-dim); user-select: none;
+}
+.weeknav-ctl > a:hover { background: var(--panel-2); color: var(--text); }
+.weeknav-ctl > .off { color: var(--text-faint); opacity: 0.3; }
 .weeknav-cur {
-  font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
-  display: flex; align-items: baseline; gap: 10px;
+  display: flex; align-items: baseline; gap: 6px; white-space: nowrap;
+  padding: 9px 15px; font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
+  border-left: 1px solid var(--border); border-right: 1px solid var(--border);
 }
+.weeknav-cur .yr { color: var(--text-faint); font-weight: 400; font-size: 13px; }
 .weeknav-jump {
-  font-size: 11px; font-weight: 500; color: var(--blue);
-  border: 1px solid color-mix(in srgb, var(--blue) 35%, var(--border));
-  border-radius: 5px; padding: 1px 6px;
+  font-size: 11.5px; font-weight: 600; color: var(--blue);
+  border: 1px solid color-mix(in srgb, var(--blue) 30%, var(--border));
+  border-radius: 8px; padding: 5px 10px;
 }
+.weeknav-jump:hover { background: color-mix(in srgb, var(--blue) 12%, transparent); }
 
 .board-controls {
   display: flex; align-items: center; justify-content: space-between;
