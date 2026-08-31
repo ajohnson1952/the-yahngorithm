@@ -1,89 +1,69 @@
 # Status
 
-Living checklist. See `README.md` for the architecture overview.
+Living snapshot. `README.md` = architecture, `docs/OPERATIONS.md` = how to run
+it during the season, `docs/CALIBRATION.md` = what the backtests found.
 
-## Done
+## Where it stands (2026 season, week 1)
 
-- [x] Team identity + alias matching (CFBD / Odds API / ESPN → one canonical list)
-- [x] Weekly ratings pull — SP+, SRS, pace
-- [x] Bill Connelly 772-team SP+ loader → FCS coverage (re-centered onto CFBD's scale)
-- [x] Schedule / scores / venue / TV pull
-- [x] Betting lines — live snapshots (The Odds API) + historical backfill 2023–26 (CFBD `/lines`)
-- [x] Dual→triple spread model (SP+, SRS, Yahn) + totals model
-- [x] Situational flags (short week, off bye, travel, revenge, lookahead, letdown)
-- [x] Weather (Open-Meteo) + injuries (ESPN, thin)
-- [x] Pick generation (corroboration required) + ATS/CLV grading
-- [x] AP + Coaches polls, `#rank` badges
-- [x] Team trends — ATS / SU / O-U splits with outlier flags
-- [x] Kalshi prediction markets — win-prob snapshots, per-game panel
-- [x] Market flags — `steam` (dormant until denser snapshots) and `rlm`
-- [x] Webapp — board (edge / kickoff sort, week paging), game detail, picks, guide
-- [x] `/rankings` — drag-and-drop "My Top 25" → Yahn model
-- [x] `/admin` — manual pipeline runs, password-gated
-- [x] GitHub Actions schedule (`.github/workflows/`)
-- [x] Deployed to Render, `pipeline` merged into `main`
-- [x] Totals split around the spread margin (spread & total now consistent)
-- [x] Kalshi per-side data + game-page panel; board edge/kickoff sort toggle
+Everything is built and deployed. The pipeline runs itself on GitHub Actions;
+the webapp is live on Render off `main`. Data through 2018 is loaded for the
+backtests. **We're in "watch football and grade live" mode.**
 
-## Open — needs you
+## Needs you
 
-- [ ] Add repo secrets (GitHub → Settings → Secrets → Actions): `DATABASE_URL`,
-      `CFBD_API_KEY`, `ODDS_API_KEY` — the cron does nothing until these exist
-- [ ] Add `CFBD_API_KEY` + `ODDS_API_KEY` to the Render service env
-- [ ] Set a real Top 25 at `/rankings` (currently seeded from the AP poll)
+- [ ] Confirm `ADMIN_PASSWORD` and `ADMIN_SESSION_SECRET` are set in the Render
+      dashboard (added to `render.yaml` as `sync:false` in the security pass —
+      without them `/admin` + `/rankings` fall back to the public default `2142`).
+- [ ] Run the **Preseason factor refresh** workflow once (GitHub → Actions) to
+      confirm the annual feeds (talent / returning / portal / HFA) work in prod.
 
-## Yahn model v2 (multi-factor rating)
+## Built this cycle
 
-- [x] **Build 1 — data layer.** Factor feeds landed (no model change yet):
-      `pull-talent` (247 composite), `pull-returning` (roster stability),
-      `pull-portal` (transfer net rollup), `pull-advanced` (success rate,
-      explosiveness, havoc, PPO, field position, EPA), `compute-team-hfa`
-      (per-team home edge). New tables + `/admin` buttons + `preseason.yml`.
-- [x] **Build 2 — Yahn v2 composite** wired into `predictedSpreadYahn`:
-      SP+ backbone + EPA adj (ramps up through season) + roster adj (talent
-      z-score nudge + returning + portal net, decays to 0 by wk 5) + per-team
-      HFA. `lib/yahnModel.ts`; breakdown stored (`ModelPrediction.yahnBreakdown`)
-      and shown on the game page. Top 25 no longer feeds the model. Portal
-      rollup switched to value-over-replacement + ±6 cap.
-- [x] **Per-team HFA is rules-based** (2.7 base + altitude bump, ~+1 Wyoming/
-      Air Force down to ~+0.15 UTEP; 11 venues adjusted, rest flat 2.7).
-      Deriving it from history failed even with 7 seasons — `margin − SP+`
-      just measures "favorites don't cover" and the home team is the favorite.
-      2018/19/21/22 game results backfilled; the SP+-residual estimate is kept
-      as a printed diagnostic.
-- [x] **Build 3 — calibration harness.** `scripts/backtestHarness.ts` +
-      `computeAsofRatings.ts` + `TeamRatingAsOf` (point-in-time ridge margin
-      rating with a talent prior — CFBD only serves final SP+). Walk-forward
-      over 2023-25, ~2,200 FBS-vs-FBS games with closing lines.
-      **Verdict: no ATS edge over the closing line.** asof / yahn-heuristic /
-      yahn-fitted / yahn-vs-market all land 49-51.5%, every CI includes 50%,
-      none clears 52.4% break-even; market MAE 12.0 beats all. Roster factors
-      priced in; EPA coefficient stable (~2.9) but too small to act on.
-      → Yahn stays a displayed 3rd opinion, not a betting driver.
-- [x] **Flag / pick-logic backtest** (`scripts/backtestFlags.ts`, 2021-25).
-      Line movement at the close: dead. Help flags (off_bye, revenge): dead.
-      Fade flags (travel/lookahead/letdown): ~53%, season-unstable. `travel`
-      best (54.8%). Pick logic ~52.8% overall, 44-61% by season. **`short_week`
-      corroboration is counterproductive (38.6%).** Full writeup:
-      `docs/CALIBRATION.md`.
-- [x] `generate-picks` corroboration trimmed to travel/lookahead/letdown/revenge
-      (short_week + off_bye dropped; still shown on the board). ~52.8% → 56.4%.
-- [x] `bad_spot` flag — 2+ stacked hurt situational flags → red chip + "Bad
-      spots" board filter. Fade lean, ~57% ATS (n=75). Display only.
-- [ ] Build 4 — Top-25 bounded-prior toggle (deprioritised — Yahn isn't a driver)
+- **Yahn model v2** — `lib/yahnModel.ts`: SP+ backbone + EPA adj (ramps up
+  through the season) + roster adj (talent z-score nudge + returning + portal
+  net, decays to 0 by wk 5) + per-team HFA. Component breakdown on the game
+  page. Factor feeds: `pull-talent` / `pull-returning` / `pull-portal` /
+  `pull-advanced` / `compute-team-hfa`.
+- **Per-team HFA** — rules-based: `2.7 + max(altitude bump, hostile-venue
+  bump)`. Altitude data-supported; hostile list hand-set (LSU/A&M/PSU/Oregon
+  +0.40 … VT/Texas/SC/WVU/Iowa/UW/ND/MissSt/OleMiss/Michigan +0.15). 34
+  venues adjusted, rest flat 2.7. (Deriving it per-team from history failed —
+  see CALIBRATION.md.)
+- **Calibration harness** — `TeamRatingAsOf` (point-in-time ridge margin
+  rating), `backtestHarness.ts`, `backtestFlags.ts`, `backtestYahn.ts`.
+  Verdict: **no ATS edge over the closing line** anywhere — power ratings or
+  flags. Closest to signal: fading travel/trap spots (~53–55%,
+  season-inconsistent) and travel/revenge corroboration of a rating edge
+  (~56–60%, small n). See CALIBRATION.md.
+- **Pick logic** — corroboration set trimmed to `travel` / `lookahead` /
+  `letdown` / `revenge` (`short_week` + `off_bye` dropped — they backtested at
+  or below 50%; still shown on the board). Simulated logic 52.8% → 56.4%.
+- **`bad_spot` flag** — fires on a team with 2+ stacked hurt situational flags.
+  Red chip + "Bad spots" board filter. Display only, doesn't corroborate picks.
+- **Security pass** — hashed admin cookie, timing-safe compare + login
+  throttle, `Secure` cookie in prod, security headers, 20s fetch timeouts,
+  `week` param validation, `saveRanking` input validation, `computeFlags`
+  no longer wipes market flags.
 
-## Open — build backlog
+## Backlog
 
-- [ ] Make Yahn a formal pick corroborator (2-of-3 model agreement) — calibrate first
-- [ ] Kalshi "fair-value gap" flag (static book-vs-market divergence, not just movement)
-- [ ] FCS SRS (pullRatings only iterates SP+ rows today = FBS)
-- [ ] Bowl / postseason games
-- [ ] Better injury source if ESPN stays empty
+- [ ] Isolate the EPA signal as its own small flag (only Yahn component with a
+      stable coefficient vs the market — but small).
+- [ ] Grade all three spread models + every flag live in 2026 (extend
+      `grade-picks`), then revisit whether anything has a real edge.
+- [ ] `steam` needs the gameday cron actually running > once/day (it does now).
+- [ ] Kalshi "fair-value gap" flag (static book-vs-market divergence).
+- [ ] FCS SRS (`pull-ratings` only iterates SP+ rows = FBS today).
+- [ ] Bowl / postseason games.
+- [ ] Better injury source — ESPN's feed is thin, and injuries are the biggest
+      un-priced factor (CALIBRATION.md §4).
+- [ ] Top-25 bounded-prior toggle — deprioritised, Yahn isn't a driver.
 
 ## Known limitations
 
-- SRS is empty in week 1 and noisy through ~week 3 — spread signal is SP+ only early.
-- Rating edges on spreads > ~20 are artifacts (books shade big favorites) — filtered.
-- The Odds API is current-week only; historical lines come from CFBD instead.
-- ESPN's CFB injury feed is thin — an empty report means "unknown," not "clean."
-- `steam` needs line snapshots more than once a day; the gameday workflow provides that.
+- SRS is empty in week 1, noisy through ~week 3 — early spread signal is SP+ only.
+- Rating edges on market spreads > ~20 are artifacts (books shade big favorites) — filtered.
+- The Odds API is current-week only; historical lines come from CFBD.
+- ESPN's CFB injury feed is thin — an empty report means "unknown", not "clean".
+- The market is efficient on everything this tool measures from public data.
+  Treat it as decision support, not an automated betting system.

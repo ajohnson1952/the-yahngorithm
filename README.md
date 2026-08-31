@@ -132,6 +132,15 @@ lib/            data layer + model helpers (webData, cfbd, kalshi, yahn, winProb
 scripts/        the pipeline
 prisma/         schema + migrations
 data/           rivalries, Bill C sheet
-docs/           INTERPRETATION_GUIDE.md
+docs/           see below
 .github/        scheduled workflows
 ```
+
+## Docs
+
+| | |
+|---|---|
+| [`docs/INTERPRETATION_GUIDE.md`](docs/INTERPRETATION_GUIDE.md) | what every number on the site means and how much to trust it (rendered at `/guide`) |
+| [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | how it runs during the season — the automatic schedule, your weekly rhythm, what to do if something breaks |
+| [`docs/CALIBRATION.md`](docs/CALIBRATION.md) | the backtest findings — **no proven ATS edge**; what got built to test it and how to reproduce |
+| [`docs/STATUS.md`](docs/STATUS.md) | current-state snapshot + backlog |
