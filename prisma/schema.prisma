@@ -1,0 +1,212 @@
+// ============================================================
+// CFB Betting Model — Database Schema
+// ============================================================
+// This file is the single source of truth for the database structure.
+// Run `npx prisma migrate dev` after editing this to apply changes.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- TEAM IDENTITY (build this first, get it right) ----------
+
+model Team {
+  id            String   @id @default(cuid())
+  canonicalName String   @unique
+  conference    String?
+  timezone      String?
+  lat           Float?
+  lng           Float?
+
+  aliases         TeamSourceAlias[]
+  ratingsWeekly   TeamRatingWeekly[]
+  homeGames       Game[]              @relation("HomeTeam")
+  awayGames       Game[]              @relation("AwayTeam")
+  injuries        Injury[]
+  gameFlags       GameFlag[]
+  rivalriesAsA    Rivalry[]           @relation("RivalryTeamA")
+  rivalriesAsB    Rivalry[]           @relation("RivalryTeamB")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// This table is the whole point: every source (CFBD, Odds API, ESPN) names
+// teams differently. Every other table below references Team.id ONLY —
+// never a raw name string — so a naming mismatch can only ever break here,
+// in one place, instead of silently corrupting data everywhere downstream.
+model TeamSourceAlias {
+  id         String  @id @default(cuid())
+  teamId     String
+  team       Team    @relation(fields: [teamId], references: [id])
+  source     String  // 'cfbd' | 'odds_api' | 'espn'
+  sourceName String  // the exact string that source uses for this team
+  confidence String  @default("needs_review") // 'confirmed' | 'auto_matched' | 'needs_review'
+
+  createdAt DateTime @default(now())
+
+  @@unique([source, sourceName])
+  @@index([teamId])
+}
+
+model Rivalry {
+  id       String @id @default(cuid())
+  teamAId  String
+  teamA    Team   @relation("RivalryTeamA", fields: [teamAId], references: [id])
+  teamBId  String
+  teamB    Team   @relation("RivalryTeamB", fields: [teamBId], references: [id])
+  name     String // e.g. "Iron Bowl"
+}
+
+// ---------- WEEKLY RATINGS (refreshed Tuesdays, per source SP+ cadence) ----------
+
+model TeamRatingWeekly {
+  id                     String   @id @default(cuid())
+  teamId                 String
+  team                   Team     @relation(fields: [teamId], references: [id])
+  season                 Int
+  week                   Int
+  spPlusOverall          Float?
+  spPlusOffense          Float?
+  spPlusDefense          Float?
+  avgPossessionsPerGame  Float?
+  pulledAt               DateTime @default(now())
+
+  @@unique([teamId, season, week])
+  @@index([season, week])
+}
+
+// ---------- SCHEDULE / RESULTS ----------
+
+model Game {
+  id          String   @id @default(cuid())
+  season      Int
+  week        Int
+  homeTeamId  String
+  homeTeam    Team     @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId  String
+  awayTeam    Team     @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  kickoffTime DateTime
+  venue       String?
+  venueLat    Float?
+  venueLng    Float?
+  homeScore   Int?
+  awayScore   Int?
+  status      String   @default("scheduled") // 'scheduled' | 'final'
+
+  lines             Line[]
+  weather           Weather[]
+  injuries          Injury[]
+  modelPredictions  ModelPrediction[]
+  gameFlags         GameFlag[]
+  picks             Pick[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([season, week])
+}
+
+// ---------- LINES (snapshotted, never overwritten — this is what makes CLV possible) ----------
+
+model Line {
+  id           String   @id @default(cuid())
+  gameId       String
+  game         Game     @relation(fields: [gameId], references: [id])
+  sportsbook   String
+  market       String   // 'spread' | 'total' | 'h2h'
+  lineValue    Float
+  price        Int?     // American odds, e.g. -110
+  snapshotType String   // 'open' | 'daily' | 'close'
+  capturedAt   DateTime @default(now())
+
+  @@index([gameId])
+}
+
+// ---------- WEATHER ----------
+
+model Weather {
+  id               String   @id @default(cuid())
+  gameId           String
+  game             Game     @relation(fields: [gameId], references: [id])
+  windMph          Float?
+  precipProbability Float?
+  tempF            Float?
+  pulledAt         DateTime @default(now())
+
+  @@index([gameId])
+}
+
+// ---------- INJURIES (impact/starter-level players only — filtered by design) ----------
+
+model Injury {
+  id             String   @id @default(cuid())
+  gameId         String
+  game           Game     @relation(fields: [gameId], references: [id])
+  teamId         String
+  team           Team     @relation(fields: [teamId], references: [id])
+  playerName     String
+  position       String?
+  isImpactPlayer Boolean  @default(true)
+  status         String   // 'out' | 'doubtful' | 'questionable'
+  updatedAt      DateTime @updatedAt
+
+  @@index([gameId])
+}
+
+// ---------- MODEL OUTPUT ----------
+
+model ModelPrediction {
+  id                    String   @id @default(cuid())
+  gameId                String
+  game                  Game     @relation(fields: [gameId], references: [id])
+  predictedSpread       Float?
+  predictedTotal        Float?
+  homeExpectedPpp       Float?
+  awayExpectedPpp       Float?
+  predictedPossessions  Float?
+  generatedAt           DateTime @default(now())
+
+  @@index([gameId])
+}
+
+// ---------- SITUATIONAL FLAGS ----------
+
+model GameFlag {
+  id       String  @id @default(cuid())
+  gameId   String
+  game     Game    @relation(fields: [gameId], references: [id])
+  teamId   String
+  team     Team    @relation(fields: [teamId], references: [id])
+  flagType String  // 'lookahead' | 'letdown' | 'short_week' | 'off_bye' | 'travel' | 'revenge'
+  detail   Json?   // e.g. { "distanceMiles": 1800, "tzChange": 2 }
+
+  @@index([gameId])
+}
+
+// ---------- PICKS (the actual output — logged, then graded after the game) ----------
+
+model Pick {
+  id            String    @id @default(cuid())
+  gameId        String
+  game          Game      @relation(fields: [gameId], references: [id])
+  market        String    // 'spread' | 'total'
+  modelLine     Float
+  marketLine    Float
+  edge          Float
+  flagsPresent  Json?     // array of flag_types active at pick time
+  suggestedAt   DateTime  @default(now())
+
+  closingLine   Float?
+  actualResult  Float?
+  atsResult     String?   // 'win' | 'loss' | 'push'
+  gradedAt      DateTime?
+
+  @@index([gameId])
+}
