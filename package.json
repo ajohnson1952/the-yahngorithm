@@ -33,7 +33,8 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "compute-asof-ratings": "tsx --env-file=.env scripts/computeAsofRatings.ts",
-    "backtest-harness": "tsx --env-file=.env scripts/backtestHarness.ts"
+    "backtest-harness": "tsx --env-file=.env scripts/backtestHarness.ts",
+    "backtest-flags": "tsx --env-file=.env scripts/backtestFlags.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
