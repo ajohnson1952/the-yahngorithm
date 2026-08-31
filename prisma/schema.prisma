@@ -170,6 +170,9 @@ model Line {
   lineValue    Float
   price        Int?     // American odds, e.g. -110
   snapshotType String   // 'open' | 'daily' | 'close'
+  // 'odds_api' = live snapshots from The Odds API (current weeks);
+  // 'cfbd'     = historical open/close from CFBD /lines (backfill, past weeks)
+  source       String   @default("odds_api")
   capturedAt   DateTime @default(now())
 
   @@index([gameId])

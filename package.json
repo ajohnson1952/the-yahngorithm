@@ -9,6 +9,7 @@
     "pull-games": "tsx --env-file=.env scripts/pullGames.ts",
     "backfill-team-meta": "tsx --env-file=.env scripts/backfillTeamMeta.ts",
     "pull-lines": "tsx --env-file=.env scripts/pullLines.ts",
+    "pull-historical-lines": "tsx --env-file=.env scripts/pullHistoricalLines.ts",
     "pull-weather": "tsx --env-file=.env scripts/pullWeather.ts",
     "pull-injuries": "tsx --env-file=.env scripts/pullInjuries.ts",
     "prisma:generate": "prisma generate",
