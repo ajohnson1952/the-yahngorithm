@@ -19,7 +19,7 @@ export default function RootLayout({
         <header className="topbar">
           <div className="wrap topbar-inner">
             <a href="/" className="brand">
-              <img className="brand-avatar" src="/joe.png" alt="" />
+              <img className="brand-avatar" src="/joe.jpg" alt="" />
               the yahngorithm
             </a>
             <Nav />
