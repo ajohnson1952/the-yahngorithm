@@ -70,15 +70,9 @@ a.inline-link:hover { color: var(--blue); }
 .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); flex-shrink: 0; }
 .brand-avatar {
   width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-  display: block;
+  object-fit: cover; object-position: center;
   border: 1px solid var(--border-bright);
-  background-color: var(--panel-2);
-  background-image: url(/joe.jpg);
-  background-repeat: no-repeat;
-  /* zoom: 100% = image fits the circle's width; higher = zoomed in */
-  background-size: 210%;
-  /* focal point: x% y% — lower first number = further left, lower second = higher up */
-  background-position: 42% 8%;
+  background: var(--panel-2);
 }
 .nav { display: flex; gap: 4px; margin-left: auto; flex-shrink: 0; }
 @media (max-width: 400px) {

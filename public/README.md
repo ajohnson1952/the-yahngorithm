@@ -2,7 +2,6 @@
 
 Static assets served at the site root (e.g. `public/joe.png` -> `/joe.png`).
 
-Drop the topbar avatar image here as **joe.jpg** — ideally cropped to a
-square of the head (~256×256). The CSS frames it as a 30px circle with
-`object-position: 48% 14%`; adjust that in globals.css (`.brand-avatar`)
-if the crop sits differently.
+`joe.png` is the topbar avatar — a pre-cropped square, shown as a 30px
+circle by `.brand-avatar` in `app/globals.css`. Replace the file in place
+to change it; no CSS changes needed if it stays square.
