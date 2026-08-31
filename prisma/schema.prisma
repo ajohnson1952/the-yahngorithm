@@ -196,6 +196,7 @@ model Game {
   predictionMarkets PredictionMarket[]
   gameFlags         GameFlag[]
   picks             Pick[]
+  modelGrades       ModelGrade[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -348,6 +349,31 @@ model Pick {
   // one logged pick per game per market — first time it qualifies, captured as-is
   @@unique([gameId, market])
   @@index([gameId])
+}
+
+// ---------- MODEL / FLAG GRADING (hindsight-free, vs the closing line) ----------
+// One row per (final game, signal). grade-picks writes these every week so we
+// can see — live, over the 2026 season — whether any spread model or flag
+// actually beats the closing line. `key` is a model ("sp_plus" | "srs" |
+// "yahn") or a flag ("flag:travel", "flag:bad_spot", …).
+model ModelGrade {
+  id           String   @id @default(cuid())
+  gameId       String
+  game         Game     @relation(fields: [gameId], references: [id])
+  season       Int
+  week         Int
+  key          String
+  predMargin   Float?   // model's predicted home margin (null for flags)
+  closeMargin  Float    // home margin implied by the closing line
+  actualMargin Float
+  side         Int      // +1 = bet home, -1 = bet away, 0 = no lean
+  edge         Float?   // |predMargin − closeMargin| for models
+  result       String   // 'win' | 'loss' | 'push'
+  absError     Float?   // |predMargin − actualMargin| for models
+  gradedAt     DateTime @default(now())
+
+  @@unique([gameId, key])
+  @@index([season, week])
 }
 
 // ============================================================

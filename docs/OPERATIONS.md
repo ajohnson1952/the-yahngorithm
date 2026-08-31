@@ -10,7 +10,7 @@ scheduled run failed or you want a fresh pull right now.
 |---|---|---|
 | **Tue weekly** | Tue 14:00 | ratings (SP+ / SRS / pace), polls, this week's schedule, advanced stats + EPA, **opening lines**, Kalshi, situational flags, market flags, run model, generate picks |
 | **Gameday** | Thu 20/23, Fri 18/21/23, Sat 15–23 + Sun 00–04 | **line snapshots** (this is what makes `steam` work), Kalshi, market flags, re-run model, re-generate picks |
-| **Sun results** | Sun 16:00 | final scores, advanced stats, **grade the week's picks** (ATS + CLV), refresh team trends, market flags, run model |
+| **Sun results** | Sun 16:00 | final scores, advanced stats, **grade the week's picks** (ATS + CLV) **and every spread model + flag vs the closing line** (→ the Grades page), refresh team trends, market flags, run model |
 | **Daily** | every day 13:00 | weather forecast, injury report |
 | **Preseason factor refresh** | manual only | talent composite, returning production, transfer portal, per-team HFA — run once preseason and again after the portal windows |
 
@@ -25,7 +25,9 @@ Budget with this schedule: CFBD ~15%/mo, The Odds API ~35%/mo. Comfortable.
    the ones you care about — that's where the flags, trends, Kalshi panel, line
    movement, and the Yahn breakdown all live.
 3. **Saturday** — final line check before kickoff.
-4. **Sunday** — `Sun results` grades everything overnight; look at CLV, not W-L.
+4. **Sunday** — `Sun results` grades everything overnight. Check `/picks` for
+   CLV (not W-L) and `/grades` for how each model + flag is tracking vs the
+   close for the season.
 
 ## What to actually trust
 
@@ -52,10 +54,14 @@ over the closing line.** Use it as decision support:
 - **`/admin` buttons fail in prod** — `CFBD_API_KEY` / `ODDS_API_KEY` also need
   to be in the Render service env.
 
-## Grading the models live (backlog)
+## The Grades page
 
-`grade-picks` currently only grades logged `Pick` rows. To get a hindsight-free
-read on the three spread models and each flag over the 2026 season, extend it
-to also score `predictedSpreadSpPlus` / `predictedSpreadSrs` /
-`predictedSpreadYahn` and every `GameFlag` against the closing line each week.
-By ~week 8 that's the real answer to "does any of this beat the market."
+`grade-picks` (Sunday) now scores **all three spread models and every flag**
+against the closing line on each final game, frozen at first grading, into
+`ModelGrade`. The **Grades** page is the season-to-date scoreboard: ATS record
+and win % for each model (overall + on edge ≥ 2) and each flag, vs the 52.4%
+break-even.
+
+Small samples early — one week is noise. The point is the trend by ~week 8:
+if SP+ / Yahn / a flag is sitting at 50% on 100+ games, that's the honest
+verdict. The backtests say to expect exactly that.

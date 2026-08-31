@@ -96,12 +96,13 @@ secrets: `DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY`. The `/admin` page
 
 | Route | |
 |---|---|
-| `/` | the week's board — grouped by edge, or toggle to kickoff order; page between weeks |
-| `/game/[id]` | full breakdown: three spread models, totals math, flags, line movement, Kalshi panel, weather, injuries, trends, picks |
+| `/` | the week's board — toggle: by edge / by kickoff / bad spots; page between weeks |
+| `/game/[id]` | full breakdown: three spread models + Yahn breakdown, totals math, flags, line movement, Kalshi panel, weather, injuries, trends, picks |
 | `/picks` | season pick log with ATS record + CLV |
-| `/rankings` | "My Top 25" drag-and-drop editor (password `2142`) — a reference list; does not feed the model |
-| `/admin` | manual pipeline runs (password `2142`) |
+| `/grades` | season-to-date: every spread model + every flag graded vs the closing line |
+| `/admin` | manual pipeline runs (password gate) |
 | `/guide` | renders the interpretation guide |
+| `/rankings` | "My Top 25" editor — **parked**, off the nav, not wired to anything |
 
 ---
 

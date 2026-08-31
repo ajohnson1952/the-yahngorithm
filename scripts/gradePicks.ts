@@ -1,14 +1,12 @@
 // ============================================================
-// Grade picks  (PROJECT_BRIEF: "track record matters more than any
-// single prediction")
+// Grade picks + every model + every flag
 // ============================================================
-// For every logged Pick whose game is final and that isn't graded
-// yet: record the actual result, the closing line, whether the pick
-// won ATS, and compute closing-line value.
-//
-// CLV (points) = how much better our number was than the closing
-// number, from our side. Positive CLV over time is the real evidence
-// the process has an edge, even in a season where W-L is noisy.
+// 1. For every logged Pick whose game is final and not yet graded:
+//    actual result, closing line, ATS, and closing-line value (CLV).
+// 2. For every final game with a closing line: grade all three spread
+//    models AND every situational/market flag against that close, into
+//    ModelGrade. This is the hindsight-free record — over the 2026
+//    season it answers "does any of this actually beat the market?"
 //
 // No API calls. Run after games finish (Sunday), or any time.
 //
@@ -16,11 +14,15 @@
 //       npm run grade-picks -- --season 2026 --week 3
 // ============================================================
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { getCurrentSeasonWeek } from "../lib/cfbd";
 import { median } from "../lib/consensus";
 
 const prisma = new PrismaClient();
+
+// flag → which side its presence implies you bet
+const FLAG_FADE = new Set(["short_week", "travel", "lookahead", "letdown", "bad_spot", "rlm"]);
+const FLAG_BACK = new Set(["off_bye", "revenge", "steam"]);
 
 function parseArgs(): { season?: number; week?: number } {
   const args = process.argv.slice(2);
@@ -59,6 +61,122 @@ function closingConsensus(
   const val = median(use.map((l) => l.lineValue));
   if (val == null) return null;
   return market === "spread" ? -val : val; // spread -> home margin
+}
+
+/** Grade the 3 spread models + every flag on this week's final games,
+ *  then print a season-to-date scoreboard. Idempotent (upsert per game+key). */
+async function gradeModelsAndFlags(season: number, week: number) {
+  // freeze the grade at first grading — don't re-score a game once it's in
+  // (a later run-model on a final game would be mild hindsight).
+  const already = new Set(
+    (await prisma.modelGrade.findMany({ where: { season, week }, select: { gameId: true } })).map(
+      (x) => x.gameId
+    )
+  );
+
+  const games = await prisma.game.findMany({
+    where: {
+      season, week, status: "final",
+      homeScore: { not: null }, awayScore: { not: null },
+      id: { notIn: [...already] },
+    },
+    select: {
+      id: true, kickoffTime: true, homeTeamId: true, awayTeamId: true, homeScore: true, awayScore: true,
+      lines: { select: { market: true, lineValue: true, snapshotType: true, capturedAt: true } },
+      gameFlags: { select: { teamId: true, flagType: true } },
+      modelPredictions: { orderBy: { generatedAt: "desc" }, take: 1 },
+    },
+  });
+
+  const rows: Prisma.ModelGradeCreateManyInput[] = [];
+  const outcome = (side: number, cover: number): "win" | "loss" | "push" =>
+    Math.abs(cover) < 1e-9 ? "push" : Math.sign(side) === Math.sign(cover) ? "win" : "loss";
+
+  for (const g of games) {
+    const closeMargin = closingConsensus(g.lines, g.kickoffTime, "spread");
+    if (closeMargin == null) continue;
+    const actualMargin = g.homeScore! - g.awayScore!;
+    const cover = actualMargin - closeMargin; // + = home covered
+
+    // --- spread models ---
+    const p = g.modelPredictions[0];
+    const models: [string, number | null][] = [
+      ["sp_plus", p?.predictedSpreadSpPlus ?? null],
+      ["srs", p?.predictedSpreadSrs ?? null],
+      ["yahn", p?.predictedSpreadYahn ?? null],
+    ];
+    for (const [key, m] of models) {
+      if (m == null) continue;
+      const side = Math.sign(m - closeMargin);
+      if (side === 0) continue;
+      rows.push({
+        gameId: g.id, season, week, key,
+        predMargin: r1(m), closeMargin: r1(closeMargin), actualMargin,
+        side, edge: r1(Math.abs(m - closeMargin)),
+        result: outcome(side, cover), absError: r1(Math.abs(m - actualMargin)),
+      });
+    }
+
+    // --- flags (skip a type that fired on both teams — ambiguous) ---
+    const byType = new Map<string, string[]>();
+    for (const f of g.gameFlags) (byType.get(f.flagType) ?? byType.set(f.flagType, []).get(f.flagType)!).push(f.teamId);
+    for (const [flagType, teamIds] of byType) {
+      if (teamIds.length !== 1) continue;
+      const dir = FLAG_FADE.has(flagType) ? -1 : FLAG_BACK.has(flagType) ? 1 : 0;
+      if (dir === 0) continue;
+      const onHome = teamIds[0] === g.homeTeamId;
+      const side = onHome ? dir : -dir; // fade home = bet away = -1
+      rows.push({
+        gameId: g.id, season, week, key: `flag:${flagType}`,
+        predMargin: null, closeMargin: r1(closeMargin), actualMargin,
+        side, edge: null, result: outcome(side, cover), absError: null,
+      });
+    }
+  }
+
+  for (const row of rows) {
+    await prisma.modelGrade.upsert({
+      where: { gameId_key: { gameId: row.gameId, key: row.key } },
+      update: { ...row, gradedAt: new Date() },
+      create: row,
+    });
+  }
+  console.log(`\nModelGrade rows written this run: ${rows.length}  (${games.length} final games)`);
+
+  // --- season-to-date scoreboard ---
+  const all = await prisma.modelGrade.findMany({
+    where: { season },
+    select: { key: true, result: true, edge: true, absError: true },
+  });
+  if (all.length === 0) return;
+
+  const agg = (pred: (r: (typeof all)[number]) => boolean) => {
+    const s = all.filter(pred);
+    const w = s.filter((x) => x.result === "win").length;
+    const l = s.filter((x) => x.result === "loss").length;
+    const pu = s.filter((x) => x.result === "push").length;
+    const n = w + l;
+    const errs = s.map((x) => x.absError).filter((x): x is number => x != null);
+    return { w, l, pu, n, rate: n ? w / n : 0, mae: errs.length ? mean(errs) : null };
+  };
+  const line = (label: string, a: ReturnType<typeof agg>) =>
+    `  ${label.padEnd(20)} ${`${a.w}-${a.l}${a.pu ? `-${a.pu}` : ""}`.padEnd(11)} ` +
+    `${a.n ? (100 * a.rate).toFixed(1) + "%" : "  –  "}   ` +
+    `${a.mae != null ? `MAE ${a.mae.toFixed(2)}` : ""}`;
+
+  console.log("\n============================================================");
+  console.log(`SEASON ${season} — models vs the closing line (break-even 52.4%)`);
+  console.log("------------------------------------------------------------");
+  for (const k of ["sp_plus", "srs", "yahn"]) {
+    console.log(line(k, agg((r) => r.key === k)));
+    console.log(line(`  ${k} · edge≥2`, agg((r) => r.key === k && (r.edge ?? 0) >= 2)));
+  }
+  console.log("------------------------------------------------------------");
+  console.log(`SEASON ${season} — flags (bet the implied side vs the close)`);
+  console.log("------------------------------------------------------------");
+  const flagKeys = [...new Set(all.map((r) => r.key).filter((k) => k.startsWith("flag:")))].sort();
+  for (const k of flagKeys) console.log(line(k.replace("flag:", ""), agg((r) => r.key === k)));
+  console.log("============================================================");
 }
 
 async function main() {
@@ -149,7 +267,7 @@ async function main() {
   }
 
   console.log("\n============================================================");
-  console.log(`This run:  ${w}-${l}-${pu} ATS`);
+  console.log(`Logged picks this run:  ${w}-${l}-${pu} ATS`);
   if (clvs.length > 0) {
     const beat = clvs.filter((x) => x > 0).length;
     console.log(`CLV:       ${beat}/${clvs.length} beat the close, avg ${signed(mean(clvs))} pts`);
@@ -171,13 +289,15 @@ async function main() {
       }
     }
     console.log("------------------------------------------------------------");
-    console.log(`Season ${season} to date:  ${g.win}-${g.loss}-${g.push} ATS`);
+    console.log(`Logged picks, season ${season} to date:  ${g.win}-${g.loss}-${g.push} ATS`);
     if (sclv.length > 0) {
       const beat = sclv.filter((x) => x > 0).length;
       console.log(`CLV: ${beat}/${sclv.length} beat close, avg ${signed(mean(sclv))} pts`);
     }
   }
-  console.log("============================================================");
+
+  // ---- grade every model + every flag vs the closing line ----
+  await gradeModelsAndFlags(season, week);
 
   await prisma.$disconnect();
 }

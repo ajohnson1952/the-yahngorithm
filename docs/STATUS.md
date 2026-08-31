@@ -47,11 +47,13 @@ backtests. **We're in "watch football and grade live" mode.**
 
 ## Backlog
 
+- [x] **Grade all three spread models + every flag live vs the closing line**
+      (`grade-picks` → `ModelGrade` table → `/grades` page). Frozen at first
+      grading. The season-long verdict.
+- [x] `/rankings` parked — off the nav, banner on the page, route kept so the
+      data + the bounded-prior option survive.
 - [ ] Isolate the EPA signal as its own small flag (only Yahn component with a
       stable coefficient vs the market — but small).
-- [ ] Grade all three spread models + every flag live in 2026 (extend
-      `grade-picks`), then revisit whether anything has a real edge.
-- [ ] `steam` needs the gameday cron actually running > once/day (it does now).
 - [ ] Kalshi "fair-value gap" flag (static book-vs-market divergence).
 - [ ] FCS SRS (`pull-ratings` only iterates SP+ rows = FBS today).
 - [ ] Bowl / postseason games.

@@ -108,11 +108,23 @@ export default async function RankingsPage() {
   return (
     <>
       <h1>My Top 25</h1>
+      <p
+        className="subhead"
+        style={{
+          color: "var(--amber)",
+          border: "1px solid color-mix(in srgb, var(--amber) 30%, var(--border))",
+          borderRadius: 8,
+          padding: "8px 12px",
+        }}
+      >
+        <strong>Parked.</strong> This tool isn&apos;t wired into anything right now
+        — the Yahn model runs on stats only, and the calibration work found no
+        edge to justify folding an eye-test ranking in. Kept here in case that
+        changes. It&apos;s off the nav.
+      </p>
       <p className="subhead">
-        Drag to reorder. Your eye-test board — a reference list for now. The
-        Yahn spread model currently runs on stats only (SP+ + EPA + roster);
-        an opt-in way to fold this ranking in is coming. Tier numbers below
-        preview what each slot would be worth.
+        Drag to reorder. Tier numbers preview what each slot would be worth if it
+        were ever plugged back in.
       </p>
       {seeded && (
         <p className="subhead" style={{ color: "var(--amber)" }}>

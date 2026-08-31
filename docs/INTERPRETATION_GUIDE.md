@@ -68,8 +68,9 @@ picture pulling against the preseason number — look at why.
 > **So: read Yahn as a third opinion and a breakdown of *why* a team rates where it
 > does — not as a betting signal.** It does not feed pick generation.
 
-Your **"My Top 25"** (`/rankings`) does **not** feed this model right now — it's a
-reference list. An opt-in way to fold it in is planned.
+The old **"My Top 25"** eye-test tool (`/rankings`) is **parked** — it's off the
+nav and doesn't feed anything. The calibration work didn't turn up an edge that
+would justify hand-weighting a ranking into the model.
 
 ### How to read them together
 
@@ -335,6 +336,18 @@ finding real value, *regardless of that season's win/loss variance*. Positive
 average CLV with a break-even ATS record is a good sign. Negative CLV with a
 winning record is probably luck. Watch the CLV.
 
+### The Grades page
+
+`/grades` is the wider version of the same idea: **every** spread model (SP+,
+SRS, Yahn) and **every** flag, graded against the closing line on **every** final
+game — not just the games that became logged picks. Each row is a season-to-date
+ATS record and win %, with 52.4% as the break-even mark.
+
+This is the honest, hindsight-free scoreboard for the whole tool. The backtests
+(`CALIBRATION.md`) say to expect everything to hover around 50% — the Grades page
+is where we find out if the live 2026 season agrees. Small samples early; one
+week is noise. Look at where things sit by mid-season on 100+ games.
+
 ---
 
 ## 8. Team trends (ATS / SU / O-U splits)
@@ -424,3 +437,22 @@ perfect.
 **Both flags are corroborators, not the pick.** `rlm` against a team the model
 already dislikes, or `steam` toward a team the model likes, is a green light.
 Pointing the other way, they cancel — stand down.
+
+---
+
+## 10. When the data refreshes
+
+Everything below runs automatically. Times are UTC (subtract 4–5 hrs for
+Eastern). Full detail + your weekly rhythm is in `docs/OPERATIONS.md`.
+
+| When | What updates |
+|---|---|
+| **Tuesday ~14:00** | Ratings (SP+ / SRS / pace), AP + Coaches polls, this week's schedule, advanced stats + EPA, **opening lines**, Kalshi, all flags, the model, picks |
+| **Thu / Fri / Sat (hourly-ish) + Sat night** | **Line snapshots** (this is what feeds `steam`), Kalshi, market flags, model + picks re-run |
+| **Sunday ~16:00** | Final scores, **picks + all models + all flags graded** (see the Grades page), team trends refreshed |
+| **Daily ~13:00** | Weather forecast, injury report |
+| **Preseason (manual)** | Talent composite, returning production, transfer portal, per-team HFA |
+
+So: opening numbers land Tuesday, lines move through the week, and the whole
+board re-scores after each pull. The **Grades** page updates Sunday nights with
+every model's and flag's record against the closing line for the season.

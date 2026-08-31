@@ -444,3 +444,68 @@ export async function getPickLog(season: number) {
 
   return { rows, record, clvAvg, clvBeat, clvCount: clvs.length };
 }
+
+export interface GradeRow {
+  key: string;
+  label: string;
+  kind: "model" | "flag";
+  win: number;
+  loss: number;
+  push: number;
+  n: number;
+  rate: number | null; // win rate on decided (null if none)
+  mae: number | null; // models only
+  bigWin: number; // edge>=2 subset (models only)
+  bigLoss: number;
+}
+
+const GRADE_LABEL: Record<string, string> = {
+  sp_plus: "SP+ model",
+  srs: "SRS model",
+  yahn: "Yahn model",
+};
+
+/** Season-to-date scoreboard: each spread model + each flag vs the closing line. */
+export async function getGradeBoard(season: number) {
+  const grades = await db.modelGrade.findMany({
+    where: { season },
+    select: { key: true, result: true, edge: true, absError: true },
+  });
+
+  const keys = [...new Set(grades.map((g) => g.key))];
+  const order = (k: string) =>
+    k === "sp_plus" ? 0 : k === "srs" ? 1 : k === "yahn" ? 2 : 10;
+
+  const rows: GradeRow[] = keys
+    .map((key) => {
+      const g = grades.filter((x) => x.key === key);
+      const win = g.filter((x) => x.result === "win").length;
+      const loss = g.filter((x) => x.result === "loss").length;
+      const push = g.filter((x) => x.result === "push").length;
+      const n = win + loss;
+      const errs = g.map((x) => x.absError).filter((x): x is number => x != null);
+      const big = g.filter((x) => (x.edge ?? 0) >= 2);
+      return {
+        key,
+        label: GRADE_LABEL[key] ?? key.replace("flag:", ""),
+        kind: (key.startsWith("flag:") ? "flag" : "model") as "model" | "flag",
+        win,
+        loss,
+        push,
+        n,
+        rate: n ? win / n : null,
+        mae: errs.length ? r1(errs.reduce((a, b) => a + b, 0) / errs.length) : null,
+        bigWin: big.filter((x) => x.result === "win").length,
+        bigLoss: big.filter((x) => x.result === "loss").length,
+      };
+    })
+    .sort((a, b) => order(a.key) - order(b.key) || a.label.localeCompare(b.label));
+
+  const gamesGraded = new Set(
+    (await db.modelGrade.findMany({ where: { season }, select: { gameId: true } })).map(
+      (x) => x.gameId
+    )
+  ).size;
+
+  return { rows, gamesGraded };
+}
