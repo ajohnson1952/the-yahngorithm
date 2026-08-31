@@ -269,6 +269,11 @@ a.card:hover .team-name { color: var(--blue); }
 .chip.hurt { border-color: color-mix(in srgb, var(--red) 35%, var(--border)); color: color-mix(in srgb, var(--red) 80%, var(--text)); }
 .chip.help { border-color: color-mix(in srgb, var(--green) 35%, var(--border)); color: color-mix(in srgb, var(--green) 80%, var(--text)); }
 .chip.wx { border-color: color-mix(in srgb, var(--blue) 35%, var(--border)); color: color-mix(in srgb, var(--blue) 85%, var(--text)); }
+.chip.mkt {
+  border-color: color-mix(in srgb, var(--purple) 45%, var(--border));
+  color: color-mix(in srgb, var(--purple) 85%, var(--text));
+  background: color-mix(in srgb, var(--purple) 10%, var(--panel-2));
+}
 
 /* ---------- game-detail: model rows / flag rows / pick rows ---------- */
 .mrows { display: flex; flex-direction: column; gap: 8px; max-width: 780px; }
@@ -435,6 +440,32 @@ tr:hover td { background: var(--panel); }
 .rk-add > span:not(.rk-ap-rank):not(.rk-add-plus) { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rk-ap-rank { font-family: var(--mono); font-size: 10px; color: var(--amber); width: 18px; }
 .rk-add-plus { color: var(--text-faint); font-weight: 700; }
+
+/* ---------- admin ---------- */
+.admin-limits {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; margin: 6px 0 18px; font-size: 12.5px;
+}
+.admin-limits strong { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
+.admin-limits ul { margin: 8px 0 0; padding-left: 18px; color: var(--text-dim); }
+.admin-limits li { margin: 3px 0; }
+
+.admin-grid { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
+.admin-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.admin-card-h { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.admin-card-title { font-weight: 650; font-size: 13.5px; }
+.admin-card-note { color: var(--text-faint); font-size: 11.5px; margin-top: 2px; }
+.admin-btn:disabled { opacity: 0.45; cursor: default; }
+.admin-out {
+  margin: 10px 0 0; padding: 10px; border-radius: 7px; font-size: 11px;
+  background: var(--bg); border: 1px solid var(--border);
+  max-height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+  font-family: var(--mono); color: var(--text-dim);
+}
+.admin-out.err { border-color: color-mix(in srgb, var(--red) 40%, var(--border)); }
+.admin-out-meta { display: block; color: var(--text-faint); margin-bottom: 6px; font-weight: 700; }
+.admin-out.ok .admin-out-meta { color: var(--green); }
+.admin-out.err .admin-out-meta { color: var(--red); }
 
 .empty { color: var(--text-faint); padding: 40px 0; text-align: center; }
 .foot { color: var(--text-faint); font-size: 12px; margin: 40px 0 30px; padding-top: 14px; border-top: 1px solid var(--border); }

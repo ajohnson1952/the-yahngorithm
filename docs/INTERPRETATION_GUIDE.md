@@ -310,3 +310,43 @@ an outlier the same way you'd treat a situational flag — a tiebreaker that add
 confidence when it points the same way as the model, nothing when it doesn't.
 
 Early in the season every split reads "–" until a team has played enough games.
+
+---
+
+## 9. Market flags: reverse line movement and steam
+
+Two flags come from the betting market itself, not the schedule. They show
+as **purple chips**.
+
+### `steam`
+
+The consensus spread made a **fast, synchronized move** toward one team —
+≥ 1.5 points across most books within a few hours. That's the fingerprint of
+real money hitting the market quickly (a syndicate, a respected source). It
+fires on the team the line moved *toward*. Following steam late is usually a
+losing play — the value's already gone — but it tells you which side the
+sharp money is on, which is useful as a corroborator or a "don't fade this"
+signal.
+
+*Needs frequent line snapshots to detect. Until `pull-lines` runs more than
+once a day it will stay quiet — that's expected, not a bug.*
+
+### `rlm` (reverse line movement)
+
+The sportsbook's number moved **toward** one team, while the **Kalshi
+prediction market** (real money, no vig, CFTC-regulated) moved the **other
+way** — on a market with real volume (≥ 500 contracts). 
+
+The read: the public is piling onto the team the book moved toward, and the
+book shaded the line to balance its action — but the sharp, no-vig market
+doesn't agree the team got better. **Lean the other side.** The flag fires on
+the *public* team (the one to fade).
+
+Kalshi's win-probability markets are converted to an implied spread with a
+normal model (σ ≈ 13.5, the historical SD of a CFB result). We're comparing
+*movement direction*, not exact numbers, so the conversion doesn't need to be
+perfect.
+
+**Both are corroborators, not the pick.** `rlm` against a team the model
+already dislikes, or `steam` toward a team the model likes, is a green light.
+Pointing the other way, they cancel — stand down.

@@ -1,7 +1,14 @@
 import type { FlagView, TeamLite } from "../lib/webData";
 
-export const HURT_FLAGS = new Set(["short_week", "travel", "lookahead", "letdown"]);
-export const HELP_FLAGS = new Set(["off_bye", "revenge"]);
+export const HURT_FLAGS = new Set([
+  "short_week",
+  "travel",
+  "lookahead",
+  "letdown",
+  "rlm",
+]);
+export const HELP_FLAGS = new Set(["off_bye", "revenge", "steam"]);
+export const MARKET_FLAGS = new Set(["rlm", "steam"]);
 
 const FLAG_LABEL: Record<string, string> = {
   short_week: "short week",
@@ -10,6 +17,8 @@ const FLAG_LABEL: Record<string, string> = {
   revenge: "revenge",
   lookahead: "lookahead",
   letdown: "letdown",
+  rlm: "reverse line move",
+  steam: "steam",
   wind: "wind",
   slow_pace: "slow pace",
   fast_pace: "fast pace",
@@ -28,6 +37,10 @@ export const FLAG_MEANING: Record<string, string> = {
     "Decent team favored by 13+ this week, with a rivalry or tough opponent (within ~6) next week. Classic trap — fade this team / take the points.",
   letdown:
     "Won an emotional game last week (rivalry or within 3 SP+ pts) and this week's opponent is 10+ SP+ pts weaker. Emotional hangover — fade this team / take the points.",
+  rlm:
+    "The book's number moved toward this team while the Kalshi prediction market (real money, no vig) moved the other way, on a market with real volume. The public is on this team; the sharp market isn't. Lean the other side.",
+  steam:
+    "The consensus spread made a fast, synchronized move toward this team across the books — a sign real money came in on them quickly.",
 };
 
 export function flagDetail(flagType: string, detail: unknown): string {
@@ -49,6 +62,20 @@ export function flagDetail(flagType: string, detail: unknown): string {
       return `then ${d.nextOpponent}`;
     case "letdown":
       return `beat ${d.lastWeekBeat}`;
+    case "rlm":
+      return [
+        d.bookMovePts != null ? `book ${d.bookMovePts}` : "",
+        d.volume != null ? `${d.volume} vol` : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
+    case "steam":
+      return [
+        d.movePts != null ? `${d.movePts} pts` : "",
+        d.hours != null ? `in ${d.hours}h` : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
     default:
       return "";
   }
@@ -61,10 +88,12 @@ export function FlagChip({
   flag: FlagView;
   showTeam?: boolean;
 }) {
-  const cls = HURT_FLAGS.has(flag.flagType)
-    ? "hurt"
-    : HELP_FLAGS.has(flag.flagType)
-      ? "help"
+  const cls = MARKET_FLAGS.has(flag.flagType)
+    ? "mkt"
+    : HURT_FLAGS.has(flag.flagType)
+      ? "hurt"
+      : HELP_FLAGS.has(flag.flagType)
+        ? "help"
       : "wx";
   const det = flagDetail(flag.flagType, flag.detail);
   return (

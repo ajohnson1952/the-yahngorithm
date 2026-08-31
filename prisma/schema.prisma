@@ -184,6 +184,7 @@ model Game {
   weather           Weather[]
   injuries          Injury[]
   modelPredictions  ModelPrediction[]
+  predictionMarkets PredictionMarket[]
   gameFlags         GameFlag[]
   picks             Pick[]
 
@@ -209,6 +210,23 @@ model Line {
   // 'odds_api' = live snapshots from The Odds API (current weeks);
   // 'cfbd'     = historical open/close from CFBD /lines (backfill, past weeks)
   source       String   @default("odds_api")
+  capturedAt   DateTime @default(now())
+
+  @@index([gameId])
+}
+
+// ---------- PREDICTION MARKETS (Kalshi) — snapshotted, for RLM vs the book ----------
+
+model PredictionMarket {
+  id           String   @id @default(cuid())
+  gameId       String
+  game         Game     @relation(fields: [gameId], references: [id])
+  source       String   @default("kalshi")
+  homeWinProb  Float // 0..1, de-vigged
+  homePrevProb Float? // Kalshi's "previous_price" for the home side, for movement
+  volume       Float // total contracts traded on the event (~$ notional)
+  volume24h    Float
+  openInterest Float
   capturedAt   DateTime @default(now())
 
   @@index([gameId])

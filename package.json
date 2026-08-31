@@ -12,6 +12,7 @@
     "pull-lines": "tsx --env-file=.env scripts/pullLines.ts",
     "pull-historical-lines": "tsx --env-file=.env scripts/pullHistoricalLines.ts",
     "pull-weather": "tsx --env-file=.env scripts/pullWeather.ts",
+    "pull-kalshi": "tsx --env-file=.env scripts/pullKalshi.ts",
     "pull-injuries": "tsx --env-file=.env scripts/pullInjuries.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -21,6 +22,7 @@
     "compute-trends": "tsx --env-file=.env scripts/computeTeamTrends.ts",
     "seed-rivalries": "tsx --env-file=.env scripts/seedRivalries.ts",
     "compute-flags": "tsx --env-file=.env scripts/computeFlags.ts",
+    "compute-market-flags": "tsx --env-file=.env scripts/computeMarketFlags.ts",
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start"
@@ -32,14 +34,14 @@
     "@prisma/client": "^5.20.0",
     "next": "^16.3.3",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "tsx": "^4.19.0"
   },
   "devDependencies": {
     "@types/node": "^22.7.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "prisma": "^5.20.0",
-    "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   },
   "allowScripts": {
