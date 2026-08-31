@@ -83,6 +83,28 @@ a.inline-link:hover { color: var(--blue); }
 .nav a:hover { background: var(--panel); color: var(--text); }
 .nav a.active { background: var(--panel-2); color: var(--text); }
 
+/* ---------- week nav ---------- */
+.weeknav {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  margin: 26px 0 4px;
+}
+.weeknav > a, .weeknav > .disabled {
+  font-size: 13px; font-weight: 500; color: var(--text-dim);
+  padding: 4px 8px; border-radius: 6px;
+}
+.weeknav > a:hover { background: var(--panel); color: var(--text); }
+.weeknav > .disabled { color: var(--text-faint); opacity: 0.4; pointer-events: none; }
+.weeknav-cur {
+  font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+  display: flex; align-items: baseline; gap: 10px;
+}
+.weeknav-jump {
+  font-size: 11px; font-weight: 500; color: var(--blue);
+  border: 1px solid color-mix(in srgb, var(--blue) 35%, var(--border));
+  border-radius: 5px; padding: 1px 6px;
+}
+
 /* ---------- headings ---------- */
 h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 26px 0 4px; }
 h2 { font-size: 15px; font-weight: 650; margin: 28px 0 12px; letter-spacing: -0.01em; }

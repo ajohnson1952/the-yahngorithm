@@ -84,9 +84,20 @@ export function GameCard({ g }: { g: GameView }) {
                 underLabel="away"
               />
             </>
+          ) : g.modelSpreadSp != null ? (
+            <>
+              <span className="mm-line">
+                <span className="mkt mono">
+                  {teamShort(g.home)} {spreadStr(-g.modelSpreadSp)}
+                </span>
+              </span>
+              <span className="mm-line">
+                <span className="na">model · no market line</span>
+              </span>
+            </>
           ) : (
             <span className="mm-line">
-              <span className="na">{g.hasModel ? "no line yet" : "—"}</span>
+              <span className="na">—</span>
             </span>
           )}
         </div>
@@ -113,9 +124,24 @@ export function GameCard({ g }: { g: GameView }) {
                 underLabel="UNDER"
               />
             </>
+          ) : g.modelTotal != null ? (
+            <>
+              <span className="mm-line">
+                <span className="mkt mono">{trim(g.modelTotal)}</span>
+              </span>
+              <span className="mm-line">
+                <span className="na">
+                  model
+                  {g.predictedPossessions != null
+                    ? ` · ${trim(g.predictedPossessions)} poss`
+                    : ""}{" "}
+                  · no market total
+                </span>
+              </span>
+            </>
           ) : (
             <span className="mm-line">
-              <span className="na">{g.hasModel ? "no total yet" : "—"}</span>
+              <span className="na">—</span>
             </span>
           )}
         </div>

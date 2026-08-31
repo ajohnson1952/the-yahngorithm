@@ -26,3 +26,16 @@ export async function currentWeek(season: number = currentSeason()): Promise<num
   });
   return last?.week ?? 1;
 }
+
+/** Every week number that has at least one game this season, ascending. */
+export async function weeksWithGames(
+  season: number = currentSeason()
+): Promise<number[]> {
+  const rows = await db.game.findMany({
+    where: { season },
+    distinct: ["week"],
+    select: { week: true },
+    orderBy: { week: "asc" },
+  });
+  return rows.map((r) => r.week);
+}

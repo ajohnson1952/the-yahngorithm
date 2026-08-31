@@ -1,4 +1,4 @@
-import { currentSeason, currentWeek } from "../lib/currentWeek";
+import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
 import { getWeekBoard } from "../lib/webData";
 import { GameCard } from "../components/GameCard";
 
@@ -10,7 +10,7 @@ const RANK_LABEL: Record<number, string> = {
   2: "Flagged games",
   3: "Big-favorite edges (model artifact — usually noise, see Guide §2)",
   4: "Everything else",
-  6: "FBS vs FCS",
+  6: "No model yet",
 };
 
 export default async function Home({
@@ -20,11 +20,17 @@ export default async function Home({
 }) {
   const season = currentSeason();
   const sp = await searchParams;
-  const week = sp.week ? Number(sp.week) : await currentWeek(season);
+  const thisWeek = await currentWeek(season);
+  const week = sp.week ? Number(sp.week) : thisWeek;
 
-  const board = await getWeekBoard(season, week);
+  const [board, weeks] = await Promise.all([
+    getWeekBoard(season, week),
+    weeksWithGames(season),
+  ]);
 
-  // group by sortRank, keeping the within-group order from getWeekBoard
+  const prev = weeks.filter((w) => w < week).pop() ?? null;
+  const next = weeks.find((w) => w > week) ?? null;
+
   const groups = new Map<number, typeof board>();
   for (const g of board) {
     const arr = groups.get(g.sortRank) ?? [];
@@ -36,19 +42,38 @@ export default async function Home({
 
   return (
     <>
-      <h1>
-        Week {week}
-        <span style={{ color: "var(--text-faint)", fontWeight: 400, fontSize: 15 }}>
-          {" "}
-          · {season}
+      <div className="weeknav">
+        {prev != null ? (
+          <a href={`/?week=${prev}`}>← Week {prev}</a>
+        ) : (
+          <span className="disabled">&nbsp;</span>
+        )}
+        <span className="weeknav-cur">
+          Week {week}
+          <span style={{ color: "var(--text-faint)", fontWeight: 400 }}>
+            {" "}
+            · {season}
+          </span>
+          {week !== thisWeek && (
+            <a href="/" className="weeknav-jump">
+              this week ({thisWeek})
+            </a>
+          )}
         </span>
-      </h1>
+        {next != null ? (
+          <a href={`/?week=${next}`}>Week {next} →</a>
+        ) : (
+          <span className="disabled">&nbsp;</span>
+        )}
+      </div>
+
       <p className="subhead">
         {board.length} games ·{" "}
         {pickCount === 0
           ? "no picks this week — the model and the market agree where it counts"
           : `${pickCount} pick${pickCount > 1 ? "s" : ""} logged`}
-        . Numbers are the consensus across sportsbooks; "model" is our projection.
+        . Numbers are the consensus across sportsbooks; &quot;model&quot; is our
+        projection.
       </p>
 
       {[0, 1, 2, 3, 4, 6].map((rank) => {
@@ -70,7 +95,7 @@ export default async function Home({
 
       <p className="foot">
         Decision support, not a guarantee. Read the{" "}
-        <a href="/guide" style={{ color: "var(--blue)" }}>
+        <a href="/guide" className="inline-link" style={{ color: "var(--blue)" }}>
           interpretation guide
         </a>{" "}
         before acting on anything here.
