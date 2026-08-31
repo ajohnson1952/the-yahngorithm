@@ -455,6 +455,7 @@ export interface GradeRow {
   n: number;
   rate: number | null; // win rate on decided (null if none)
   mae: number | null; // models only
+  closeMae: number | null; // the closing line's MAE over this model's same games
   bigWin: number; // edge>=2 subset (models only)
   bigLoss: number;
 }
@@ -465,11 +466,17 @@ const GRADE_LABEL: Record<string, string> = {
   yahn: "Yahn model",
 };
 
+const meanAbs = (a: number[]) =>
+  a.length ? r1(a.reduce((s, x) => s + Math.abs(x), 0) / a.length) : null;
+
 /** Season-to-date scoreboard: each spread model + each flag vs the closing line. */
 export async function getGradeBoard(season: number) {
   const grades = await db.modelGrade.findMany({
     where: { season },
-    select: { key: true, result: true, edge: true, absError: true },
+    select: {
+      gameId: true, key: true, result: true, edge: true,
+      absError: true, closeMargin: true, actualMargin: true,
+    },
   });
 
   const keys = [...new Set(grades.map((g) => g.key))];
@@ -483,29 +490,33 @@ export async function getGradeBoard(season: number) {
       const loss = g.filter((x) => x.result === "loss").length;
       const push = g.filter((x) => x.result === "push").length;
       const n = win + loss;
+      const isModel = !key.startsWith("flag:");
       const errs = g.map((x) => x.absError).filter((x): x is number => x != null);
       const big = g.filter((x) => (x.edge ?? 0) >= 2);
       return {
         key,
         label: GRADE_LABEL[key] ?? key.replace("flag:", ""),
-        kind: (key.startsWith("flag:") ? "flag" : "model") as "model" | "flag",
+        kind: (isModel ? "model" : "flag") as "model" | "flag",
         win,
         loss,
         push,
         n,
         rate: n ? win / n : null,
-        mae: errs.length ? r1(errs.reduce((a, b) => a + b, 0) / errs.length) : null,
+        mae: meanAbs(errs),
+        // closing line's MAE over exactly the games this model graded
+        closeMae: isModel
+          ? meanAbs(g.map((x) => x.closeMargin - x.actualMargin))
+          : null,
         bigWin: big.filter((x) => x.result === "win").length,
         bigLoss: big.filter((x) => x.result === "loss").length,
       };
     })
     .sort((a, b) => order(a.key) - order(b.key) || a.label.localeCompare(b.label));
 
-  const gamesGraded = new Set(
-    (await db.modelGrade.findMany({ where: { season }, select: { gameId: true } })).map(
-      (x) => x.gameId
-    )
-  ).size;
+  const byGame = new Map(grades.map((g) => [g.gameId, g]));
+  const closeMaeAll = meanAbs(
+    [...byGame.values()].map((g) => g.closeMargin - g.actualMargin)
+  );
 
-  return { rows, gamesGraded };
+  return { rows, gamesGraded: byGame.size, closeMaeAll };
 }

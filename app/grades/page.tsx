@@ -21,9 +21,30 @@ function Rate({ rate }: { rate: number | null }) {
   );
 }
 
+/** model MAE next to the closing line's MAE on the same games */
+function Mae({ mae, close }: { mae: number | null; close: number | null }) {
+  if (mae == null) return <span style={{ color: "var(--text-faint)" }}>–</span>;
+  const beat = close != null && mae < close;
+  return (
+    <>
+      <span
+        className="mono"
+        style={{ color: beat ? "var(--green)" : "var(--text)", fontWeight: beat ? 700 : 400 }}
+      >
+        {mae.toFixed(1)}
+      </span>
+      {close != null && (
+        <div style={{ fontSize: 11, color: "var(--text-faint)" }}>
+          close {close.toFixed(1)}
+        </div>
+      )}
+    </>
+  );
+}
+
 export default async function GradesPage() {
   const season = currentSeason();
-  const { rows, gamesGraded } = await getGradeBoard(season);
+  const { rows, gamesGraded, closeMaeAll } = await getGradeBoard(season);
   const models = rows.filter((r) => r.kind === "model");
   const flags = rows.filter((r) => r.kind === "flag");
 
@@ -51,8 +72,10 @@ export default async function GradesPage() {
         market (a win = that side covered the close). <strong>Win %</strong> is of
         decided bets; 52.4% is break-even at −110. <strong>Edge ≥ 2</strong> = only
         games the model was ≥ 2 pts off the close. <strong>MAE</strong> = average
-        miss between the predicted and actual margin, in points (the closing line
-        itself is ~12.0 — lower is better).
+        miss between the predicted and actual final margin, in points — with the
+        closing line&apos;s own MAE on the same games below it. Lower is better;
+        green = the model beat the market at raw prediction. (Beating the market
+        on MAE is a different thing from beating it ATS.)
       </p>
 
       {rows.length === 0 ? (
@@ -62,6 +85,13 @@ export default async function GradesPage() {
       ) : (
         <>
           <h2>Spread models vs. the close</h2>
+          {closeMaeAll != null && (
+            <p className="subhead" style={{ marginTop: 0 }}>
+              The closing line missed the final margin by{" "}
+              <strong className="mono">{closeMaeAll.toFixed(1)}</strong> points on
+              average across these {gamesGraded} games — that&apos;s the bar.
+            </p>
+          )}
           <div style={{ overflowX: "auto" }}>
             <table>
               <thead>
@@ -89,7 +119,9 @@ export default async function GradesPage() {
                         ? "–"
                         : `${r.bigWin}–${r.bigLoss}`}
                     </td>
-                    <td className="num mono">{r.mae ?? "–"}</td>
+                    <td className="num">
+                      <Mae mae={r.mae} close={r.closeMae} />
+                    </td>
                   </tr>
                 ))}
               </tbody>

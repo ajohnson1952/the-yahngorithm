@@ -470,7 +470,7 @@ every model's and flag's record against the closing line for the season.
 | **cover** | A side "covers" when it beats the spread (a −7 favorite that wins by 10 covers; by 3 does not). |
 | **break-even (52.4%)** | The win rate you need at standard −110 odds just to not lose money (risk 110 to win 100). |
 | **edge** | Predicted margin − market margin, in points. How far the model disagrees with the line. |
-| **MAE** | Mean absolute error — the average size of the miss between a predicted margin and the actual result. Lower = more accurate. The closing line's MAE is ~12 points; that's the bar. |
+| **MAE** | Mean absolute error — the average size of the miss between a predicted margin and the actual result. Lower = more accurate. The Grades page shows each model's MAE next to the **closing line's own MAE** on the same games (~12 points over a full season) — green means the model out-predicted the market. Note: beating the market on MAE is *not* the same as beating it ATS. |
 | **CLV** | Closing-line value — how many points better your number was than the closing line, from your side. The single best indicator that a process is finding value. |
 | **the close / closing line** | The final line right before kickoff — the sharpest price the market makes. Everything here is graded against it. |
 | **SP+** | Bill Connelly's tempo- and opponent-adjusted efficiency rating (points better than average). Predictive. |
