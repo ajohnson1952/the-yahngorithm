@@ -456,3 +456,31 @@ Eastern). Full detail + your weekly rhythm is in `docs/OPERATIONS.md`.
 So: opening numbers land Tuesday, lines move through the week, and the whole
 board re-scores after each pull. The **Grades** page updates Sunday nights with
 every model's and flag's record against the closing line for the season.
+
+---
+
+## Glossary
+
+| Term | Meaning |
+|---|---|
+| **ATS** | Against the spread. A bet/record measured against the point spread, not who won outright. |
+| **SU** | Straight up. Who won the game, ignoring the spread. |
+| **O/U** | Over/under — the total points line. |
+| **push** | A tie against the number — the bet neither wins nor loses. Shown as the third figure in a record (6–2–**1**). |
+| **cover** | A side "covers" when it beats the spread (a −7 favorite that wins by 10 covers; by 3 does not). |
+| **break-even (52.4%)** | The win rate you need at standard −110 odds just to not lose money (risk 110 to win 100). |
+| **edge** | Predicted margin − market margin, in points. How far the model disagrees with the line. |
+| **MAE** | Mean absolute error — the average size of the miss between a predicted margin and the actual result. Lower = more accurate. The closing line's MAE is ~12 points; that's the bar. |
+| **CLV** | Closing-line value — how many points better your number was than the closing line, from your side. The single best indicator that a process is finding value. |
+| **the close / closing line** | The final line right before kickoff — the sharpest price the market makes. Everything here is graded against it. |
+| **SP+** | Bill Connelly's tempo- and opponent-adjusted efficiency rating (points better than average). Predictive. |
+| **SRS** | Simple Rating System — opponent-adjusted average scoring margin. Descriptive; empty until ~week 3. |
+| **EPA** | Expected points added (per play) — how much each play changed the team's expected points. A raw efficiency measure. |
+| **PPA** | CFBD's name for EPA (predicted points added). Same thing. |
+| **HFA** | Home-field advantage, in points. Flat 2.5 for SP+/SRS; per-venue (2.7 + altitude/hostile bump) for Yahn. |
+| **HFA base / altitude / hostile** | The three parts of the Yahn per-team home number (see §1). |
+| **RLM** | Reverse line movement — the book's number moves toward the side the *public* is betting while the sharp signal points the other way. |
+| **steam** | A fast, synchronized line move across books — the fingerprint of sharp money hitting quickly. |
+| **talent composite** | The 247Sports team talent number — accumulated recruiting rankings, a proxy for raw roster ability. |
+| **returning production** | The share of last year's output (measured in EPA) that's back this season — a continuity/experience measure. |
+| **portal net** | Transfer-portal value in minus value out, per team — captures roster churn the preseason ratings underweight. |

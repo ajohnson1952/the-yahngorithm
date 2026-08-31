@@ -46,6 +46,15 @@ export default async function GradesPage() {
         . {gamesGraded} game{gamesGraded === 1 ? "" : "s"} graded so far.
       </p>
 
+      <p className="subhead" style={{ fontSize: 12 }}>
+        <strong>ATS</strong> = record betting the side the model favored over the
+        market (a win = that side covered the close). <strong>Win %</strong> is of
+        decided bets; 52.4% is break-even at −110. <strong>Edge ≥ 2</strong> = only
+        games the model was ≥ 2 pts off the close. <strong>MAE</strong> = average
+        miss between the predicted and actual margin, in points (the closing line
+        itself is ~12.0 — lower is better).
+      </p>
+
       {rows.length === 0 ? (
         <p className="empty">
           Nothing graded yet — this fills in after the first Sunday of results.
