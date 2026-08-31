@@ -28,14 +28,17 @@ html, body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 a { color: inherit; text-decoration: none; }
-a:hover { color: var(--blue); }
+.prose a:hover,
+a.inline-link:hover { color: var(--blue); }
 
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
 .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
+@media (max-width: 560px) { .wrap { padding: 0 14px; } }
 
 /* ---------- top bar ---------- */
 .topbar {
@@ -49,8 +52,11 @@ a:hover { color: var(--blue); }
 .topbar-inner {
   display: flex;
   align-items: center;
-  gap: 22px;
-  height: 56px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-height: 56px;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 .brand {
   font-weight: 700;
@@ -59,9 +65,14 @@ a:hover { color: var(--blue); }
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
-.brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); }
-.nav { display: flex; gap: 4px; margin-left: auto; }
+.brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); flex-shrink: 0; }
+.nav { display: flex; gap: 4px; margin-left: auto; flex-shrink: 0; }
+@media (max-width: 400px) {
+  .nav a { padding: 6px 8px; }
+  .topbar-inner { gap: 8px; }
+}
 .nav a {
   padding: 6px 12px;
   border-radius: 7px;
@@ -88,6 +99,9 @@ h2 { font-size: 15px; font-weight: 650; margin: 28px 0 12px; letter-spacing: -0.
 
 /* ---------- game card ---------- */
 .card {
+  display: block;
+  position: relative;
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -95,8 +109,8 @@ h2 { font-size: 15px; font-weight: 650; margin: 28px 0 12px; letter-spacing: -0.
   margin-bottom: 10px;
   transition: border-color 0.12s, background 0.12s;
 }
-.card { position: relative; overflow: hidden; }
-.card:hover { border-color: var(--border-bright); background: var(--panel-2); }
+a.card:hover { border-color: var(--border-bright); background: var(--panel-2); }
+a.card:hover .team-name { color: var(--blue); }
 .card.pick {
   border-color: color-mix(in srgb, var(--amber) 45%, var(--border));
   background: color-mix(in srgb, var(--amber) 5%, var(--panel));
@@ -111,12 +125,16 @@ h2 { font-size: 15px; font-weight: 650; margin: 28px 0 12px; letter-spacing: -0.
 
 .card-grid {
   display: grid;
-  grid-template-columns: minmax(210px, 1.3fr) 1fr 1fr auto;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) minmax(140px, auto);
   gap: 18px;
   align-items: center;
 }
-@media (max-width: 760px) {
+/* grid/flex items default to min-width:auto, which lets long unbreakable
+   text blow out the track width — force every cell to be allowed to shrink */
+.card-grid > * { min-width: 0; }
+@media (max-width: 860px) {
   .card-grid { grid-template-columns: 1fr; gap: 12px; }
+  .rail { align-items: flex-start; min-width: 0; }
 }
 
 .matchup { display: flex; flex-direction: column; gap: 6px; }
@@ -134,9 +152,10 @@ h2 { font-size: 15px; font-weight: 650; margin: 28px 0 12px; letter-spacing: -0.
 /* ---------- market vs model block ---------- */
 .mm {
   display: flex; flex-direction: column; gap: 3px;
+  min-width: 0; overflow-wrap: anywhere;
 }
 .mm-label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
-.mm-line { display: flex; align-items: baseline; gap: 8px; font-family: var(--mono); }
+.mm-line { display: flex; align-items: baseline; gap: 8px; font-family: var(--mono); flex-wrap: wrap; }
 .mm-line .mkt { font-size: 15px; font-weight: 650; }
 .mm-line .mdl { font-size: 12px; color: var(--text-dim); }
 .mm-line .na { color: var(--text-faint); font-size: 12px; font-family: var(--sans); }
@@ -150,8 +169,11 @@ h2 { font-size: 15px; font-weight: 650; margin: 28px 0 12px; letter-spacing: -0.
 .edge.small { color: var(--text-faint); background: transparent; padding-left: 0; }
 
 /* ---------- right rail: flags + pick ---------- */
-.rail { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; min-width: 150px; }
-@media (max-width: 760px) { .rail { align-items: flex-start; } }
+.rail { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+@media (max-width: 860px) {
+  .rail { align-items: flex-start; }
+  .pick-side { text-align: left; }
+}
 
 .pick-badge {
   display: inline-flex; align-items: center; gap: 6px;
@@ -166,7 +188,7 @@ h2 { font-size: 15px; font-weight: 650; margin: 28px 0 12px; letter-spacing: -0.
 .res.win { color: var(--green); } .res.loss { color: var(--red); } .res.push { color: var(--text-dim); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
-@media (max-width: 760px) { .chips { justify-content: flex-start; } }
+@media (max-width: 860px) { .chips { justify-content: flex-start; } }
 .chip {
   font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 5px;
   background: var(--panel-2); border: 1px solid var(--border); color: var(--text-dim);
@@ -202,7 +224,8 @@ tr:hover td { background: var(--panel); }
 .prose p, .prose li { color: var(--text-dim); }
 .prose strong { color: var(--text); }
 .prose code { font-family: var(--mono); background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
-.prose table { margin: 14px 0; }
+.prose .table-scroll { margin: 14px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.prose .table-scroll table { margin: 0; min-width: 480px; }
 .prose td { color: var(--text-dim); vertical-align: top; }
 .prose blockquote { border-left: 2px solid var(--border-bright); margin: 14px 0; padding-left: 14px; color: var(--text-faint); }
 .prose pre { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 12px; }

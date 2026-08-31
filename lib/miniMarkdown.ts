@@ -38,7 +38,7 @@ function renderTable(rows: string[]): string {
         `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`
     )
     .join("");
-  return `<table><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`;
+  return `<div class="table-scroll"><table><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`;
 }
 
 export function renderMarkdown(md: string): string {
