@@ -42,9 +42,12 @@ adjustments, then uses a **per-team home-field number** instead of the flat 2.5:
 - **Roster adjustment** — where the roster disagrees with SP+: 247 talent composite,
   returning production (continuity), and net transfer-portal value. Biggest in the
   preseason, fades to zero by about week 5 as real results pile up.
-- **Per-team HFA** — measured from years of home results vs SP+ expectation, then
-  regressed hard toward the ~3-pt league average. Altitude venues and a few genuinely
-  hostile ones sit a bit higher; most teams land 2.5–3.5.
+- **Per-team HFA** — a **2.7-pt base** for every team, plus an **altitude bump**
+  (up to ~+1 for Wyoming / Air Force, ~+0.5 for Colorado / BYU / Utah / the Mountain
+  West). We tried deriving a venue-specific number for all 133 teams from seven years
+  of results and couldn't — at that sample size the estimate just measures "favorites
+  don't cover the number," and the home team is nearly always the favorite. Altitude
+  is the one venue effect that survives. (SP+ and SRS keep a flat 2.5.)
 
 The game page shows the full breakdown (SP+ base, EPA adj, roster adj, HFA) for each
 team. **The weights are not calibrated yet** — treat Yahn as the softest of the three

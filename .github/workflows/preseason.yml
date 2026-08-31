@@ -1,8 +1,9 @@
 # Annual / preseason refresh of the slow-moving Yahn model factor feeds:
 # team talent composite, returning production, transfer portal, and the
-# per-team home-field-advantage recompute. Manual trigger — run it once
-# in the preseason and again after the spring/summer portal windows.
-#   CFBD cost: ~6 calls total. No schedule.
+# per-team home-field-advantage recompute (rules-based: 2.7 base +
+# altitude). Manual trigger — run it once in the preseason and again
+# after the spring/summer portal windows.
+#   CFBD cost: ~10 calls total. No schedule.
 name: Preseason factor refresh
 
 on:

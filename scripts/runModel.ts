@@ -66,7 +66,10 @@ async function main() {
       ? { season: override.season, week: override.week }
       : await getCurrentSeasonWeek();
 
-  console.log(`Model run — season ${season}, week ${week}  (HFA ${HOME_FIELD_ADVANTAGE})\n`);
+  console.log(
+    `Model run — season ${season}, week ${week}  ` +
+      `(SP+/SRS HFA ${HOME_FIELD_ADVANTAGE}; Yahn uses per-team HFA)\n`
+  );
 
   const games = await prisma.game.findMany({
     where: {

@@ -44,11 +44,16 @@ Living checklist. See `README.md` for the architecture overview.
       z-score nudge + returning + portal net, decays to 0 by wk 5) + per-team
       HFA. `lib/yahnModel.ts`; breakdown stored (`ModelPrediction.yahnBreakdown`)
       and shown on the game page. Top 25 no longer feeds the model. Portal
-      rollup switched to value-over-replacement + ±6 cap; HFA regressed hard
-      (PRIOR_N 150, clamp 2.2–4.0) so ~78% of teams land 2.75–3.5.
-- [ ] Build 3 — calibration harness (historical backfill + regression vs
-      closing lines); tune all `lib/yahnModel.ts` weights; re-evaluate
-      per-team HFA (still noisy on 3 seasons — backfill 2019–22 games).
+      rollup switched to value-over-replacement + ±6 cap.
+- [x] **Per-team HFA is rules-based** (2.7 base + altitude bump, ~+1 Wyoming/
+      Air Force down to ~+0.15 UTEP; 11 venues adjusted, rest flat 2.7).
+      Deriving it from history failed even with 7 seasons — `margin − SP+`
+      just measures "favorites don't cover" and the home team is the favorite.
+      2018/19/21/22 game results backfilled; the SP+-residual estimate is kept
+      as a printed diagnostic.
+- [ ] Build 3 — calibration harness (regression vs closing lines); tune all
+      `lib/yahnModel.ts` weights; fit HFA jointly with team ratings so it can
+      escape the favorite bias.
 - [ ] Build 4 — Top-25 bounded-prior toggle (off by default) + preview.
 
 ## Open — build backlog
