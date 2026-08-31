@@ -57,9 +57,16 @@ adjustments, then uses a **per-team home-field number** instead of the flat 2.5:
   and the home team is nearly always the favorite. (SP+ and SRS keep a flat 2.5.)
 
 The game page shows the full breakdown (SP+ base, EPA adj, roster adj, HFA) for each
-team. **The weights are not calibrated yet** — treat Yahn as the softest of the three
-models until it has a track record. Where Yahn and SP+ disagree by more than ~2 pts,
-it's the roster/efficiency picture pulling against the preseason number — look at why.
+team. Where Yahn and SP+ disagree by more than ~2 pts, it's the roster/efficiency
+picture pulling against the preseason number — look at why.
+
+> **What the backtest found (see `docs/CALIBRATION.md`).** A walk-forward test over
+> 2023–25 (~2,200 games) says Yahn — heuristic *or* with fitted weights — **does not
+> beat the closing line** (49–51.5% ATS, break-even 52.4%). The talent / returning /
+> portal factors are already priced in by the market; only EPA/play carries a small
+> residual signal, too small to act on. Yahn is **not worse** than a plain rating.
+> **So: read Yahn as a third opinion and a breakdown of *why* a team rates where it
+> does — not as a betting signal.** It does not feed pick generation.
 
 Your **"My Top 25"** (`/rankings`) does **not** feed this model right now — it's a
 reference list. An opt-in way to fold it in is planned.
@@ -253,14 +260,22 @@ deliberately conservative — we'd rather miss a soft flag than raise a false on
 
 ### Reading them
 
-- **`lookahead` and `letdown` point at the same bet** (fade the favorite) and are
-  the strongest of the six because they combine schedule spot *and* a mismatch.
-- **`travel` + `short_week` on the same team** compound — that's a meaningfully
-  tired team.
-- **`off_bye` for the underdog** is the one flag that usually favors *backing* a
-  side rather than fading one.
 - A flag against a team the model *already* dislikes = green light for a candidate.
   A flag against a team the model *likes* = it cancels out; stand down.
+
+> **What the backtest found (2021–25, `docs/CALIBRATION.md`).** Betting a flag's
+> implied side vs the close:
+> - **`travel`** is the best single flag — **54.8%** ATS (n=425).
+> - The **"fade" flags together** (`travel` / `lookahead` / `letdown`) run **~53%**,
+>   but that's flat in 2021–22 and only shows up in 2023–25 — a weak, unstable lean.
+> - The **"help" flags** (`off_bye`, `revenge` as a straight bet) show **nothing** (~51%).
+> - As *corroboration* for a rating edge, **`travel` (60%) and `revenge` (56%)** carry
+>   the signal; **`short_week` corroboration is counterproductive (39%)** and `off_bye`
+>   is dead.
+>
+> Net: `travel` (and to a lesser extent `revenge`, `letdown`, `lookahead`) is worth
+> respecting as a lean. `short_week` and `off_bye` are not — and `short_week` should
+> probably be dropped as a corroborator.
 
 ---
 
@@ -365,6 +380,13 @@ signal.
 
 *Needs frequent line snapshots to detect. Until `pull-lines` runs more than
 once a day it will stay quiet — that's expected, not a bug.*
+
+> **Backtest note.** Using open→close as a stand-in for line movement,
+> **neither following nor fading the move beats the close** (49.5% / 50.5%,
+> n=2,077). By definition the closing number already contains the move — the
+> only value in "steam" is catching it *before* the close, which needs
+> intra-day snapshots we don't yet have. Treat `steam` as a "which side is
+> the sharp money on / don't fade this" signal, not a bet trigger.
 
 ### `rlm` (reverse line movement)
 

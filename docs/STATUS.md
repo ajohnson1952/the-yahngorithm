@@ -60,8 +60,15 @@ Living checklist. See `README.md` for the architecture overview.
       none clears 52.4% break-even; market MAE 12.0 beats all. Roster factors
       priced in; EPA coefficient stable (~2.9) but too small to act on.
       → Yahn stays a displayed 3rd opinion, not a betting driver.
+- [x] **Flag / pick-logic backtest** (`scripts/backtestFlags.ts`, 2021-25).
+      Line movement at the close: dead. Help flags (off_bye, revenge): dead.
+      Fade flags (travel/lookahead/letdown): ~53%, season-unstable. `travel`
+      best (54.8%). Pick logic ~52.8% overall, 44-61% by season. **`short_week`
+      corroboration is counterproductive (38.6%).** Full writeup:
+      `docs/CALIBRATION.md`.
+- [ ] Apply the recommended pick-logic tweaks (drop short_week/off_bye as
+      corroborators; standalone travel lean) — see docs/CALIBRATION.md §4
 - [ ] Build 4 — Top-25 bounded-prior toggle (deprioritised — Yahn isn't a driver)
-- [ ] Point calibration at the FLAGS + pick logic (harness infra now exists)
 
 ## Open — build backlog
 

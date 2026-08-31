@@ -15,9 +15,9 @@ where our numbers and the market disagree. Decision support — not a money-prin
 
 | Model | Source | Idea |
 |---|---|---|
-| **SP+** | CFBD `/ratings/sp`, extended to FCS with Bill Connelly's 772-team sheet | opponent-adjusted play-by-play efficiency — the predictive one |
+| **SP+** | CFBD `/ratings/sp`, extended to FCS with Bill Connelly's 772-team sheet | opponent-adjusted play-by-play efficiency — the predictive one, drives pick generation |
 | **SRS** | CFBD `/ratings/srs` | opponent-adjusted scoring margin — empty until ~week 3 |
-| **Yahn** | your "My Top 25" at `/rankings`, mapped through fixed tiers | your eye test; unranked teams fall back to SP+ |
+| **Yahn** | SP+ backbone + EPA + roster factors (talent / returning production / transfer portal) + per-team home-field | a stat composite shown as a third opinion — **backtested to no ATS edge, so it does not feed picks** (see `docs/CALIBRATION.md`) |
 
 `predicted_margin = home_rating − away_rating + home_field_advantage`
 
@@ -99,7 +99,7 @@ secrets: `DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY`. The `/admin` page
 | `/` | the week's board — grouped by edge, or toggle to kickoff order; page between weeks |
 | `/game/[id]` | full breakdown: three spread models, totals math, flags, line movement, Kalshi panel, weather, injuries, trends, picks |
 | `/picks` | season pick log with ATS record + CLV |
-| `/rankings` | "My Top 25" drag-and-drop editor (password `2142`) — drives the Yahn model |
+| `/rankings` | "My Top 25" drag-and-drop editor (password `2142`) — a reference list; does not feed the model |
 | `/admin` | manual pipeline runs (password `2142`) |
 | `/guide` | renders the interpretation guide |
 
