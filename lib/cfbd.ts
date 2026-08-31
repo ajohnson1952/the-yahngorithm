@@ -32,7 +32,10 @@ export async function cfbdGet<T = unknown>(path: string, attempts = 4): Promise<
   for (let i = 0; i < attempts; i++) {
     let res: Response;
     try {
-      res = await fetch(url, { headers: { Authorization: `Bearer ${key}` } });
+      res = await fetch(url, {
+        headers: { Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(20_000),
+      });
     } catch (e) {
       lastErr = String(e);
       await sleep(500 * 2 ** i);

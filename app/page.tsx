@@ -29,7 +29,13 @@ export default async function Home({
   const season = currentSeason();
   const sp = await searchParams;
   const thisWeek = await currentWeek(season);
-  const week = sp.week ? Number(sp.week) : thisWeek;
+  // ?week= is user input — accept only a positive integer in a sane range,
+  // otherwise fall back to the current week (a bad value would 500 at Prisma).
+  const parsedWeek = Number(sp.week);
+  const week =
+    sp.week && Number.isInteger(parsedWeek) && parsedWeek >= 1 && parsedWeek <= 25
+      ? parsedWeek
+      : thisWeek;
   const byTime = sp.sort === "time";
 
   const [board, weeks] = await Promise.all([

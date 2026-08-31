@@ -42,7 +42,10 @@ async function getAll<T>(
     const url = `${BASE}${path}${path.includes("?") ? "&" : "?"}limit=200${
       cursor ? `&cursor=${cursor}` : ""
     }`;
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(20_000),
+    });
     if (!res.ok) throw new Error(`Kalshi ${path} -> ${res.status}`);
     const j = (await res.json()) as Record<string, unknown>;
     out.push(...((j[key] as T[]) ?? []));

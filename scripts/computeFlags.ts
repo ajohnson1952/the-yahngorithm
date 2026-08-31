@@ -50,6 +50,17 @@ type FlagType =
   | "lookahead"
   | "letdown";
 
+// the flag types THIS script owns — the wipe below must not touch market
+// flags (steam / rlm), which computeMarketFlags.ts manages separately.
+const SITUATIONAL_FLAG_TYPES: FlagType[] = [
+  "short_week",
+  "off_bye",
+  "travel",
+  "revenge",
+  "lookahead",
+  "letdown",
+];
+
 function parseArgs(): { season?: number; week?: number; all: boolean } {
   const args = process.argv.slice(2);
   const val = (f: string) => {
@@ -354,7 +365,10 @@ async function main() {
   // --- write (wipe + recompute for the games in scope) ---
   const scopeIds = gamesInScope.map((g) => g.id);
   const deleted = await prisma.gameFlag.deleteMany({
-    where: { gameId: { in: scopeIds } },
+    where: {
+      gameId: { in: scopeIds },
+      flagType: { in: SITUATIONAL_FLAG_TYPES },
+    },
   });
   if (rows.length > 0) await prisma.gameFlag.createMany({ data: rows });
 

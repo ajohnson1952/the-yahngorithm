@@ -53,7 +53,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function getJson(url: string): Promise<any | null> {
   try {
-    const res = await fetch(url.replace(/^http:/, "https:"));
+    const res = await fetch(url.replace(/^http:/, "https:"), {
+      signal: AbortSignal.timeout(20_000),
+    });
     if (!res.ok) return null;
     return await res.json();
   } catch {

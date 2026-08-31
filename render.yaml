@@ -17,5 +17,16 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false # set in the Render dashboard — same Neon connection string as .env
+      # Admin/rankings gate. Without these two the app falls back to the
+      # public default password "2142" — set real values in the dashboard.
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_SESSION_SECRET
+        sync: false # `openssl rand -hex 32`
+      # Needed for the /admin "Run" buttons to hit the data APIs in prod.
+      - key: CFBD_API_KEY
+        sync: false
+      - key: ODDS_API_KEY
+        sync: false
       - key: NODE_VERSION
         value: "22"

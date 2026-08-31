@@ -59,7 +59,7 @@ export async function fetchNcaafOdds(
   const url =
     `${ODDS_BASE}/sports/americanfootball_ncaaf/odds` +
     `?apiKey=${key}&regions=us&markets=${markets.join(",")}&oddsFormat=american`;
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
   if (!res.ok) {
     throw new Error(`Odds API -> ${res.status} ${res.statusText} ${await res.text()}`);
   }

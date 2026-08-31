@@ -15,10 +15,12 @@ function inline(s: string): string {
   out = out.replace(/`([^`]+)`/g, (_m, c) => `<code>${c}</code>`);
   out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  out = out.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2">$1</a>'
-  );
+  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text, href) => {
+    // only allow safe schemes / relative / anchor links (defense in depth —
+    // the source is a trusted repo file, but keep javascript: etc. out)
+    const ok = /^(https?:\/\/|\/|#|mailto:)/i.test(href.trim());
+    return ok ? `<a href="${href.trim()}">${text}</a>` : text;
+  });
   return out;
 }
 

@@ -36,7 +36,7 @@ export async function forecastAt(
     `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=UTC` +
     `&forecast_days=${forecastDays}`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
   if (!res.ok) {
     throw new Error(`Open-Meteo -> ${res.status} ${res.statusText}`);
   }
