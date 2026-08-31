@@ -119,7 +119,7 @@ Migrations use the diff + `migrate deploy` flow (not `migrate dev`) because
 
 ## Deployment
 
-Render web service (`render.yaml`), auto-deploys the `pipeline` branch. Build runs
+Render web service (`render.yaml`), auto-deploys `main`. Build runs
 `prisma migrate deploy` so schema changes ship with the code. Render env needs
 `DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY`.
 
