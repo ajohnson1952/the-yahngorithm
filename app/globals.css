@@ -144,6 +144,27 @@ a.card:hover .team-name { color: var(--blue); }
   width: 3px;
   background: var(--amber);
 }
+/* model-only: a projection, no sportsbook line yet — tinted blue, not amber */
+.card.model-only {
+  background: color-mix(in srgb, var(--blue) 5%, var(--panel));
+  border-color: color-mix(in srgb, var(--blue) 22%, var(--border));
+}
+.card.model-only::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: color-mix(in srgb, var(--blue) 65%, transparent);
+}
+.kick-model { color: var(--blue); font-weight: 600; }
+.mdl-proj { color: var(--text-dim); font-weight: 600; }
+.proj-tag {
+  font-family: var(--sans); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--blue); margin-right: 5px;
+  border: 1px solid color-mix(in srgb, var(--blue) 40%, var(--border));
+  border-radius: 3px; padding: 0 3px; vertical-align: 1px;
+}
 
 .card-grid {
   display: grid;

@@ -51,13 +51,24 @@ export function GameCard({ g }: { g: GameView }) {
       ["wind", "slow_pace", "fast_pace"].includes(f)
     ) ?? [];
 
+  // model projection but no sportsbook line anywhere yet
+  const modelOnly =
+    g.hasModel && g.marketSpread == null && g.marketTotal == null;
+
+  const cls = ["card", g.picks.length && "pick", modelOnly && "model-only"]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <a href={`/game/${g.id}`} className={`card${g.picks.length ? " pick" : ""}`}>
+    <a href={`/game/${g.id}`} className={cls}>
       <div className="card-grid">
         <div className="gc-matchup">
           <TeamRow team={g.away} score={g.awayScore} won={awayWon} />
           <TeamRow team={g.home} score={g.homeScore} won={homeWon} />
-          <div className="kick">{meta.join(" · ")}</div>
+          <div className="kick">
+            {meta.join(" · ")}
+            {modelOnly && <span className="kick-model"> · model only</span>}
+          </div>
         </div>
 
         <div className="gc-spread mm">
@@ -87,12 +98,13 @@ export function GameCard({ g }: { g: GameView }) {
           ) : g.modelSpreadSp != null ? (
             <>
               <span className="mm-line">
-                <span className="mkt mono">
+                <span className="mkt mono mdl-proj">
+                  <span className="proj-tag">proj</span>
                   {teamShort(g.home)} {spreadStr(-g.modelSpreadSp)}
                 </span>
               </span>
               <span className="mm-line">
-                <span className="na">model · no market line</span>
+                <span className="na">no market line yet</span>
               </span>
             </>
           ) : (
@@ -127,15 +139,17 @@ export function GameCard({ g }: { g: GameView }) {
           ) : g.modelTotal != null ? (
             <>
               <span className="mm-line">
-                <span className="mkt mono">{trim(g.modelTotal)}</span>
+                <span className="mkt mono mdl-proj">
+                  <span className="proj-tag">proj</span>
+                  {trim(g.modelTotal)}
+                </span>
               </span>
               <span className="mm-line">
                 <span className="na">
-                  model
                   {g.predictedPossessions != null
-                    ? ` · ${trim(g.predictedPossessions)} poss`
-                    : ""}{" "}
-                  · no market total
+                    ? `${trim(g.predictedPossessions)} poss · `
+                    : ""}
+                  no market total yet
                 </span>
               </span>
             </>
