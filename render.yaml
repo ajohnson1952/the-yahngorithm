@@ -1,0 +1,19 @@
+# Render deployment (https://render.com/docs/blueprint-spec)
+# One web service: the Next.js dashboard. The data pipeline (scripts/*)
+# is run manually / by a scheduler for now — added here later once the
+# weekly cadence is settled.
+services:
+  - type: web
+    name: the-yahngorithm
+    runtime: node
+    plan: free
+    region: ohio
+    branch: pipeline
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        sync: false # set in the Render dashboard — same Neon connection string as .env
+      - key: NODE_VERSION
+        value: "22"

@@ -8,6 +8,13 @@ node_modules/
 
 # Build output
 dist/
+.next/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Next auto-generated agent rules
+/AGENTS.md
+/CLAUDE.md
 
 # OS / editor cruft
 .DS_Store
