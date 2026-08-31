@@ -126,7 +126,7 @@ export default async function GamePage({
   const data = await getGameDetail(id);
   if (!data) notFound();
 
-  const { game: g, pred, ratings, lines, weather } = data;
+  const { game: g, pred, ratings, lines, weather, homeApRank, awayApRank } = data;
 
   const home = g.homeTeam;
   const away = g.awayTeam;
@@ -192,8 +192,8 @@ export default async function GamePage({
 
       <div className="card" style={{ maxWidth: 440 }}>
         <div className="matchup">
-          <TeamRow team={lite(away)} score={g.awayScore} won={awayWon} />
-          <TeamRow team={lite(home)} score={g.homeScore} won={homeWon} />
+          <TeamRow team={lite(away, awayApRank)} score={g.awayScore} won={awayWon} />
+          <TeamRow team={lite(home, homeApRank)} score={g.homeScore} won={homeWon} />
         </div>
       </div>
 
@@ -613,15 +613,18 @@ function Tile({
 
 // ---------- helpers ----------
 
-function lite(t: {
-  id: string;
-  canonicalName: string;
-  abbreviation: string | null;
-  logoLight: string | null;
-  color: string | null;
-  classification: string;
-  conference: string | null;
-}) {
+function lite(
+  t: {
+    id: string;
+    canonicalName: string;
+    abbreviation: string | null;
+    logoLight: string | null;
+    color: string | null;
+    classification: string;
+    conference: string | null;
+  },
+  apRank: number | null = null
+) {
   return {
     id: t.id,
     name: t.canonicalName,
@@ -630,6 +633,7 @@ function lite(t: {
     color: t.color,
     classification: t.classification,
     conference: t.conference,
+    apRank,
   };
 }
 

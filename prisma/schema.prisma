@@ -42,6 +42,7 @@ model Team {
 
   aliases         TeamSourceAlias[]
   ratingsWeekly   TeamRatingWeekly[]
+  rankings        Ranking[]
   homeGames       Game[]              @relation("HomeTeam")
   awayGames       Game[]              @relation("AwayTeam")
   injuries        Injury[]
@@ -78,6 +79,23 @@ model Rivalry {
   teamBId  String
   teamB    Team   @relation("RivalryTeamB", fields: [teamBId], references: [id])
   name     String // e.g. "Iron Bowl"
+}
+
+// ---------- POLLS (AP / Coaches), one snapshot per week, from CFBD /rankings ----------
+
+model Ranking {
+  id              String @id @default(cuid())
+  season          Int
+  week            Int
+  poll            String // 'ap' | 'coaches'
+  teamId          String
+  team            Team   @relation(fields: [teamId], references: [id])
+  rank            Int
+  points          Int?
+  firstPlaceVotes Int?
+
+  @@unique([season, week, poll, teamId])
+  @@index([season, week])
 }
 
 // ---------- WEEKLY RATINGS (refreshed Tuesdays, per source SP+ cadence) ----------

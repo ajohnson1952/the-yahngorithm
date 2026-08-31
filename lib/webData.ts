@@ -15,6 +15,7 @@ export interface TeamLite {
   color: string | null;
   classification: string;
   conference: string | null;
+  apRank: number | null;
 }
 
 export interface FlagView {
@@ -78,6 +79,25 @@ export interface GameView {
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
+/** AP rank per teamId for a given week — falls back to the most recent poll
+ *  published on or before that week (handy in the gap before a week's poll drops). */
+async function apRankMap(
+  season: number,
+  week: number
+): Promise<Map<string, number>> {
+  const latest = await db.ranking.findFirst({
+    where: { season, poll: "ap", week: { lte: week } },
+    orderBy: { week: "desc" },
+    select: { week: true },
+  });
+  if (!latest) return new Map();
+  const ranks = await db.ranking.findMany({
+    where: { season, poll: "ap", week: latest.week },
+    select: { teamId: true, rank: true },
+  });
+  return new Map(ranks.map((r) => [r.teamId, r.rank]));
+}
+
 function pickSide(
   market: string,
   edge: number,
@@ -129,7 +149,7 @@ export async function getWeekBoard(
 
   const gameIds = games.map((g) => g.id);
 
-  const [preds, lines, weather] = await Promise.all([
+  const [preds, lines, weather, apRanks] = await Promise.all([
     db.modelPrediction.findMany({
       where: { gameId: { in: gameIds } },
       orderBy: { generatedAt: "desc" },
@@ -145,6 +165,7 @@ export async function getWeekBoard(
       where: { gameId: { in: gameIds } },
       orderBy: { pulledAt: "desc" },
     }),
+    apRankMap(season, week),
   ]);
 
   const predByGame = new Map<string, (typeof preds)[number]>();
@@ -163,6 +184,7 @@ export async function getWeekBoard(
     color: t.color,
     classification: t.classification,
     conference: t.conference,
+    apRank: apRanks.get(t.id) ?? null,
   });
 
   const views: GameView[] = games.map((g) => {
@@ -300,7 +322,7 @@ export async function getGameDetail(id: string) {
   });
   if (!g) return null;
 
-  const [pred, ratings, lines, weather] = await Promise.all([
+  const [pred, ratings, lines, weather, apRanks] = await Promise.all([
     db.modelPrediction.findFirst({
       where: { gameId: id },
       orderBy: { generatedAt: "desc" },
@@ -317,9 +339,18 @@ export async function getGameDetail(id: string) {
       orderBy: [{ capturedAt: "asc" }],
     }),
     db.weather.findMany({ where: { gameId: id }, orderBy: { pulledAt: "asc" } }),
+    apRankMap(g.season, g.week),
   ]);
 
-  return { game: g, pred, ratings, lines, weather };
+  return {
+    game: g,
+    pred,
+    ratings,
+    lines,
+    weather,
+    homeApRank: apRanks.get(g.homeTeamId) ?? null,
+    awayApRank: apRanks.get(g.awayTeamId) ?? null,
+  };
 }
 
 export async function getPickLog(season: number) {
@@ -340,6 +371,14 @@ export async function getPickLog(season: number) {
     orderBy: { suggestedAt: "desc" },
   });
 
+  const apRows = await db.ranking.findMany({
+    where: { season, poll: "ap" },
+    select: { week: true, teamId: true, rank: true },
+  });
+  const apByWeekTeam = new Map(
+    apRows.map((r) => [`${r.week}:${r.teamId}`, r.rank])
+  );
+
   const rows = picks.map((p) => ({
     id: p.id,
     gameId: p.gameId,
@@ -349,6 +388,8 @@ export async function getPickLog(season: number) {
     away: p.game.awayTeam.canonicalName,
     homeAbbr: p.game.homeTeam.abbreviation,
     awayAbbr: p.game.awayTeam.abbreviation,
+    homeRank: apByWeekTeam.get(`${p.game.week}:${p.game.homeTeamId}`) ?? null,
+    awayRank: apByWeekTeam.get(`${p.game.week}:${p.game.awayTeamId}`) ?? null,
     market: p.market,
     method: p.method,
     modelLine: p.modelLine,

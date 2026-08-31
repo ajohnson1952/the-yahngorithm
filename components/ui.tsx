@@ -151,6 +151,7 @@ export function TeamRow({
         />
       )}
       <span className="team-name">
+        {team.apRank != null && <span className="ap-rank">{team.apRank}</span>}
         {team.name}
         {team.conference && <span className="conf">{team.conference}</span>}
         {team.classification !== "fbs" && (

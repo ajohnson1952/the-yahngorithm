@@ -101,7 +101,14 @@ export default async function PicksPage() {
                   <td className="num">{r.week}</td>
                   <td>
                     <a href={`/game/${r.gameId}`}>
-                      {r.away} @ {r.home}
+                      {r.awayRank != null && (
+                        <span className="ap-rank">{r.awayRank}</span>
+                      )}
+                      {r.away} @{" "}
+                      {r.homeRank != null && (
+                        <span className="ap-rank">{r.homeRank}</span>
+                      )}
+                      {r.home}
                     </a>
                     <div
                       style={{ color: "var(--text-faint)", fontSize: 11 }}
