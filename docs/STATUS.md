@@ -1,0 +1,45 @@
+# Status
+
+Living checklist. See `README.md` for the architecture overview.
+
+## Done
+
+- [x] Team identity + alias matching (CFBD / Odds API / ESPN → one canonical list)
+- [x] Weekly ratings pull — SP+, SRS, pace
+- [x] Bill Connelly 772-team SP+ loader → FCS coverage (re-centered onto CFBD's scale)
+- [x] Schedule / scores / venue / TV pull
+- [x] Betting lines — live snapshots (The Odds API) + historical backfill 2023–26 (CFBD `/lines`)
+- [x] Dual→triple spread model (SP+, SRS, Yahn) + totals model
+- [x] Situational flags (short week, off bye, travel, revenge, lookahead, letdown)
+- [x] Weather (Open-Meteo) + injuries (ESPN, thin)
+- [x] Pick generation (corroboration required) + ATS/CLV grading
+- [x] AP + Coaches polls, `#rank` badges
+- [x] Team trends — ATS / SU / O-U splits with outlier flags
+- [x] Kalshi prediction markets — win-prob snapshots, per-game panel
+- [x] Market flags — `steam` (dormant until denser snapshots) and `rlm`
+- [x] Webapp — board (edge / kickoff sort, week paging), game detail, picks, guide
+- [x] `/rankings` — drag-and-drop "My Top 25" → Yahn model
+- [x] `/admin` — manual pipeline runs, password-gated
+- [x] GitHub Actions schedule (`.github/workflows/`)
+- [x] Deployed to Render
+
+## Open
+
+- [ ] **Merge `pipeline` → `main`** (or set `pipeline` as default) so scheduled
+      workflows run
+- [ ] Add repo secrets: `DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY`
+- [ ] Add `CFBD_API_KEY` + `ODDS_API_KEY` to the Render service env
+- [ ] Set a real Top 25 at `/rankings` (currently seeded from the AP poll)
+- [ ] Make Yahn a formal pick corroborator (2-of-3 model agreement) — calibrate first
+- [ ] Kalshi "fair-value gap" flag (static book-vs-market divergence, not just movement)
+- [ ] FCS SRS (pullRatings only iterates SP+ rows today = FBS)
+- [ ] Bowl / postseason games
+- [ ] Better injury source if ESPN stays empty
+
+## Known limitations
+
+- SRS is empty in week 1 and noisy through ~week 3 — spread signal is SP+ only early.
+- Rating edges on spreads > ~20 are artifacts (books shade big favorites) — filtered.
+- The Odds API is current-week only; historical lines come from CFBD instead.
+- ESPN's CFB injury feed is thin — an empty report means "unknown," not "clean."
+- `steam` needs line snapshots more than once a day; the gameday workflow provides that.

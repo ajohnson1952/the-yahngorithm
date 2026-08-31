@@ -347,6 +347,22 @@ normal model (σ ≈ 13.5, the historical SD of a CFB result). We're comparing
 *movement direction*, not exact numbers, so the conversion doesn't need to be
 perfect.
 
-**Both are corroborators, not the pick.** `rlm` against a team the model
+### Reading the Kalshi panel on a game page
+
+- **Win probability** (per team) — the market's price that that team wins,
+  de-vigged so the two sides sum to 100%. This is the number that matters. The
+  ▲/▼ next to the home team is how much it's moved since the previous snapshot.
+- **Implied line** — that probability turned into a spread, shown next to the
+  book's number. A gap of a point or two is noise; a bigger gap means the
+  market and the book genuinely disagree about who's better.
+- **Volume / Open interest / 24h** — these are **total contracts on the whole
+  game**, not a per-side split. Kalshi runs a separate "Team A wins" and "Team B
+  wins" market and you can back a side from either one, so the per-market
+  volumes are *not* "money on A vs money on B" — don't read them that way. What
+  they tell you is **how much to trust the price**: a market with 20,000+
+  contracts is a real signal; one under 500 is two people and a bot — the panel
+  flags those as thin.
+
+**Both flags are corroborators, not the pick.** `rlm` against a team the model
 already dislikes, or `steam` toward a team the model likes, is a green light.
 Pointing the other way, they cancel — stand down.
