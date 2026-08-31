@@ -51,10 +51,17 @@ Living checklist. See `README.md` for the architecture overview.
       just measures "favorites don't cover" and the home team is the favorite.
       2018/19/21/22 game results backfilled; the SP+-residual estimate is kept
       as a printed diagnostic.
-- [ ] Build 3 — calibration harness (regression vs closing lines); tune all
-      `lib/yahnModel.ts` weights; fit HFA jointly with team ratings so it can
-      escape the favorite bias.
-- [ ] Build 4 — Top-25 bounded-prior toggle (off by default) + preview.
+- [x] **Build 3 — calibration harness.** `scripts/backtestHarness.ts` +
+      `computeAsofRatings.ts` + `TeamRatingAsOf` (point-in-time ridge margin
+      rating with a talent prior — CFBD only serves final SP+). Walk-forward
+      over 2023-25, ~2,200 FBS-vs-FBS games with closing lines.
+      **Verdict: no ATS edge over the closing line.** asof / yahn-heuristic /
+      yahn-fitted / yahn-vs-market all land 49-51.5%, every CI includes 50%,
+      none clears 52.4% break-even; market MAE 12.0 beats all. Roster factors
+      priced in; EPA coefficient stable (~2.9) but too small to act on.
+      → Yahn stays a displayed 3rd opinion, not a betting driver.
+- [ ] Build 4 — Top-25 bounded-prior toggle (deprioritised — Yahn isn't a driver)
+- [ ] Point calibration at the FLAGS + pick logic (harness infra now exists)
 
 ## Open — build backlog
 
