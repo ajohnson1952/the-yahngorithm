@@ -133,8 +133,12 @@ lift, though n drops to ~90/season and it still isn't multi-season-stable.
    `letdown` / `revenge` (`short_week` + `off_bye` dropped). Backtests 56.4%
    vs 52.8%. All six flags still shown on the board.
 
-**Do next:**
-3. Add a standalone **"bad spot" lean** on the board — see below.
+3. **`bad_spot` flag added** — fires on a team with **2+** stacked hurt
+   situational flags (`travel` / `lookahead` / `letdown` / `short_week`).
+   Backtests **57.3%** ATS on the fade [46–68], n=75 (~15/season — small,
+   and the same 2021-22-flat / 2023-25-strong pattern). Red chip on the
+   board + game page; "Bad spots" board filter. Display/decision aid only,
+   does **not** corroborate picks.
 
 **Consider:**
 4. The `travel` + `revenge` corroboration cells are the only thing that

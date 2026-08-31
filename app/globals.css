@@ -305,6 +305,12 @@ a.card:hover .team-name { color: var(--blue); }
   color: color-mix(in srgb, var(--purple) 85%, var(--text));
   background: color-mix(in srgb, var(--purple) 10%, var(--panel-2));
 }
+.chip.spot {
+  border-color: color-mix(in srgb, var(--red) 60%, var(--border));
+  color: color-mix(in srgb, var(--red) 92%, var(--text));
+  background: color-mix(in srgb, var(--red) 14%, var(--panel-2));
+  font-weight: 700;
+}
 
 /* ---------- game-detail: model rows / flag rows / pick rows ---------- */
 .mrows { display: flex; flex-direction: column; gap: 8px; max-width: 780px; }

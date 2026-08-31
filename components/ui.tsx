@@ -6,9 +6,11 @@ export const HURT_FLAGS = new Set([
   "lookahead",
   "letdown",
   "rlm",
+  "bad_spot",
 ]);
 export const HELP_FLAGS = new Set(["off_bye", "revenge", "steam"]);
 export const MARKET_FLAGS = new Set(["rlm", "steam"]);
+export const SPOT_FLAGS = new Set(["bad_spot"]);
 
 const FLAG_LABEL: Record<string, string> = {
   short_week: "short week",
@@ -17,6 +19,7 @@ const FLAG_LABEL: Record<string, string> = {
   revenge: "revenge",
   lookahead: "lookahead",
   letdown: "letdown",
+  bad_spot: "bad spot",
   rlm: "reverse line move",
   steam: "steam",
   wind: "wind",
@@ -37,6 +40,8 @@ export const FLAG_MEANING: Record<string, string> = {
     "Decent team favored by 13+ this week, with a rivalry or tough opponent (within ~6) next week. Classic trap — fade this team / take the points.",
   letdown:
     "Won an emotional game last week (rivalry or within 3 SP+ pts) and this week's opponent is 10+ SP+ pts weaker. Emotional hangover — fade this team / take the points.",
+  bad_spot:
+    "Two or more situational negatives stacked on this team (e.g. a long trip on a short week, or a letdown spot after a long trip). Backtests ~57% ATS on the fade — a decision aid, not a lock. Take the points against this team.",
   rlm:
     "The book's number moved toward this team while the Kalshi prediction market (real money, no vig) moved the other way, on a market with real volume. The public is on this team; the sharp market isn't. Lean the other side.",
   steam:
@@ -62,6 +67,10 @@ export function flagDetail(flagType: string, detail: unknown): string {
       return `then ${d.nextOpponent}`;
     case "letdown":
       return `beat ${d.lastWeekBeat}`;
+    case "bad_spot":
+      return Array.isArray(d.flags)
+        ? (d.flags as string[]).map((f) => FLAG_LABEL[f] ?? f).join(" + ")
+        : "";
     case "rlm":
       return [
         d.bookMovePts != null ? `book ${d.bookMovePts}` : "",
@@ -88,13 +97,15 @@ export function FlagChip({
   flag: FlagView;
   showTeam?: boolean;
 }) {
-  const cls = MARKET_FLAGS.has(flag.flagType)
-    ? "mkt"
-    : HURT_FLAGS.has(flag.flagType)
-      ? "hurt"
-      : HELP_FLAGS.has(flag.flagType)
-        ? "help"
-      : "wx";
+  const cls = SPOT_FLAGS.has(flag.flagType)
+    ? "spot"
+    : MARKET_FLAGS.has(flag.flagType)
+      ? "mkt"
+      : HURT_FLAGS.has(flag.flagType)
+        ? "hurt"
+        : HELP_FLAGS.has(flag.flagType)
+          ? "help"
+          : "wx";
   const det = flagDetail(flag.flagType, flag.detail);
   return (
     <span className={`chip ${cls}`} title={`${flag.team}${det ? ` — ${det}` : ""}`}>

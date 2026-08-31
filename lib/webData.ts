@@ -286,13 +286,18 @@ export async function getWeekBoard(
       totalEdge,
       wind: wx?.windMph != null ? r1(wx.windMph) : null,
       tempF: wx?.tempF != null ? Math.round(wx.tempF) : null,
-      flags: g.gameFlags.map((f) => ({
-        team: f.team.canonicalName,
-        teamAbbr: f.team.abbreviation,
-        teamId: f.teamId,
-        flagType: f.flagType,
-        detail: f.detail,
-      })),
+      flags: g.gameFlags
+        .map((f) => ({
+          team: f.team.canonicalName,
+          teamAbbr: f.team.abbreviation,
+          teamId: f.teamId,
+          flagType: f.flagType,
+          detail: f.detail,
+        }))
+        // bad_spot first (it's the headline), then everything else
+        .sort((a, b) =>
+          a.flagType === "bad_spot" ? -1 : b.flagType === "bad_spot" ? 1 : 0
+        ),
       picks,
       hasModel,
       sortRank,

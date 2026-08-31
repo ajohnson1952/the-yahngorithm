@@ -211,6 +211,8 @@ async function main() {
   const flagRes: Record<string, number[]> = {};
   const anyFade: number[] = [];
   const anyHelp: number[] = [];
+  const multi2: number[] = []; // >= 2 hurt situational flags on one team
+  const multi2BySeason: Record<number, number[]> = {};
   const moveWith: number[] = [];
   const moveFade: number[] = [];
   const pickEdgeOnly: number[] = [];
@@ -241,13 +243,24 @@ async function main() {
     // flags
     let fadeTeam: string | null = null;
     let helpTeam: string | null = null;
+    let multiTeam: string | null = null;
+    const HURT_SITU = new Set(["travel", "lookahead", "letdown", "short_week"]);
     for (const t of [g.homeTeamId, g.awayTeamId]) {
-      for (const f of flagsFor(g, t)) {
+      const fs = flagsFor(g, t);
+      let hurtCount = 0;
+      for (const f of fs) {
         const side = HELPS.has(f) ? forTeam(t) : -forTeam(t); // hurt → bet against
         (flagRes[f] ??= []).push(side);
         if (HELPS.has(f)) helpTeam = t;
         else fadeTeam = t;
+        if (HURT_SITU.has(f)) hurtCount++;
       }
+      if (hurtCount >= 2) multiTeam = t;
+    }
+    if (multiTeam) {
+      const side = -forTeam(multiTeam);
+      multi2.push(side);
+      (multi2BySeason[g.season] ??= []).push(side);
     }
     if (fadeTeam) {
       const side = -forTeam(fadeTeam);
@@ -310,6 +323,12 @@ async function main() {
   }
   console.log(`  ${"ANY fade".padEnd(11)} (${"fade flagged team".padEnd(18)}) ${fmt(record(anyFade))}`);
   console.log(`  ${"ANY help".padEnd(11)} (${"back flagged team".padEnd(18)}) ${fmt(record(anyHelp))}`);
+  console.log(`  ${"BAD SPOT".padEnd(11)} (${"≥2 hurt situ flags".padEnd(18)}) ${fmt(record(multi2))}`);
+  console.log(`     bad spot by season: ` +
+    Object.keys(multi2BySeason).sort().map((s) => {
+      const r = record(multi2BySeason[+s]);
+      return `${s} ${(100 * r.rate).toFixed(0)}%(${r.n})`;
+    }).join("  "));
   console.log(`     ANY fade, flagged team was FAV   ${fmt(record(anyFadeFav))}`);
   console.log(`     ANY fade, flagged team was DOG   ${fmt(record(anyFadeDog))}`);
   console.log(`     ANY fade by season: ` +

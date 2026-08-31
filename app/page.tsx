@@ -37,6 +37,7 @@ export default async function Home({
       ? parsedWeek
       : thisWeek;
   const byTime = sp.sort === "time";
+  const badSpotOnly = sp.sort === "badspot";
 
   const [board, weeks] = await Promise.all([
     getWeekBoard(season, week),
@@ -55,9 +56,19 @@ export default async function Home({
 
   const pickCount = board.filter((g) => g.picks.length > 0).length;
 
+  const hasBadSpot = (g: (typeof board)[number]) =>
+    g.flags.some((f) => f.flagType === "bad_spot");
+
   // ---- build the sections ----
   let sections: { label: string; games: typeof board }[];
-  if (byTime) {
+  if (badSpotOnly) {
+    const games = [...board]
+      .filter(hasBadSpot)
+      .sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
+    sections = games.length
+      ? [{ label: `Bad-spot games (${games.length})`, games }]
+      : [];
+  } else if (byTime) {
     const byDay = new Map<string, typeof board>();
     const ordered = [...board].sort(
       (a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)
@@ -123,7 +134,7 @@ export default async function Home({
         <div className="sort-toggle">
           <a
             href={qs({ week: sp.week ? week : undefined })}
-            className={byTime ? "" : "on"}
+            className={!byTime && !badSpotOnly ? "on" : ""}
           >
             By edge
           </a>
@@ -133,8 +144,20 @@ export default async function Home({
           >
             By kickoff
           </a>
+          <a
+            href={qs({ week: sp.week ? week : undefined, sort: "badspot" })}
+            className={badSpotOnly ? "on" : ""}
+          >
+            Bad spots
+          </a>
         </div>
       </div>
+
+      {badSpotOnly && sections.length === 0 && (
+        <p className="empty">
+          No bad-spot games this week — no team has 2+ situational flags stacked.
+        </p>
+      )}
 
       {sections.map((s) => (
         <section key={s.label}>

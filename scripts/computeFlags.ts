@@ -52,14 +52,21 @@ type FlagType =
 
 // the flag types THIS script owns — the wipe below must not touch market
 // flags (steam / rlm), which computeMarketFlags.ts manages separately.
-const SITUATIONAL_FLAG_TYPES: FlagType[] = [
+const SITUATIONAL_FLAG_TYPES: string[] = [
   "short_week",
   "off_bye",
   "travel",
   "revenge",
   "lookahead",
   "letdown",
+  "bad_spot",
 ];
+
+// bad_spot = a rollup: 2+ of these hurt situational flags stacked on one
+// team. Fade the flagged team. Display + board filter only — its
+// components already corroborate picks (docs/CALIBRATION.md).
+const BAD_SPOT_COMPONENTS = new Set(["travel", "lookahead", "letdown", "short_week"]);
+const BAD_SPOT_MIN = 2;
 
 function parseArgs(): { season?: number; week?: number; all: boolean } {
   const args = process.argv.slice(2);
@@ -185,6 +192,9 @@ async function main() {
     letdown: [],
   };
 
+  // hurt situational flags added per team-game, to roll up into bad_spot
+  const hurtByTeamGame = new Map<string, string[]>();
+
   const add = (
     g: G,
     teamId: string,
@@ -195,6 +205,10 @@ async function main() {
     rows.push({ gameId: g.id, teamId, flagType, detail });
     counts[flagType]++;
     if (examples[flagType].length < 4) examples[flagType].push(example);
+    if (BAD_SPOT_COMPONENTS.has(flagType)) {
+      const k = `${g.id}|${teamId}`;
+      (hurtByTeamGame.get(k) ?? hurtByTeamGame.set(k, []).get(k)!).push(flagType);
+    }
   };
 
   for (const g of gamesInScope) {
@@ -362,6 +376,20 @@ async function main() {
     }
   }
 
+  // --- roll up bad_spot (2+ stacked hurt situational flags on one team) ---
+  let badSpots = 0;
+  for (const [k, fs] of hurtByTeamGame) {
+    if (fs.length < BAD_SPOT_MIN) continue;
+    const [gameId, teamId] = k.split("|");
+    rows.push({
+      gameId,
+      teamId,
+      flagType: "bad_spot",
+      detail: { flags: fs, count: fs.length } as Prisma.InputJsonValue,
+    });
+    badSpots++;
+  }
+
   // --- write (wipe + recompute for the games in scope) ---
   const scopeIds = gamesInScope.map((g) => g.id);
   const deleted = await prisma.gameFlag.deleteMany({
@@ -381,6 +409,7 @@ async function main() {
     console.log(`  ${ft.padEnd(12)} ${counts[ft]}`);
     for (const ex of examples[ft]) console.log(`      ${ex}`);
   }
+  console.log(`  ${"bad_spot".padEnd(12)} ${badSpots}   (2+ hurt situational flags stacked)`);
 
   await prisma.$disconnect();
 }

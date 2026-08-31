@@ -66,8 +66,10 @@ Living checklist. See `README.md` for the architecture overview.
       best (54.8%). Pick logic ~52.8% overall, 44-61% by season. **`short_week`
       corroboration is counterproductive (38.6%).** Full writeup:
       `docs/CALIBRATION.md`.
-- [ ] Apply the recommended pick-logic tweaks (drop short_week/off_bye as
-      corroborators; standalone travel lean) — see docs/CALIBRATION.md §4
+- [x] `generate-picks` corroboration trimmed to travel/lookahead/letdown/revenge
+      (short_week + off_bye dropped; still shown on the board). ~52.8% → 56.4%.
+- [x] `bad_spot` flag — 2+ stacked hurt situational flags → red chip + "Bad
+      spots" board filter. Fade lean, ~57% ATS (n=75). Display only.
 - [ ] Build 4 — Top-25 bounded-prior toggle (deprioritised — Yahn isn't a driver)
 
 ## Open — build backlog
