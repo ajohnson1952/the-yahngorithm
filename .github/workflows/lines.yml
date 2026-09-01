@@ -1,0 +1,28 @@
+# Betting-line snapshots (The Odds API) on every day games are played —
+# including the odd Wed / Sun / Mon slots — then re-score. Also refreshes
+# scores (pull-games) so Sunday/Monday finals land without waiting for
+# the Tuesday pull.
+#   Odds API: ~16 pulls/week x 2 credits = ~32/week = ~28% of 500/mo.
+name: Betting lines
+
+on:
+  schedule:
+    - cron: "13 21 * * 3"                  # Wed evening
+    - cron: "13 16,22 * * 4"               # Thu
+    - cron: "13 16,22 * * 5"               # Fri
+    - cron: "13 13,15,17,19,21,23 * * 6"   # Sat, every 2h
+    - cron: "13 1,15,20 * * 0"             # Sat night + Sunday games
+    - cron: "13 19,22 * * 1"               # Monday games
+  workflow_dispatch:
+
+jobs:
+  go:
+    uses: ./.github/workflows/_run.yml
+    secrets: inherit
+    with:
+      commands: >
+        npm run pull-games &&
+        npm run pull-lines -- --type daily &&
+        npm run compute-market-flags &&
+        npm run run-model &&
+        npm run generate-picks

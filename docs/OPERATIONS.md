@@ -8,26 +8,36 @@ scheduled run failed or you want a fresh pull right now.
 
 | Workflow | When (UTC) | What it does |
 |---|---|---|
-| **Tue weekly** | Tue 14:00 | ratings (SP+ / SRS / pace), polls, this week's schedule, advanced stats + EPA, **opening lines**, Kalshi, situational flags, market flags, run model, generate picks |
-| **Gameday** | Thu 20/23, Fri 18/21/23, Sat 15–23 + Sun 00–04 | **line snapshots** (this is what makes `steam` work), Kalshi, market flags, re-run model, re-generate picks |
-| **Sun results** | Sun 16:00 | final scores, advanced stats, **grade the week's picks** (ATS + CLV) **and every spread model + flag vs the closing line** (→ the Grades page), refresh team trends, market flags, run model |
-| **Daily** | every day 13:00 | weather forecast, injury report |
+| **Heartbeat** | every 3 h, all week | Kalshi refresh, market flags, re-run model, re-generate picks (all free) |
+| **Betting lines** | Wed 21; Thu 16/22; Fri 16/22; Sat every 2 h 13–23; Sat-night + Sun 01/15/20; Mon 19/22 | scores, **line snapshots** (feeds `steam`), market flags, model, picks — covers every day games are played, including Sun/Mon |
+| **Tue weekly** | Tue 14:13 | grade last week, then ratings (SP+ / SRS / pace), polls, schedule, advanced stats + EPA, **opening lines**, Kalshi, situational flags, model, picks |
+| **Sun results** | Sun 15:43 | Saturday's finals, advanced-stat checkpoint, **grade** (picks + all models + all flags vs the close → Grades page), team trends |
+| **Daily** | 11:43 and 23:43 | weather forecast, injury report |
 | **Preseason factor refresh** | manual only | talent composite, returning production, transfer portal, per-team HFA — run once preseason and again after the portal windows |
 
-Budget with this schedule: CFBD ~15%/mo, The Odds API ~35%/mo. Comfortable.
+Budget with this schedule: CFBD ~35%/mo, The Odds API ~30%/mo. Comfortable.
+
+> **If the data looks stale:** check **GitHub → Actions**. Scheduled workflows
+> sometimes don't start until the workflow files have been re-pushed (any commit
+> touching `.github/workflows/`). If a manual **Run workflow** succeeds but the
+> schedules stay dead for a day, the workflow files need another push, or the
+> repo secrets (`DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY` — under Settings →
+> Secrets and variables → **Actions**) are missing.
 
 ## Your weekly rhythm
 
 1. **Tuesday/Wednesday** — the board has opening lines + the model + any picks.
-   Skim it. Check `/picks` for last week's grade.
-2. **Through the week** — watch the board as lines move. The **"Bad spots"**
-   filter surfaces the 1–2 nastiest situational spots. Read the game pages for
-   the ones you care about — that's where the flags, trends, Kalshi panel, line
-   movement, and the Yahn breakdown all live.
-3. **Saturday** — final line check before kickoff.
-4. **Sunday** — `Sun results` grades everything overnight. Check `/picks` for
-   CLV (not W-L) and `/grades` for how each model + flag is tracking vs the
-   close for the season.
+   Skim it. Check `/grades` + `/picks` for last week.
+2. **Through the week** — Kalshi + the model refresh every 3 hours; lines refresh
+   every game day. Watch the board as lines move. The **"Bad spots"** filter
+   surfaces the 1–2 nastiest situational spots; **pin** games you're tracking.
+   Read the game pages — flags, trends, Kalshi panel, line movement, the current
+   sportsbook lines, and the Yahn breakdown all live there.
+3. **Saturday** — final line check before kickoff (game pages show every book's
+   current number).
+4. **Sunday/Monday** — grading runs Sunday and again Tuesday (to catch Sun/Mon
+   games). Check `/grades` for how each model + flag is tracking for the season,
+   and `/picks` for CLV (not W-L).
 
 ## What to actually trust
 

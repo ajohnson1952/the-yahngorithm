@@ -1,10 +1,11 @@
-# Tuesday: fresh SP+ / SRS / polls, this week's schedule, opening lines,
-# then flags + model + picks. ~14:00 UTC (mid-morning ET).
+# Tuesday mid-morning ET: grade last week (incl. any Sun/Mon games),
+# then the weekly heavy pull — SP+ / SRS / polls / schedule / advanced
+# stats / opening lines / Kalshi — then flags + model + picks.
 name: Tue weekly refresh
 
 on:
   schedule:
-    - cron: "0 14 * * 2"
+    - cron: "13 14 * * 2"
   workflow_dispatch:
 
 jobs:
@@ -13,6 +14,7 @@ jobs:
     secrets: inherit
     with:
       commands: >
+        npm run grade-picks &&
         npm run pull-ratings &&
         npm run pull-rankings &&
         npm run pull-games &&
