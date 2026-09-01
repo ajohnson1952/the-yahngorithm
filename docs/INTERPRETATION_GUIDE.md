@@ -211,7 +211,9 @@ market underrates is one of the few repeatable totals edges.
 
 Pulled per game as a **snapshot** (never overwritten), so you can see the
 forecast drift from Tuesday to Saturday. Indoor games are skipped entirely.
-Stored: temperature, wind (mph, sustained), precipitation probability.
+Stored: temperature + "feels like", humidity, wind (sustained + gust),
+precipitation probability, and rain / snowfall rate at kickoff. When a forecast
+is genuinely extreme it also raises a **weather chip** on the game — see §5.
 
 What actually moves a number:
 
@@ -270,9 +272,20 @@ Not every chip is a situational flag. A card can also show:
 | **`reverse line move`** (`rlm`) | red (hurt) | market (§9) | The book's number moved toward this team while the Kalshi market (real money, no vig) moved the other way. Public's on this team; the sharp market isn't — **lean the other side.** |
 | **`fast pace`** (`fast_pace`) | blue | totals model | The game projects to **≥ 26 possessions** — an up-tempo matchup. Shown when it's the second signal behind an **OVER** pick. |
 | **`slow pace`** (`slow_pace`) | blue | totals model | The game projects to **≤ 21 possessions** — a grind. Shown when it's the second signal behind an **UNDER** pick. |
-| **`wind`** | blue | weather | Sustained wind **≥ 15 mph** at kickoff. Corroborates an **UNDER** (and it already shaved the model total directly — see §3–4). |
 
 The blue chips are **totals corroboration only** — they never touch a spread pick, and on their own they are not a reason to bet. `steam` / `rlm` get their full treatment in §9.
+
+### Weather chips
+
+Raised when the **kickoff forecast is genuinely extreme for football** — a handful of games a week in the hot early season and the cold late one, near-zero in between. They hit **both teams**, so they're a "conditions" heads-up, not a fade-this-team signal. Weather is already baked into the totals model (§3–4); these chips just make the notable games easy to spot. **Not pick corroborators, not graded.**
+
+| Chip | Fires when | Football effect |
+|---|---|---|
+| **`extreme heat`** (`heat`) | "feels like" (heat index) **≥ 100°F** at kickoff | Late-game legs and depth matter more; offenses stall in the 4th. Small **UNDER** lean. |
+| **`extreme cold`** (`cold`) | "feels like" (wind chill) **≤ 15°F** | Catching and kicking get hard, FG range shrinks → **UNDER** + the run, and the cold-weather side over a warm-weather visitor. |
+| **`wind`** | sustained **≥ 20 mph** or gusts **≥ 35** | The biggest weather factor — passing and kicking suffer badly. Strong **UNDER** lean; shootout scripts are unlikely. |
+| **`heavy rain`** (`rain`) | steady rain **≥ 3 mm/hr** and above freezing | Fumbles up, passing down → the run, the more physical team, and the **UNDER**. |
+| **`snow`** | snow falling **≥ 0.5 cm/hr**, or near-freezing with a high precip chance | Highest-variance weather: heavy **UNDER** pressure, kicking chaos, ball-security problems. Often the points with the dog. |
 
 ### Reading them
 

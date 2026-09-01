@@ -117,6 +117,7 @@ async function main() {
     { name: "pull-kalshi", args: [], on: run.heartbeat || w },
     { name: "pull-weather", args: [], on: run.weather },
     { name: "pull-injuries", args: [], on: run.weather },
+    { name: "compute-weather-flags", args: [], on: run.weather || w },
     { name: "compute-flags", args: [], on: w },
     { name: "compute-market-flags", args: [], on: run.heartbeat || w },
     { name: "run-model", args: [], on: run.heartbeat || w },
@@ -178,8 +179,8 @@ async function main() {
   // cron-job.org, failure email) when a pure-compute step broke, or when this
   // was an explicit --only / weekly run the operator is watching.
   const COMPUTE = new Set([
-    "compute-flags", "compute-market-flags", "run-model", "generate-picks",
-    "grade-picks", "compute-trends",
+    "compute-flags", "compute-market-flags", "compute-weather-flags", "run-model",
+    "generate-picks", "grade-picks", "compute-trends",
   ]);
   const hardFail = failed.some(
     (f) => onlyArg != null || run.weekly || COMPUTE.has(f.split(" ")[0])

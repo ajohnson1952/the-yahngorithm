@@ -11,6 +11,7 @@ import {
   FLAG_MEANING,
   HURT_FLAGS,
   HELP_FLAGS,
+  WEATHER_FLAGS,
   flagDetail,
   kickoffStr,
   stampCT,
@@ -404,11 +405,14 @@ export default async function GamePage({
       ) : (
         <div className="mrows">
           {g.gameFlags.map((f) => {
-            const dir = HURT_FLAGS.has(f.flagType)
-              ? "hurts"
-              : HELP_FLAGS.has(f.flagType)
-                ? "helps"
-                : "";
+            const isWeather = WEATHER_FLAGS.has(f.flagType);
+            const dir = isWeather
+              ? ""
+              : HURT_FLAGS.has(f.flagType)
+                ? "hurts"
+                : HELP_FLAGS.has(f.flagType)
+                  ? "helps"
+                  : "";
             const det = flagDetail(f.flagType, f.detail);
             return (
               <div key={f.id} className="mrow">
@@ -422,7 +426,7 @@ export default async function GamePage({
                       detail: f.detail,
                     }}
                   />
-                  <strong>{f.team.canonicalName}</strong>
+                  <strong>{isWeather ? "Both teams" : f.team.canonicalName}</strong>
                   {det && <span className="mrow-sub">{det}</span>}
                   {dir && (
                     <span
@@ -542,13 +546,19 @@ export default async function GamePage({
                 <li key={w.id}>
                   <span className="hist-when">{stampCT(w.pulledAt)}</span>
                   <span className="hist-vals mono">
-                    <span>{w.tempF == null ? "–" : `${Math.round(w.tempF)}°F`}</span>
+                    <span>
+                      {w.tempF == null ? "–" : `${Math.round(w.tempF)}°F`}
+                      {w.feelsF != null &&
+                        Math.round(w.feelsF) !== Math.round(w.tempF ?? w.feelsF) &&
+                        ` (feels ${Math.round(w.feelsF)}°)`}
+                    </span>
                     <span
                       className={
                         w.windMph != null && w.windMph >= 15 ? "wind-hi" : ""
                       }
                     >
                       wind {w.windMph == null ? "–" : trim(r1(w.windMph))}
+                      {w.windGustMph != null && ` g${Math.round(w.windGustMph)}`}
                     </span>
                     <span className="dim">
                       precip{" "}

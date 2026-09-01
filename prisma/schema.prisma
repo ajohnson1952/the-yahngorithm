@@ -267,8 +267,13 @@ model Weather {
   gameId           String
   game             Game     @relation(fields: [gameId], references: [id])
   windMph          Float?
+  windGustMph      Float?
   precipProbability Float?
+  rainMmHr         Float?   // liquid precip rate at kickoff
+  snowCmHr         Float?   // snowfall rate at kickoff
   tempF            Float?
+  feelsF           Float?   // apparent temp (heat index / wind chill)
+  humidityPct      Float?
   pulledAt         DateTime @default(now())
 
   @@index([gameId])

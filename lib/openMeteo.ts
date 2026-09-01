@@ -11,9 +11,13 @@ const MAX_FORECAST_DAYS = 16;
 
 export interface HourlyWeather {
   tempF: number | null;
+  feelsF: number | null; // apparent temperature (heat index / wind chill combined)
+  humidityPct: number | null;
   precipProb: number | null;
   windMph: number | null;
   windGustMph: number | null;
+  rainMmHr: number | null; // liquid precip rate at kickoff, mm/hour
+  snowCmHr: number | null; // snowfall rate at kickoff, cm/hour
 }
 
 /** Nearest-hour forecast for a venue at kickoff. null if beyond the horizon. */
@@ -32,7 +36,7 @@ export async function forecastAt(
 
   const url =
     `${BASE}?latitude=${lat}&longitude=${lng}` +
-    `&hourly=temperature_2m,precipitation_probability,wind_speed_10m,wind_gusts_10m` +
+    `&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation_probability,wind_speed_10m,wind_gusts_10m,rain,snowfall` +
     `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=UTC` +
     `&forecast_days=${forecastDays}`;
 
@@ -61,8 +65,12 @@ export async function forecastAt(
   const at_ = <T,>(arr: T[] | undefined): T | null => arr?.[best] ?? null;
   return {
     tempF: at_(j.hourly.temperature_2m),
+    feelsF: at_(j.hourly.apparent_temperature),
+    humidityPct: at_(j.hourly.relative_humidity_2m),
     precipProb: at_(j.hourly.precipitation_probability),
     windMph: at_(j.hourly.wind_speed_10m),
     windGustMph: at_(j.hourly.wind_gusts_10m),
+    rainMmHr: at_(j.hourly.rain),
+    snowCmHr: at_(j.hourly.snowfall),
   };
 }

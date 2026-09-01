@@ -30,6 +30,7 @@
     "seed-rivalries": "tsx --env-file=.env scripts/seedRivalries.ts",
     "compute-flags": "tsx --env-file=.env scripts/computeFlags.ts",
     "compute-market-flags": "tsx --env-file=.env scripts/computeMarketFlags.ts",
+    "compute-weather-flags": "tsx --env-file=.env scripts/computeWeatherFlags.ts",
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",

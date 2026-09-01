@@ -51,6 +51,11 @@ export const RUNNABLE: Record<
     label: "Recompute market flags (RLM / steam)",
     note: "No API. After pull-lines + pull-kalshi.",
   },
+  "compute-weather-flags": {
+    file: "scripts/computeWeatherFlags.ts",
+    label: "Recompute weather flags (heat/cold/wind/rain/snow)",
+    note: "No API. After pull-weather.",
+  },
   "run-model": {
     file: "scripts/runModel.ts",
     label: "Run the model (spreads + totals)",
@@ -115,6 +120,7 @@ export const RUN_ALL_ORDER: string[] = [
   "pull-injuries",
   "compute-flags",
   "compute-market-flags",
+  "compute-weather-flags",
   "run-model",
   "generate-picks",
   "grade-picks",

@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Weather" ADD COLUMN     "rainMmHr" DOUBLE PRECISION,
+ADD COLUMN     "snowCmHr" DOUBLE PRECISION,
+ADD COLUMN     "windGustMph" DOUBLE PRECISION;
+

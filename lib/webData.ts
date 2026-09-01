@@ -81,6 +81,11 @@ export interface GameView {
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
+const WEATHER_FLAG_TYPES = new Set(["heat", "cold", "wind", "rain", "snow"]);
+/** chip display order: bad_spot headline, then situational/market, weather last */
+const rank = (flagType: string) =>
+  flagType === "bad_spot" ? 0 : WEATHER_FLAG_TYPES.has(flagType) ? 2 : 1;
+
 /** AP rank per teamId for a given week — falls back to the most recent poll
  *  published on or before that week (handy in the gap before a week's poll drops). */
 async function apRankMap(
@@ -297,10 +302,8 @@ export async function getWeekBoard(
           flagType: f.flagType,
           detail: f.detail,
         }))
-        // bad_spot first (it's the headline), then everything else
-        .sort((a, b) =>
-          a.flagType === "bad_spot" ? -1 : b.flagType === "bad_spot" ? 1 : 0
-        ),
+        // bad_spot first (the headline), weather chips last, situational between
+        .sort((a, b) => rank(a.flagType) - rank(b.flagType)),
       picks,
       hasModel,
       sortRank,

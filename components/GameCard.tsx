@@ -47,10 +47,14 @@ export function GameCard({ g }: { g: GameView }) {
     g.wind != null && g.wind >= 15 ? `wind ${trim(g.wind)}` : null,
   ].filter(Boolean);
 
-  const paceFlags =
+  // the pace/wind chips that ride along with a pick — but drop "wind" if the
+  // game already carries the stronger weather `wind` flag (avoid a double chip)
+  const hasWeatherWind = g.flags.some((f) => f.flagType === "wind");
+  const paceFlags = (
     g.picks[0]?.flags?.filter((f) =>
       ["wind", "slow_pace", "fast_pace"].includes(f)
-    ) ?? [];
+    ) ?? []
+  ).filter((f) => !(f === "wind" && hasWeatherWind));
 
   // model projection but no sportsbook line anywhere yet
   const modelOnly =

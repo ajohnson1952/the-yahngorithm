@@ -88,8 +88,13 @@ async function main() {
     rows.push({
       gameId: g.id,
       tempF: wx.tempF,
+      feelsF: wx.feelsF,
+      humidityPct: wx.humidityPct,
       windMph: wx.windMph,
+      windGustMph: wx.windGustMph,
       precipProbability: wx.precipProb,
+      rainMmHr: wx.rainMmHr,
+      snowCmHr: wx.snowCmHr,
     });
     captured.push(
       `${g.awayTeam.canonicalName} @ ${g.homeTeam.canonicalName}: ` +

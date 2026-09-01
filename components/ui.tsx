@@ -11,6 +11,7 @@ export const HURT_FLAGS = new Set([
 export const HELP_FLAGS = new Set(["off_bye", "revenge", "steam"]);
 export const MARKET_FLAGS = new Set(["rlm", "steam"]);
 export const SPOT_FLAGS = new Set(["bad_spot"]);
+export const WEATHER_FLAGS = new Set(["heat", "cold", "wind", "rain", "snow"]);
 
 const FLAG_LABEL: Record<string, string> = {
   short_week: "short week",
@@ -25,6 +26,10 @@ const FLAG_LABEL: Record<string, string> = {
   wind: "wind",
   slow_pace: "slow pace",
   fast_pace: "fast pace",
+  heat: "extreme heat",
+  cold: "extreme cold",
+  rain: "heavy rain",
+  snow: "snow",
 };
 
 export const FLAG_MEANING: Record<string, string> = {
@@ -46,6 +51,16 @@ export const FLAG_MEANING: Record<string, string> = {
     "The book's number moved toward this team while the Kalshi prediction market (real money, no vig) moved the other way, on a market with real volume. The public is on this team; the sharp market isn't. Lean the other side.",
   steam:
     "The consensus spread made a fast, synchronized move toward this team across the books — a sign real money came in on them quickly.",
+  heat:
+    "Kickoff \"feels like\" 100°F+ (heat index — and the field runs hotter still). Second-half legs and depth matter more; offenses tend to bog down late. Small lean UNDER. Affects both teams.",
+  cold:
+    "Kickoff \"feels like\" 15°F or below (wind chill). Ball is harder to catch and kick, field-goal range shrinks — favors the run and the UNDER, and the cold-weather side over a warm-weather visitor.",
+  wind:
+    "Sustained wind 18+ mph or gusts 30+. The single biggest weather factor: passing and especially kicking suffer. Leans UNDER; a shootout script is unlikely. Affects both teams.",
+  rain:
+    "Steady, moderate-or-heavier rain at kickoff. Fumbles up, passing efficiency down — favors the run, the more physical team, and the UNDER. Explosive plays get dampened.",
+  snow:
+    "Snow falling at kickoff (or near-freezing with a high precip chance). The highest-variance weather: big UNDER pressure, kicking chaos, ball-security problems. Often the points with the dog. Affects both teams.",
 };
 
 export function flagDetail(flagType: string, detail: unknown): string {
@@ -85,6 +100,31 @@ export function flagDetail(flagType: string, detail: unknown): string {
       ]
         .filter(Boolean)
         .join(" ");
+    case "heat":
+    case "cold": {
+      const t = d.tempF != null ? `${Math.round(Number(d.tempF))}°F` : "";
+      const f =
+        d.feelsLike != null && Math.round(Number(d.feelsLike)) !== Math.round(Number(d.tempF))
+          ? `feels ${Math.round(Number(d.feelsLike))}°`
+          : "";
+      const h = d.humidityPct != null ? `${d.humidityPct}% RH` : "";
+      return [t, f, h].filter(Boolean).join(", ");
+    }
+    case "wind":
+      return [
+        d.windMph != null ? `${Math.round(Number(d.windMph))} mph` : "",
+        d.gustMph != null ? `gust ${Math.round(Number(d.gustMph))}` : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
+    case "rain":
+      return d.rateMmHr != null ? `${d.rateMmHr} mm/hr` : "";
+    case "snow":
+      return d.rateCmHr != null
+        ? `${d.rateCmHr} cm/hr`
+        : d.tempF != null
+          ? `${Math.round(Number(d.tempF))}°F`
+          : "";
     default:
       return "";
   }
@@ -97,19 +137,26 @@ export function FlagChip({
   flag: FlagView;
   showTeam?: boolean;
 }) {
+  const isWeather = WEATHER_FLAGS.has(flag.flagType);
   const cls = SPOT_FLAGS.has(flag.flagType)
     ? "spot"
     : MARKET_FLAGS.has(flag.flagType)
       ? "mkt"
-      : HURT_FLAGS.has(flag.flagType)
-        ? "hurt"
-        : HELP_FLAGS.has(flag.flagType)
-          ? "help"
-          : "wx";
+      : isWeather
+        ? "wx"
+        : HURT_FLAGS.has(flag.flagType)
+          ? "hurt"
+          : HELP_FLAGS.has(flag.flagType)
+            ? "help"
+            : "wx";
   const det = flagDetail(flag.flagType, flag.detail);
+  // weather hits both sides — never tag it to one team
   return (
-    <span className={`chip ${cls}`} title={`${flag.team}${det ? ` — ${det}` : ""}`}>
-      {showTeam ? `${flag.teamAbbr ?? abbrevTeam(flag.team)} ` : ""}
+    <span
+      className={`chip ${cls}`}
+      title={isWeather ? det : `${flag.team}${det ? ` — ${det}` : ""}`}
+    >
+      {showTeam && !isWeather ? `${flag.teamAbbr ?? abbrevTeam(flag.team)} ` : ""}
       {FLAG_LABEL[flag.flagType] ?? flag.flagType}
     </span>
   );
