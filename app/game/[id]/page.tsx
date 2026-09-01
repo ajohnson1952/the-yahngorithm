@@ -314,7 +314,6 @@ export default async function GamePage({
               />
             )}
           </div>
-          {yb && <YahnBreakdownPanel yb={yb} away={awayShort} home={homeShort} />}
           <p className="subhead" style={{ marginTop: 12 }}>
             {modelSrs == null
               ? "The spread signal is SP+ only right now."
@@ -326,6 +325,7 @@ export default async function GamePage({
             Market is the consensus of {books} book{books === 1 ? "" : "s"}.
             Positive edge = model likes {home.canonicalName}. Guide §2.
           </p>
+          {yb && <YahnBreakdownPanel yb={yb} away={awayShort} home={homeShort} />}
         </>
       )}
 
@@ -517,6 +517,12 @@ export default async function GamePage({
               forecast horizon.
             </p>
           ) : (
+            <>
+            <p className="subhead" style={{ marginTop: 0 }}>
+              Forecast for the venue <strong>at kickoff time</strong> (nearest
+              hour). Each row is a snapshot — expect it to firm up as the game
+              nears; the timestamp is when that snapshot was taken.
+            </p>
             <ul className="hist">
               {dedupeWeather([...weather].reverse()).map((w) => (
                 <li key={w.id}>
@@ -540,6 +546,7 @@ export default async function GamePage({
                 </li>
               ))}
             </ul>
+            </>
           )}
           <p className="subhead" style={{ marginTop: 10 }}>
             Sustained wind ≥ 15 mph is the one weather factor that reliably moves a
@@ -750,32 +757,37 @@ function YahnBreakdownPanel({
 }) {
   const adj = (n: number) => (n === 0 ? "—" : signed(r1(n)));
   const row = (label: string, s: YahnSide) => (
-    <div className="mrow">
-      <div className="mrow-top">
-        <strong>{label}</strong>
-        <span className="mono" style={{ marginLeft: "auto" }}>
-          rating <strong>{signed(r1(s.rating))}</strong>
-        </span>
-      </div>
-      <div className="mrow-body mono">
-        <span className="dim">SP+ base</span> {signed(r1(s.spBase))}
-        &nbsp;·&nbsp; <span className="dim">EPA adj</span> {adj(s.epaAdj)}
-        &nbsp;·&nbsp; <span className="dim">roster adj</span> {adj(s.rosterAdj)}
-      </div>
+    <div className="ybd-row">
+      <span className="ybd-team">{label}</span>
+      <span className="ybd-part mono">{signed(r1(s.spBase))}</span>
+      <span className="ybd-part mono">{adj(s.epaAdj)}</span>
+      <span className="ybd-part mono">{adj(s.rosterAdj)}</span>
+      <span className="ybd-part mono ybd-rating">{signed(r1(s.rating))}</span>
     </div>
   );
   return (
-    <div className="mrows" style={{ marginTop: 10 }}>
-      {row(away, yb.away)}
-      {row(home, yb.home)}
-      <p className="subhead" style={{ margin: "4px 2px 0" }}>
-        SP+ is the backbone. <em>EPA adj</em> nudges toward raw efficiency
+    <div className="yahn-detail">
+      <div className="ybd-head">
+        How the Yahn number is built <span className="dim">— not a separate model</span>
+      </div>
+      <div className="ybd-grid">
+        <div className="ybd-row ybd-labels">
+          <span />
+          <span>SP+ base</span>
+          <span>+ EPA</span>
+          <span>+ roster</span>
+          <span className="ybd-rating">= rating</span>
+        </div>
+        {row(away, yb.away)}
+        {row(home, yb.home)}
+      </div>
+      <p className="ybd-note">
+        SP+ is the backbone. <strong>EPA</strong> nudges toward raw efficiency
         (weight grows through the season — near zero this early).{" "}
-        <em>Roster adj</em> = talent + returning production + transfer-portal
-        net, and fades to zero by week 5. Home edge for this venue:{" "}
-        <span className="mono">{trim(yb.hfa)}</span> (2.7 base + altitude or a
-        hostile-venue bump; SP+/SRS use a flat 2.5). Weights are un-calibrated
-        for now.
+        <strong>Roster</strong> = talent + returning production + transfer-portal
+        net, fading to zero by week 5. Venue home edge:{" "}
+        <span className="mono">{trim(yb.hfa)}</span> (2.7 base + altitude / hostile
+        bump; SP+ and SRS use a flat 2.5). Weights un-calibrated.
       </p>
     </div>
   );

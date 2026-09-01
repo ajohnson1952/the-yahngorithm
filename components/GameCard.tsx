@@ -82,13 +82,8 @@ export function GameCard({ g }: { g: GameView }) {
               </span>
               <span className="mm-line">
                 <span className="mdl mono">
-                  model {g.modelSpreadSp != null ? signed(-g.modelSpreadSp) : "–"}
-                  {g.modelSpreadSrs != null
-                    ? ` · srs ${signed(-g.modelSpreadSrs)}`
-                    : ""}
-                  {g.modelSpreadYahn != null
-                    ? ` · yahn ${signed(-g.modelSpreadYahn)}`
-                    : ""}
+                  model{" "}
+                  {g.modelSpreadSp != null ? signed(-g.modelSpreadSp) : "–"}
                 </span>
               </span>
               <EdgeTag
@@ -127,9 +122,6 @@ export function GameCard({ g }: { g: GameView }) {
               <span className="mm-line">
                 <span className="mdl mono">
                   model {g.modelTotal != null ? trim(g.modelTotal) : "–"}
-                  {g.predictedPossessions != null
-                    ? ` · ${trim(g.predictedPossessions)} poss`
-                    : ""}
                 </span>
               </span>
               <EdgeTag

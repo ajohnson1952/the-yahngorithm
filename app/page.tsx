@@ -58,36 +58,46 @@ export default async function Home({
 
   const hasBadSpot = (g: (typeof board)[number]) =>
     g.flags.some((f) => f.flagType === "bad_spot");
+  const byKick = (a: (typeof board)[number], b: (typeof board)[number]) =>
+    Date.parse(a.kickoff) - Date.parse(b.kickoff);
+
+  // completed games always sink to their own section at the bottom
+  const live = board.filter((g) => g.status !== "final");
+  const done = board
+    .filter((g) => g.status === "final")
+    .sort((a, b) => Date.parse(b.kickoff) - Date.parse(a.kickoff)); // newest first
 
   // ---- build the sections ----
   let sections: { label: string; games: typeof board }[];
   if (badSpotOnly) {
-    const games = [...board]
-      .filter(hasBadSpot)
-      .sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
+    const games = live.filter(hasBadSpot).sort(byKick);
     sections = games.length
       ? [{ label: `Bad-spot games (${games.length})`, games }]
       : [];
   } else if (byTime) {
     const byDay = new Map<string, typeof board>();
-    const ordered = [...board].sort(
-      (a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)
-    );
-    for (const g of ordered) {
+    for (const g of [...live].sort(byKick)) {
       const k = dayLabel(g.kickoff);
       (byDay.get(k) ?? byDay.set(k, []).get(k)!).push(g);
     }
     sections = [...byDay.entries()].map(([label, games]) => ({ label, games }));
   } else {
     const groups = new Map<number, typeof board>();
-    for (const g of board) {
-      (groups.get(g.sortRank) ?? groups.set(g.sortRank, []).get(g.sortRank)!).push(
-        g
-      );
+    for (const g of live) {
+      (groups.get(g.sortRank) ?? groups.set(g.sortRank, []).get(g.sortRank)!).push(g);
     }
     sections = [0, 1, 2, 3, 4, 6]
       .filter((r) => groups.get(r)?.length)
-      .map((r) => ({ label: RANK_LABEL[r], games: groups.get(r)! }));
+      // within each edge group, sub-sort by kickoff time
+      .map((r) => ({
+        label: RANK_LABEL[r],
+        games: [...groups.get(r)!].sort(byKick),
+      }));
+  }
+
+  // trailing "Final" section (all modes except the bad-spot filter)
+  if (!badSpotOnly && done.length) {
+    sections.push({ label: `Final (${done.length})`, games: done });
   }
 
   return (
