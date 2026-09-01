@@ -65,23 +65,24 @@ function closingConsensus(
 
 /** Grade the 3 spread models + every flag on this week's final games,
  *  then print a season-to-date scoreboard. Idempotent (upsert per game+key). */
-async function gradeModelsAndFlags(season: number, week: number) {
+async function gradeModelsAndFlags(season: number, week?: number) {
   // freeze the grade at first grading — don't re-score a game once it's in
   // (a later run-model on a final game would be mild hindsight).
   const already = new Set(
-    (await prisma.modelGrade.findMany({ where: { season, week }, select: { gameId: true } })).map(
+    (await prisma.modelGrade.findMany({ where: { season }, select: { gameId: true } })).map(
       (x) => x.gameId
     )
   );
 
   const games = await prisma.game.findMany({
     where: {
-      season, week, status: "final",
+      season, status: "final",
+      ...(week != null ? { week } : {}),
       homeScore: { not: null }, awayScore: { not: null },
       id: { notIn: [...already] },
     },
     select: {
-      id: true, kickoffTime: true, homeTeamId: true, awayTeamId: true, homeScore: true, awayScore: true,
+      id: true, week: true, kickoffTime: true, homeTeamId: true, awayTeamId: true, homeScore: true, awayScore: true,
       lines: { select: { market: true, lineValue: true, snapshotType: true, capturedAt: true } },
       gameFlags: { select: { teamId: true, flagType: true } },
       modelPredictions: { orderBy: { generatedAt: "desc" }, take: 1 },
@@ -110,7 +111,7 @@ async function gradeModelsAndFlags(season: number, week: number) {
       const side = Math.sign(m - closeMargin);
       if (side === 0) continue;
       rows.push({
-        gameId: g.id, season, week, key,
+        gameId: g.id, season, week: g.week, key,
         predMargin: r1(m), closeMargin: r1(closeMargin), actualMargin,
         side, edge: r1(Math.abs(m - closeMargin)),
         result: outcome(side, cover), absError: r1(Math.abs(m - actualMargin)),
@@ -127,7 +128,7 @@ async function gradeModelsAndFlags(season: number, week: number) {
       const onHome = teamIds[0] === g.homeTeamId;
       const side = onHome ? dir : -dir; // fade home = bet away = -1
       rows.push({
-        gameId: g.id, season, week, key: `flag:${flagType}`,
+        gameId: g.id, season, week: g.week, key: `flag:${flagType}`,
         predMargin: null, closeMargin: r1(closeMargin), actualMargin,
         side, edge: null, result: outcome(side, cover), absError: null,
       });
@@ -181,15 +182,17 @@ async function gradeModelsAndFlags(season: number, week: number) {
 
 async function main() {
   const o = parseArgs();
-  const { season, week } =
-    o.season != null && o.week != null
-      ? { season: o.season, week: o.week }
-      : await getCurrentSeasonWeek();
+  // With --season --week: grade only that week. With no args (the scheduled
+  // case): sweep EVERY ungraded final game of the season, so a Sat-night /
+  // Sun / Mon final that missed its week's run still gets graded promptly.
+  // parseArgs enforces season+week together, so week != null ⟺ targeted run.
+  const season = o.season ?? (await getCurrentSeasonWeek()).season;
+  const week = o.week ?? null;
 
   const picks = await prisma.pick.findMany({
     where: {
       gradedAt: null,
-      game: { season, week, status: "final" },
+      game: { season, status: "final", ...(week != null ? { week } : {}) },
     },
     include: {
       game: {
@@ -204,7 +207,8 @@ async function main() {
     },
   });
 
-  console.log(`Grading — season ${season}, week ${week}: ${picks.length} ungraded final pick(s)\n`);
+  const scope = week != null ? `week ${week}` : "all ungraded weeks";
+  console.log(`Grading — season ${season}, ${scope}: ${picks.length} ungraded final pick(s)\n`);
 
   let w = 0, l = 0, pu = 0;
   const clvs: number[] = [];
@@ -297,7 +301,7 @@ async function main() {
   }
 
   // ---- grade every model + every flag vs the closing line ----
-  await gradeModelsAndFlags(season, week);
+  await gradeModelsAndFlags(season, week ?? undefined);
 
   await prisma.$disconnect();
 }

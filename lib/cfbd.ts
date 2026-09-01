@@ -7,6 +7,10 @@
 // npm scripts, which run tsx with --env-file=.env).
 // ============================================================
 
+import { readFileSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+
 const CFBD_BASE = "https://api.collegefootballdata.com";
 
 export function requireCfbdKey(): string {
@@ -83,11 +87,44 @@ export function seasonForDate(now: Date = new Date()): number {
  * after the regular season ends -> the last regular-season week. Scripts can
  * override this with --season/--week flags.
  */
+// The season calendar is effectively immutable once published, but ~15 scripts
+// call getCurrentSeasonWeek() and a GitHub Actions `&&` chain runs several of
+// them back-to-back in one container. Cache the calendar in /tmp (persists
+// across the steps of a single workflow job) so one chain = one /calendar call,
+// not eight. TTL is short enough that a mid-season calendar tweak still lands.
+const CAL_TTL_MS = 12 * 60 * 60 * 1000;
+const calCachePath = (season: number) => join(tmpdir(), `yahn-calendar-${season}.json`);
+
+function readCalCache(season: number): CfbdCalendarWeek[] | null {
+  try {
+    const raw = JSON.parse(readFileSync(calCachePath(season), "utf8")) as {
+      at: number;
+      cal: CfbdCalendarWeek[];
+    };
+    if (Date.now() - raw.at < CAL_TTL_MS && Array.isArray(raw.cal)) return raw.cal;
+  } catch {
+    /* no cache / unreadable — fall through to a live fetch */
+  }
+  return null;
+}
+
+function writeCalCache(season: number, cal: CfbdCalendarWeek[]): void {
+  try {
+    writeFileSync(calCachePath(season), JSON.stringify({ at: Date.now(), cal }));
+  } catch {
+    /* best-effort */
+  }
+}
+
 export async function getCurrentSeasonWeek(
   now: Date = new Date()
 ): Promise<{ season: number; week: number }> {
   const season = seasonForDate(now);
-  const cal = (await cfbdGet<CfbdCalendarWeek[]>(`/calendar?year=${season}`))
+  const cached = readCalCache(season);
+  const raw =
+    cached ?? (await cfbdGet<CfbdCalendarWeek[]>(`/calendar?year=${season}`));
+  if (!cached) writeCalCache(season, raw);
+  const cal = raw
     .filter((w) => w.seasonType === "regular")
     .sort((a, b) => a.week - b.week);
 

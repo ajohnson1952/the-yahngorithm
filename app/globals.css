@@ -199,17 +199,23 @@ a.card:hover .team-name { color: var(--blue); }
 
 .card-wrap { position: relative; }
 .pin-btn {
-  position: absolute; top: -10px; right: 10px; z-index: 3;
-  width: 24px; height: 24px; line-height: 1;
+  position: absolute; top: 9px; right: 9px; z-index: 3;
+  width: 30px; height: 30px; line-height: 1;
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; border-radius: 7px; cursor: pointer;
+  font-size: 17px; border-radius: 8px; cursor: pointer;
   background: var(--panel-2); border: 1px solid var(--border);
   color: var(--text-faint);
 }
 .pin-btn:hover { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 50%, var(--border)); }
 .pin-btn.on { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 45%, var(--border)); }
-.pin-btn.lg { position: static; width: auto; height: auto; padding: 3px 9px; font-size: 15px; gap: 5px; }
+.pin-btn.lg { position: static; width: auto; height: auto; padding: 4px 10px; font-size: 16px; gap: 5px; }
 .pin-btn:disabled { opacity: 0.5; cursor: default; }
+/* keep card content clear of the pin button in the top-right corner */
+.gc-rail { padding-right: 34px; }
+@media (max-width: 820px) {
+  .gc-rail { padding-right: 0; }
+  .card-grid { padding-right: 36px; }
+}
 .card.pinned { border-color: color-mix(in srgb, var(--amber) 40%, var(--border)); }
 .gpage-top { display: flex; align-items: center; justify-content: space-between; }
 

@@ -127,7 +127,8 @@ function clvOf(p: {
 
 export async function getWeekBoard(
   season: number,
-  week: number
+  week: number,
+  uid: string
 ): Promise<GameView[]> {
   const games = await db.game.findMany({
     where: {
@@ -145,7 +146,7 @@ export async function getWeekBoard(
         include: { team: { select: { canonicalName: true, abbreviation: true } } },
       },
       picks: true,
-      pin: { select: { gameId: true } },
+      pins: { where: { uid }, select: { gameId: true } },
     },
     orderBy: { kickoffTime: "asc" },
   });
@@ -303,7 +304,7 @@ export async function getWeekBoard(
       picks,
       hasModel,
       sortRank,
-      pinned: g.pin != null,
+      pinned: g.pins.length > 0,
     };
   });
 
@@ -318,7 +319,7 @@ export async function getWeekBoard(
   return views;
 }
 
-export async function getGameDetail(id: string) {
+export async function getGameDetail(id: string, uid: string) {
   const g = await db.game.findUnique({
     where: { id },
     include: {
@@ -329,7 +330,7 @@ export async function getGameDetail(id: string) {
       },
       picks: true,
       injuries: { include: { team: { select: { canonicalName: true } } } },
-      pin: { select: { gameId: true } },
+      pins: { where: { uid }, select: { gameId: true } },
     },
   });
   if (!g) return null;
@@ -367,7 +368,7 @@ export async function getGameDetail(id: string) {
 
   return {
     game: g,
-    pinned: g.pin != null,
+    pinned: g.pins.length > 0,
     pred,
     ratings,
     lines,

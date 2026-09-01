@@ -260,6 +260,20 @@ deliberately conservative — we'd rather miss a soft flag than raise a false on
 | **`letdown`** | Last week this team **won** a game that was either a rivalry or against a team rated within 3 SP+ points (an emotional, "played up" win) **and** this week's opponent is rated **≥ 10 SP+ points weaker**. | Emotional hangover after a big win, against a team they may overlook. **Fade this team / take the points.** |
 | **`bad_spot`** | **Two or more** of `travel` / `lookahead` / `letdown` / `short_week` stacked on the same team (e.g. a long trip on a short week). A rollup — the red chip. | The genuinely nasty spots — ~1 per week. Backtests ~57% ATS on the fade (small sample). **Take the points against this team.** Filter the board to these with the "Bad spots" toggle. Does *not* corroborate picks (its components already do). |
 
+### The other chips you'll see on a card
+
+Not every chip is a situational flag. A card can also show:
+
+| Chip | Colour | Source | What it means |
+|---|---|---|---|
+| **`steam`** | amber (help) | market (§9) | The consensus spread made a fast, synchronized move toward this team across books — real money came in on them quickly. |
+| **`reverse line move`** (`rlm`) | red (hurt) | market (§9) | The book's number moved toward this team while the Kalshi market (real money, no vig) moved the other way. Public's on this team; the sharp market isn't — **lean the other side.** |
+| **`fast pace`** (`fast_pace`) | blue | totals model | The game projects to **≥ 26 possessions** — an up-tempo matchup. Shown when it's the second signal behind an **OVER** pick. |
+| **`slow pace`** (`slow_pace`) | blue | totals model | The game projects to **≤ 21 possessions** — a grind. Shown when it's the second signal behind an **UNDER** pick. |
+| **`wind`** | blue | weather | Sustained wind **≥ 15 mph** at kickoff. Corroborates an **UNDER** (and it already shaved the model total directly — see §3–4). |
+
+The blue chips are **totals corroboration only** — they never touch a spread pick, and on their own they are not a reason to bet. `steam` / `rlm` get their full treatment in §9.
+
 ### Reading them
 
 - A flag against a team the model *already* dislikes = green light for a candidate.
@@ -448,15 +462,24 @@ Eastern). Full detail + your weekly rhythm is in `docs/OPERATIONS.md`.
 | When | What updates |
 |---|---|
 | **Every 3 hours, all week** | Kalshi refresh, market flags, model + picks re-run |
-| **Every day games are played** (Wed → Mon, several times a day) | **Line snapshots** (feeds `steam`), scores, market flags, model, picks |
+| **Game days — Sat every 30 min 10a–8p ET (hourly on the 8–9a & 8–11p wings); Thu/Fri 4×, Sun 4×, Mon/Tue/Wed 3×** | **Line snapshots** (feeds `steam`), **live scores**, market flags, model, picks, **and grading** — any final game is graded within ~30 min of ending |
 | **Tuesday ~14:00** | grade last week, then ratings / polls / schedule / advanced stats + EPA / **opening lines** / Kalshi / situational flags / model / picks |
-| **Sunday ~15:45** | Saturday's finals, advanced-stat checkpoint, **grade** (picks + all models + all flags → Grades page), team trends |
+| **Sunday ~15:45** | advanced-stat checkpoint, team trends (scores + grading already handled by the game-day loop) |
 | **Twice daily** | Weather forecast, injury report |
 | **Preseason (manual)** | Talent composite, returning production, transfer portal, per-team HFA |
 
-Sunday and Monday games are covered — scores and the Tuesday grade catch them.
-So: opening numbers land Tuesday, lines move all week, and the board re-scores
-continuously. The **Grades** page updates after each Sunday.
+Opening numbers land Tuesday; lines, scores and grades then refresh through
+every game window. A pick is only ever logged **before kickoff**, and a game is
+graded **as soon as it's final** — the **Grades** page is current within the hour
+on a Saturday.
+
+The line-snapshot cadence is sized to stay inside The Odds API's 500-credit
+monthly budget even in a five-Saturday peak month — October 2026 is the worst
+case (5 Thursdays + 5 Fridays + 5 Saturdays) and lands around 92%, with every
+Saturday including the 31st fully covered. `pull-lines` also carries a hard
+backstop that stops calling the API once the month's remaining credits fall
+below 15, as protection against manual runs or an unusual bowl stretch. The
+`/admin` panel shows the live balance.
 
 ### Using the board
 
@@ -464,7 +487,8 @@ continuously. The **Grades** page updates after each Sunday.
   kickoff), *By kickoff* (grouped by day), *Bad spots* (only games with a
   `bad_spot` flag), *★ Pinned* (your watch list).
 - **Pin** a game with the star on its card or page to add it to the Pinned
-  filter.
+  filter. Pins are remembered per browser (an anonymous cookie — no login), so
+  everyone keeps their own watch list.
 - **Completed games** drop to a "Final" section at the bottom of every view.
 - Each game page has a **Current lines** table — every book's latest number and
   odds, with the best price for each side flagged, for line-shopping.

@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
 import { getWeekBoard } from "../lib/webData";
 import { GameCard } from "../components/GameCard";
@@ -40,8 +41,9 @@ export default async function Home({
   const badSpotOnly = sp.sort === "badspot";
   const pinnedOnly = sp.sort === "pinned";
 
+  const uid = (await cookies()).get("yahn_uid")?.value ?? "";
   const [board, weeks] = await Promise.all([
-    getWeekBoard(season, week),
+    getWeekBoard(season, week, uid),
     weeksWithGames(season),
   ]);
 

@@ -113,6 +113,29 @@ async function main() {
     }
   }
 
+  // Hard budget backstop. The Odds API's own header tells us how many credits
+  // are left this calendar month (persisted on every pull). If we're near the
+  // floor, skip the call and exit cleanly — better to lose a few hours of line
+  // refresh at month's end (the slate is already captured, and it resets on the
+  // 1st) than to blow the 500/mo cap and start getting API errors. --force
+  // overrides. This makes the aggressive cadence safe even in a 5-Saturday
+  // month like October 2026 (5 Sat + 5 Fri, its theoretical max is right at 500).
+  const ODDS_FLOOR = 15;
+  const ym = new Date().toISOString().slice(0, 7);
+  const priorUsage = await prisma.apiUsage.findUnique({
+    where: { api_yearMonth: { api: "odds", yearMonth: ym } },
+  });
+  if (!force && priorUsage?.lastRemaining != null && priorUsage.lastRemaining < ODDS_FLOOR) {
+    console.log(
+      `The Odds API is down to ${priorUsage.lastRemaining} credits for ${ym} — ` +
+        `skipping this pull to stay under the monthly cap (resets on the 1st; ` +
+        `--force overrides).`
+    );
+    await recordCfbdUsage(prisma, getCfbdCallCount());
+    await prisma.$disconnect();
+    return;
+  }
+
   console.log("Pulling spreads + totals from The Odds API...");
   const { events, creditsRemaining, creditsLastCost } = await fetchNcaafOdds([
     "spreads",

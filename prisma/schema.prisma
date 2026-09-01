@@ -197,7 +197,7 @@ model Game {
   gameFlags         GameFlag[]
   picks             Pick[]
   modelGrades       ModelGrade[]
-  pin               PinnedGame?
+  pins              PinnedGame[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -377,12 +377,18 @@ model ModelGrade {
   @@index([season, week])
 }
 
-// ---------- PINNED GAMES (a personal "watch these" list, board filter) ----------
+// ---------- PINNED GAMES (per-visitor "watch these" list, board filter) ----------
+// `uid` is an anonymous per-browser id from the `yahn_uid` cookie (set by
+// middleware.ts). No accounts — a pin belongs to whoever holds that cookie.
 model PinnedGame {
   id       String   @id @default(cuid())
-  gameId   String   @unique
+  gameId   String
   game     Game     @relation(fields: [gameId], references: [id])
+  uid      String
   pinnedAt DateTime @default(now())
+
+  @@unique([gameId, uid])
+  @@index([uid])
 }
 
 // ---------- API USAGE (rolling monthly counters for the /admin budget panel) ----------

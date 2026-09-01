@@ -116,7 +116,14 @@ async function main() {
   const explain: string[] = [];
   const nearMiss: string[] = [];
 
+  const now = Date.now();
+
   for (const g of games) {
+    // Never log a pick on a game that has already kicked off — a pick made
+    // after the fact "knows" how the game is going and is worthless for
+    // grading. (The board still shows the model's line for finals.)
+    if (g.kickoffTime.getTime() <= now) continue;
+
     const pred = predByGame.get(g.id);
     const c = consensus.get(g.id);
     if (!pred || !c) continue;
