@@ -456,16 +456,17 @@ Pointing the other way, they cancel — stand down.
 
 ## 10. When the data refreshes
 
-Everything below runs automatically. Times are UTC (subtract 4–5 hrs for
-Eastern). Full detail + your weekly rhythm is in `docs/OPERATIONS.md`.
+Everything runs automatically. A scheduler ("the tick") fires every ~30 minutes,
+checks the clock and how stale each source is, and refreshes what's due. Times
+below are US Central. Full detail is in `docs/OPERATIONS.md`.
 
 | When | What updates |
 |---|---|
-| **Every 3 hours, all week** | Kalshi refresh, market flags, model + picks re-run |
-| **Game days — Sat every 30 min 10a–8p ET (hourly on the 8–9a & 8–11p wings); Thu/Fri 4×, Sun 4×, Mon/Tue/Wed 3×** | **Line snapshots** (feeds `steam`), **live scores**, market flags, model, picks, **and grading** — any final game is graded within ~30 min of ending |
-| **Tuesday ~14:00** | grade last week, then ratings / polls / schedule / advanced stats + EPA / **opening lines** / Kalshi / situational flags / model / picks |
-| **Sunday ~15:45** | advanced-stat checkpoint, team trends (scores + grading already handled by the game-day loop) |
-| **Twice daily** | Weather forecast, injury report |
+| **Every ~30 min, all week** | Kalshi, market flags, model + picks re-run |
+| **Game windows** (all week except Tue) | **Live scores** + **grading** — a final is graded within ~30 min. **Line snapshots** every ~30 min in the Saturday 9a–8p core, every ~2–3 h otherwise |
+| **Tuesday ~9am** | grade last week, then ratings / polls / schedule / advanced stats + EPA / **opening lines** / Kalshi / situational flags / model / picks |
+| **Sunday ~10am** | advanced-stat checkpoint, team trends |
+| **~6am & ~4pm** | Weather forecast, injury report |
 | **Preseason (manual)** | Talent composite, returning production, transfer portal, per-team HFA |
 
 Opening numbers land Tuesday; lines, scores and grades then refresh through

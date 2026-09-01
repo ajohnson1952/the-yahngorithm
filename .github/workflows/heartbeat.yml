@@ -1,13 +1,9 @@
-# Every 3 hours, all week: refresh Kalshi + market flags + the model +
-# picks. All free (Kalshi public reads + DB-only compute). This is what
-# keeps the prediction-market data and the board current between the
-# bigger scheduled pulls.
-#   (:17 past the hour — GitHub delays cron near the top of the hour.)
-name: Heartbeat
+# Manual trigger for the "heartbeat" group (Kalshi + market flags + model +
+# picks). Scheduling is handled by tick.yml + cron-job.org — this is just a
+# one-click "refresh the board now" button in the Actions tab.
+name: Manual — heartbeat
 
 on:
-  schedule:
-    - cron: "17 */3 * * *"
   workflow_dispatch:
 
 jobs:
@@ -15,8 +11,4 @@ jobs:
     uses: ./.github/workflows/_run.yml
     secrets: inherit
     with:
-      commands: >
-        npm run pull-kalshi &&
-        npm run compute-market-flags &&
-        npm run run-model &&
-        npm run generate-picks
+      commands: npm run tick -- --only heartbeat

@@ -391,6 +391,13 @@ model PinnedGame {
   @@index([uid])
 }
 
+// ---------- META (tiny key/value cache — e.g. the resolved season+week) ----------
+model Meta {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
 // ---------- API USAGE (rolling monthly counters for the /admin budget panel) ----------
 // 'cfbd' is a best-effort call COUNT (CFBD has no quota endpoint — each
 // script increments this by how many cfbdGet() calls it made). 'odds' is

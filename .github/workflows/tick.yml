@@ -1,0 +1,16 @@
+# The scheduler. cron-job.org fires this via GitHub's workflow_dispatch API
+# every ~30 min (GitHub's own `schedule` trigger was lagging 2–3 h on this
+# repo). scripts/tick.ts decides what's actually due and runs it.
+#
+# Manual: run it from the Actions tab any time — same decision logic.
+name: Tick — scheduler
+
+on:
+  workflow_dispatch:
+
+jobs:
+  go:
+    uses: ./.github/workflows/_run.yml
+    secrets: inherit
+    with:
+      commands: npm run tick

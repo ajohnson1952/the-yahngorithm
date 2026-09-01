@@ -1,11 +1,10 @@
-# Tuesday mid-morning ET: grade last week (incl. any Sun/Mon games),
-# then the weekly heavy pull — SP+ / SRS / polls / schedule / advanced
-# stats / opening lines / Kalshi — then flags + model + picks.
-name: Tue weekly refresh
+# Manual trigger for the "weekly" group — the full heavy pull (ratings /
+# polls / schedule / advanced stats / opening lines / Kalshi / flags / model /
+# picks / grade). Scheduling is handled by tick.yml + cron-job.org, which
+# fires this same group automatically on Tuesday morning.
+name: Manual — weekly pull
 
 on:
-  schedule:
-    - cron: "13 14 * * 2"
   workflow_dispatch:
 
 jobs:
@@ -13,15 +12,4 @@ jobs:
     uses: ./.github/workflows/_run.yml
     secrets: inherit
     with:
-      commands: >
-        npm run grade-picks &&
-        npm run pull-ratings &&
-        npm run pull-rankings &&
-        npm run pull-games &&
-        npm run pull-advanced &&
-        npm run pull-lines -- --type open &&
-        npm run pull-kalshi &&
-        npm run compute-flags &&
-        npm run compute-market-flags &&
-        npm run run-model &&
-        npm run generate-picks
+      commands: npm run tick -- --only weekly

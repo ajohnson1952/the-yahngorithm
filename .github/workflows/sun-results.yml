@@ -1,11 +1,9 @@
-# Sunday late morning ET: Saturday's final scores, advanced-stat
-# checkpoint, grade the graded games, refresh team trends. (Model +
-# market flags are handled continuously by Heartbeat.)
-name: Sun results
+# Manual trigger for the "sunday" group (advanced-stat checkpoint + team
+# trends). Scheduling is handled by tick.yml + cron-job.org, which fires this
+# group automatically on Sunday late morning.
+name: Manual — Sunday trends
 
 on:
-  schedule:
-    - cron: "43 15 * * 0"
   workflow_dispatch:
 
 jobs:
@@ -13,8 +11,4 @@ jobs:
     uses: ./.github/workflows/_run.yml
     secrets: inherit
     with:
-      commands: >
-        npm run pull-games &&
-        npm run pull-advanced &&
-        npm run grade-picks &&
-        npm run compute-trends
+      commands: npm run tick -- --only sunday

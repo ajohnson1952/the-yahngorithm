@@ -88,12 +88,52 @@ export function seasonForDate(now: Date = new Date()): number {
  * override this with --season/--week flags.
  */
 // The season calendar is effectively immutable once published, but ~15 scripts
-// call getCurrentSeasonWeek() and a GitHub Actions `&&` chain runs several of
-// them back-to-back in one container. Cache the calendar in /tmp (persists
-// across the steps of a single workflow job) so one chain = one /calendar call,
-// not eight. TTL is short enough that a mid-season calendar tweak still lands.
-const CAL_TTL_MS = 12 * 60 * 60 * 1000;
+// call getCurrentSeasonWeek() and the scheduler fires many short-lived runs.
+// Two cache layers:
+//   1. /tmp file — instant, shared across the steps of ONE runner invocation.
+//   2. Meta table — shared across invocations (a fresh runner has an empty /tmp).
+// So a live /calendar call happens only ~once a week per season.
+const CAL_TMP_TTL_MS = 12 * 60 * 60 * 1000;
+const CAL_DB_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const calCachePath = (season: number) => join(tmpdir(), `yahn-calendar-${season}.json`);
+
+async function readCalDb(season: number): Promise<CfbdCalendarWeek[] | null> {
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    const p = new PrismaClient();
+    try {
+      const row = await p.meta.findUnique({ where: { key: `calendar:${season}` } });
+      if (row && Date.now() - row.updatedAt.getTime() < CAL_DB_TTL_MS) {
+        const cal = row.value as unknown as CfbdCalendarWeek[];
+        if (Array.isArray(cal) && cal.length) return cal;
+      }
+    } finally {
+      await p.$disconnect();
+    }
+  } catch {
+    /* no DB / client not generated / offline — fall through */
+  }
+  return null;
+}
+
+async function writeCalDb(season: number, cal: CfbdCalendarWeek[]): Promise<void> {
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    const p = new PrismaClient();
+    try {
+      const value = cal as unknown as import("@prisma/client").Prisma.InputJsonValue;
+      await p.meta.upsert({
+        where: { key: `calendar:${season}` },
+        update: { value },
+        create: { key: `calendar:${season}`, value },
+      });
+    } finally {
+      await p.$disconnect();
+    }
+  } catch {
+    /* best-effort */
+  }
+}
 
 function readCalCache(season: number): CfbdCalendarWeek[] | null {
   try {
@@ -101,7 +141,7 @@ function readCalCache(season: number): CfbdCalendarWeek[] | null {
       at: number;
       cal: CfbdCalendarWeek[];
     };
-    if (Date.now() - raw.at < CAL_TTL_MS && Array.isArray(raw.cal)) return raw.cal;
+    if (Date.now() - raw.at < CAL_TMP_TTL_MS && Array.isArray(raw.cal)) return raw.cal;
   } catch {
     /* no cache / unreadable — fall through to a live fetch */
   }
@@ -120,10 +160,12 @@ export async function getCurrentSeasonWeek(
   now: Date = new Date()
 ): Promise<{ season: number; week: number }> {
   const season = seasonForDate(now);
-  const cached = readCalCache(season);
-  const raw =
-    cached ?? (await cfbdGet<CfbdCalendarWeek[]>(`/calendar?year=${season}`));
-  if (!cached) writeCalCache(season, raw);
+  let raw = readCalCache(season) ?? (await readCalDb(season));
+  if (!raw) {
+    raw = await cfbdGet<CfbdCalendarWeek[]>(`/calendar?year=${season}`);
+    await writeCalDb(season, raw);
+  }
+  writeCalCache(season, raw);
   const cal = raw
     .filter((w) => w.seasonType === "regular")
     .sort((a, b) => a.week - b.week);

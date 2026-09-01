@@ -1,10 +1,8 @@
-# Twice a day: weather forecast + injury report. Both move slowly and
-# neither costs against a hard limit.
-name: Daily weather + injuries
+# Manual trigger for the "weather" group (weather forecast + injuries).
+# Scheduling is handled by tick.yml + cron-job.org.
+name: Manual — weather + injuries
 
 on:
-  schedule:
-    - cron: "43 11,23 * * *"
   workflow_dispatch:
 
 jobs:
@@ -12,6 +10,4 @@ jobs:
     uses: ./.github/workflows/_run.yml
     secrets: inherit
     with:
-      commands: >
-        npm run pull-weather &&
-        npm run pull-injuries
+      commands: npm run tick -- --only weather

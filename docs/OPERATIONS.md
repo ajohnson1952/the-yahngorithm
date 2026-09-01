@@ -1,28 +1,62 @@
 # Operating the-yahngorithm during the season
 
-Everything below runs **automatically** on GitHub Actions. You only touch
-`/admin` (password `2142`, or whatever `ADMIN_PASSWORD` is set to) if a
-scheduled run failed or you want a fresh pull right now.
+Everything below runs **automatically**. You only touch `/admin` (password
+`2142`, or whatever `ADMIN_PASSWORD` is set to) if something failed or you want
+a fresh pull right now.
 
-## The automatic schedule
+## How scheduling works
 
-| Workflow | When (UTC) | What it does |
+GitHub's own `schedule` trigger was firing 2–3 hours late on this repo, so we
+don't use it. Instead:
+
+- **cron-job.org** hits the GitHub API every ~30 minutes and fires the
+  **`Tick — scheduler`** workflow (`workflow_dispatch`).
+- **`scripts/tick.ts`** is the brain: it reads the wall clock (US Central) and
+  how stale each data source is, then runs exactly the npm scripts that are due.
+  All schedule logic is in that one file.
+
+| Group | Fires | What runs |
 |---|---|---|
-| **Heartbeat** | every 3 h, all week | Kalshi refresh, market flags, re-run model, re-generate picks (all free) |
-| **Betting lines** | Wed 21; Thu 16/22; Fri 16/22; Sat every 2 h 13–23; Sat-night + Sun 01/15/20; Mon 19/22 | scores, **line snapshots** (feeds `steam`), market flags, model, picks — covers every day games are played, including Sun/Mon |
-| **Tue weekly** | Tue 14:13 | grade last week, then ratings (SP+ / SRS / pace), polls, schedule, advanced stats + EPA, **opening lines**, Kalshi, situational flags, model, picks |
-| **Sun results** | Sun 15:43 | Saturday's finals, advanced-stat checkpoint, **grade** (picks + all models + all flags vs the close → Grades page), team trends |
-| **Daily** | 11:43 and 23:43 | weather forecast, injury report |
-| **Preseason factor refresh** | manual only | talent composite, returning production, transfer portal, per-team HFA — run once preseason and again after the portal windows |
+| **heartbeat** | every tick (~30 min) | Kalshi, market flags, model, picks — all free |
+| **scores** | game windows (all week except Tue daytime) | `pull-games` + `grade-picks` — ~30 min on Saturday, ~hourly otherwise. A final is graded within ~30 min |
+| **lines** | game windows, never Tuesday | `pull-lines --daily` — every ~30 min in the Sat 9a–8p core, every ~2.75 h otherwise. Also self-limits when monthly Odds credits run low |
+| **weekly** | Tue ~8–11am CT, once | the full heavy pull: ratings, polls, schedule, advanced + EPA, **opening lines**, Kalshi, flags, model, picks, grade |
+| **sunday** | Sun ~9am–noon CT, once | advanced-stat checkpoint + team trends |
+| **weather** | ~6am & ~4pm CT | weather forecast + injuries |
+| **preseason** | manual only (Actions tab) | talent, returning production, portal, per-team HFA |
 
-Budget with this schedule: CFBD ~35%/mo, The Odds API ~30%/mo. Comfortable.
+Budget with this cadence: CFBD ~55%/mo, The Odds API ~85–90%/mo (tighter in a
+five-Saturday month — `pull-lines` has a hard backstop under 15 credits left).
 
-> **If the data looks stale:** check **GitHub → Actions**. Scheduled workflows
-> sometimes don't start until the workflow files have been re-pushed (any commit
-> touching `.github/workflows/`). If a manual **Run workflow** succeeds but the
-> schedules stay dead for a day, the workflow files need another push, or the
-> repo secrets (`DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY` — under Settings →
-> Secrets and variables → **Actions**) are missing.
+### The manual buttons
+
+Each `Manual — …` workflow in the Actions tab runs one group on demand,
+bypassing the staleness gates (`npm run tick -- --only <group>`). `/admin` also
+has per-script buttons and a "Run everything" button.
+
+> **If the data looks stale:** open `/admin` → the freshness panel shows exactly
+> which sources are behind. Then check **cron-job.org** (is the tick job green?)
+> and **GitHub → Actions** (are the dispatched `Tick` runs succeeding?). Repo
+> secrets `DATABASE_URL` / `CFBD_API_KEY` / `ODDS_API_KEY` live under Settings →
+> Secrets and variables → **Actions**.
+
+## Setting up the cron-job.org trigger
+
+One job does it. On [cron-job.org](https://cron-job.org) → **Create cronjob**:
+
+- **URL:** `https://api.github.com/repos/ajohnson1952/the-yahngorithm/actions/workflows/tick.yml/dispatches`
+- **Schedule:** every 30 minutes (`*/30 * * * *`), or "Every 30 minutes"
+- **Request method:** `POST`
+- **Request body:** `{"ref":"main"}`
+- **Headers:**
+  - `Accept: application/vnd.github+json`
+  - `Authorization: Bearer <FINE-GRAINED PAT>`
+  - `X-GitHub-Api-Version: 2022-11-28`
+  - `Content-Type: application/json`
+
+The PAT is a **fine-grained personal access token** (github.com/settings/tokens?type=beta)
+scoped to **only `the-yahngorithm`**, permission **Actions: Read and write**,
+nothing else. A `204` response = success. Rotate it yearly.
 
 ## Your weekly rhythm
 

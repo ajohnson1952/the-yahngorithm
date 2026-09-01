@@ -14,7 +14,7 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25 # the weekly --only chain runs ~13 scripts back to back
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

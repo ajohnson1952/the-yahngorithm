@@ -1,39 +1,9 @@
-# Game-day loop: betting-line snapshots + live scores + grading, on every
-# day games are played. Each run:
-#   pull-games          — scores (Sat/Sun/Mon finals land without waiting for Tue)
-#   pull-lines --daily  — one spread+total snapshot from The Odds API (2 credits)
-#   compute-market-flags / run-model / generate-picks — re-score the board
-#   grade-picks         — grade ANY ungraded final, season-wide, within ~30 min
-#                         of the game ending
-#
-# Cadence (aggressive — see docs/INTERPRETATION_GUIDE.md §10):
-#   Sat        every 30 min 10a–7:30p ET (core), hourly on the 8–9a and 8–11p
-#              wings                                   (26 runs)
-#   Thu / Fri  4×    Sun 4×    Mon / Tue / Wed  3× (9a, 1p, 6p ET, matched)
-#   47 Odds pulls/week × 2 credits. Calendar months aren't 4.0 weeks — a 31-day
-#   month starting Thu gives 5 Thu + 5 Fri + 5 Sat (OCTOBER 2026 is exactly
-#   this, in peak season). Sized so even that month lands ≈460 credits (~92%),
-#   with every Saturday — incl. Oct 31 — fully covered:
-#     normal 4-Sat month ≈ 384 (77%)     Oct 2026 (5-Sat) ≈ 460 (92%)
-#   pull-lines.ts ALSO has a hard backstop (skips the call under 15 credits
-#   left) as belt-and-suspenders against manual runs / bowl surprises.
-#   GitHub drops a chunk of */30 slots under load, so real usage runs lower.
-# Times are UTC. ET = UTC−4 now; the grid slides ~1h later in ET after the
-# Nov DST change — and Nov is exactly when the Tue/Wed MACtion slate makes the
-# mid-week runs worth having.
-name: Game day — lines + scores + grading
+# Manual trigger for the "scores + lines" groups (pull-games, pull-lines,
+# grade-picks, model, picks). Scheduling is handled by tick.yml + cron-job.org.
+# --only bypasses the staleness/credit gates, so this always pulls fresh.
+name: Manual — scores + lines
 
 on:
-  schedule:
-    - cron: "13 13,17,22 * * 1"           # Mon 9a, 1p, 6p ET
-    - cron: "13 13,17,22 * * 2"           # Tue 9a, 1p, 6p ET (tue-weekly heavy pull is separate, 10a)
-    - cron: "13 13,17,22 * * 3"           # Wed 9a, 1p, 6p ET
-    - cron: "13 15,18,21,23 * * 4"        # Thu 11a, 2p, 5p, 7p ET
-    - cron: "13 15,18,21,23 * * 5"        # Fri
-    - cron: "13 12,13 * * 6"              # Sat 8a, 9a ET (hourly wing)
-    - cron: "*/30 14-23 * * 6"            # Sat 10:00a–7:30p ET, every 30 min (core)
-    - cron: "13 0,1,2,3 * * 0"            # Sat 8p–11p ET / Sun UTC (hourly wing — late games)
-    - cron: "13 14,17,20,23 * * 0"        # Sun 10a, 1p, 4p, 7p ET (Sunday games + grade sweep)
   workflow_dispatch:
 
 jobs:
@@ -41,10 +11,4 @@ jobs:
     uses: ./.github/workflows/_run.yml
     secrets: inherit
     with:
-      commands: >
-        npm run pull-games &&
-        npm run pull-lines -- --type daily &&
-        npm run compute-market-flags &&
-        npm run run-model &&
-        npm run generate-picks &&
-        npm run grade-picks
+      commands: npm run tick -- --only scores,lines
