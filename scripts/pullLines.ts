@@ -92,17 +92,22 @@ async function main() {
   }
 
   // Guard against an accidental double-run of the once-only snapshots.
+  // SKIP (exit 0), don't fail — this runs unattended from a scheduled
+  // workflow, and a hard failure here would kill the rest of that
+  // workflow's `&&` chain (kalshi/flags/model/picks) every time it fires
+  // for a week that's already been touched. --force still adds another.
   if ((type === "open" || type === "close") && !force) {
     const existing = await prisma.line.count({
       where: { snapshotType: type, game: { season, week } },
     });
     if (existing > 0) {
-      console.error(
+      console.log(
         `There are already ${existing} "${type}" line rows for season ${season} ` +
-          `week ${week}.\nRe-run with --force if you really mean to add another ` +
-          `"${type}" snapshot.`
+          `week ${week} — skipping (re-run with --force to add another "${type}" ` +
+          `snapshot anyway).`
       );
-      process.exit(1);
+      await prisma.$disconnect();
+      return;
     }
   }
 
