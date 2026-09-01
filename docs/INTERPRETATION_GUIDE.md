@@ -447,15 +447,27 @@ Eastern). Full detail + your weekly rhythm is in `docs/OPERATIONS.md`.
 
 | When | What updates |
 |---|---|
-| **Tuesday ~14:00** | Ratings (SP+ / SRS / pace), AP + Coaches polls, this week's schedule, advanced stats + EPA, **opening lines**, Kalshi, all flags, the model, picks |
-| **Thu / Fri / Sat (hourly-ish) + Sat night** | **Line snapshots** (this is what feeds `steam`), Kalshi, market flags, model + picks re-run |
-| **Sunday ~16:00** | Final scores, **picks + all models + all flags graded** (see the Grades page), team trends refreshed |
-| **Daily ~13:00** | Weather forecast, injury report |
+| **Every 3 hours, all week** | Kalshi refresh, market flags, model + picks re-run |
+| **Every day games are played** (Wed → Mon, several times a day) | **Line snapshots** (feeds `steam`), scores, market flags, model, picks |
+| **Tuesday ~14:00** | grade last week, then ratings / polls / schedule / advanced stats + EPA / **opening lines** / Kalshi / situational flags / model / picks |
+| **Sunday ~15:45** | Saturday's finals, advanced-stat checkpoint, **grade** (picks + all models + all flags → Grades page), team trends |
+| **Twice daily** | Weather forecast, injury report |
 | **Preseason (manual)** | Talent composite, returning production, transfer portal, per-team HFA |
 
-So: opening numbers land Tuesday, lines move through the week, and the whole
-board re-scores after each pull. The **Grades** page updates Sunday nights with
-every model's and flag's record against the closing line for the season.
+Sunday and Monday games are covered — scores and the Tuesday grade catch them.
+So: opening numbers land Tuesday, lines move all week, and the board re-scores
+continuously. The **Grades** page updates after each Sunday.
+
+### Using the board
+
+- **Sort toggle** — *By edge* (the model's disagreement groups, sub-sorted by
+  kickoff), *By kickoff* (grouped by day), *Bad spots* (only games with a
+  `bad_spot` flag), *★ Pinned* (your watch list).
+- **Pin** a game with the star on its card or page to add it to the Pinned
+  filter.
+- **Completed games** drop to a "Final" section at the bottom of every view.
+- Each game page has a **Current lines** table — every book's latest number and
+  odds, with the best price for each side flagged, for line-shopping.
 
 ---
 

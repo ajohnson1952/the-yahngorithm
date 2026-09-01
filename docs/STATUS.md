@@ -11,11 +11,17 @@ backtests. **We're in "watch football and grade live" mode.**
 
 ## Needs you
 
+- [ ] **The scheduled workflows have never fired** (GitHub API shows 1 run ever,
+      a manual dispatch). The schedule was reworked + re-pushed 2026-09-01 to
+      force re-registration. Confirm it took: GitHub → Actions → run **Tue weekly
+      refresh** manually (fresh data + proves the secrets), then check that the
+      next few scheduled runs appear. If not: re-push a workflow-file change, or
+      the repo secrets (`DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY` under
+      Settings → Secrets and variables → **Actions**) are missing.
 - [ ] Confirm `ADMIN_PASSWORD` and `ADMIN_SESSION_SECRET` are set in the Render
-      dashboard (added to `render.yaml` as `sync:false` in the security pass —
-      without them `/admin` + `/rankings` fall back to the public default `2142`).
-- [ ] Run the **Preseason factor refresh** workflow once (GitHub → Actions) to
-      confirm the annual feeds (talent / returning / portal / HFA) work in prod.
+      dashboard (else `/admin` + pinning fall back to the public default `2142`).
+- [ ] Run the **Preseason factor refresh** workflow once to confirm the annual
+      feeds work in prod.
 
 ## Built this cycle
 
@@ -52,6 +58,12 @@ backtests. **We're in "watch football and grade live" mode.**
       grading. The season-long verdict.
 - [x] `/rankings` parked — off the nav, banner on the page, route kept so the
       data + the bounded-prior option survive.
+- [x] **Schedule reworked** — heartbeat (every 3h: Kalshi + model + picks),
+      lines.yml (every game day incl. Wed/Sun/Mon), daily ×2, tue grades first.
+- [x] **Board**: game cards show SP+ only (no wrap into the edge); completed
+      games → trailing "Final" section; by-edge sub-sorts by kickoff; **pin
+      games** + "★ Pinned" filter; **Current lines** per-book table on the game
+      page; Yahn breakdown restyled as a nested block; weather note clarified.
 - [ ] Isolate the EPA signal as its own small flag (only Yahn component with a
       stable coefficient vs the market — but small).
 - [ ] Kalshi "fair-value gap" flag (static book-vs-market divergence).
