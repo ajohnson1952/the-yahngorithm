@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
 import { getWeekBoard } from "../lib/webData";
-import { GameCard } from "../components/GameCard";
+import { BoardView } from "../components/BoardView";
 
 export const dynamic = "force-dynamic";
 
@@ -184,14 +184,7 @@ export default async function Home({
         <p className="empty">No pinned games. Tap the ☆ on a card to pin it.</p>
       )}
 
-      {sections.map((s) => (
-        <section key={s.label}>
-          <div className="section-label">{s.label}</div>
-          {s.games.map((g) => (
-            <GameCard key={g.id} g={g} />
-          ))}
-        </section>
-      ))}
+      <BoardView sections={sections} />
 
       {board.length === 0 && (
         <p className="empty">No games loaded for this week yet.</p>
