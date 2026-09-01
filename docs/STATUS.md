@@ -11,13 +11,11 @@ backtests. **We're in "watch football and grade live" mode.**
 
 ## Needs you
 
-- [ ] **The scheduled workflows have never fired** (GitHub API shows 1 run ever,
-      a manual dispatch). The schedule was reworked + re-pushed 2026-09-01 to
-      force re-registration. Confirm it took: GitHub → Actions → run **Tue weekly
-      refresh** manually (fresh data + proves the secrets), then check that the
-      next few scheduled runs appear. If not: re-push a workflow-file change, or
-      the repo secrets (`DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY` under
-      Settings → Secrets and variables → **Actions**) are missing.
+- [x] Scheduled-workflow investigation resolved: manual dispatch of Tue-weekly
+      now succeeds. Root cause was `pull-lines --type open` hard-failing
+      (`process.exit(1)`) when opens already existed for the week, killing the
+      whole `&&` chain — fixed to skip gracefully instead. Watch that the
+      *scheduled* (not manual) runs start appearing too.
 - [ ] Confirm `ADMIN_PASSWORD` and `ADMIN_SESSION_SECRET` are set in the Render
       dashboard (else `/admin` + pinning fall back to the public default `2142`).
 - [ ] Run the **Preseason factor refresh** workflow once to confirm the annual
@@ -62,8 +60,12 @@ backtests. **We're in "watch football and grade live" mode.**
       lines.yml (every game day incl. Wed/Sun/Mon), daily ×2, tue grades first.
 - [x] **Board**: game cards show SP+ only (no wrap into the edge); completed
       games → trailing "Final" section; by-edge sub-sorts by kickoff; **pin
-      games** + "★ Pinned" filter; **Current lines** per-book table on the game
-      page; Yahn breakdown restyled as a nested block; weather note clarified.
+      games** (open to everyone, not admin-gated) + "★ Pinned" filter;
+      **Current lines** per-book table on the game page; Yahn breakdown
+      restyled as a nested block; weather note clarified.
+- [x] **`/admin` gets a live API budget panel** — CFBD call count (best-effort,
+      `ApiUsage` table) and The Odds API's real remaining credits (from its own
+      response headers), both as progress bars. "Admin" added to the nav.
 - [ ] Isolate the EPA signal as its own small flag (only Yahn component with a
       stable coefficient vs the market — but small).
 - [ ] Kalshi "fair-value gap" flag (static book-vs-market divergence).
