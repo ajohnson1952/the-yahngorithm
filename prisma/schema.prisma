@@ -197,6 +197,7 @@ model Game {
   gameFlags         GameFlag[]
   picks             Pick[]
   modelGrades       ModelGrade[]
+  pin               PinnedGame?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -374,6 +375,14 @@ model ModelGrade {
 
   @@unique([gameId, key])
   @@index([season, week])
+}
+
+// ---------- PINNED GAMES (a personal "watch these" list, board filter) ----------
+model PinnedGame {
+  id       String   @id @default(cuid())
+  gameId   String   @unique
+  game     Game     @relation(fields: [gameId], references: [id])
+  pinnedAt DateTime @default(now())
 }
 
 // ============================================================

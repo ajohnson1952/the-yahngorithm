@@ -76,6 +76,7 @@ export interface GameView {
 
   hasModel: boolean;
   sortRank: number;
+  pinned: boolean;
 }
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -144,6 +145,7 @@ export async function getWeekBoard(
         include: { team: { select: { canonicalName: true, abbreviation: true } } },
       },
       picks: true,
+      pin: { select: { gameId: true } },
     },
     orderBy: { kickoffTime: "asc" },
   });
@@ -301,6 +303,7 @@ export async function getWeekBoard(
       picks,
       hasModel,
       sortRank,
+      pinned: g.pin != null,
     };
   });
 
@@ -326,6 +329,7 @@ export async function getGameDetail(id: string) {
       },
       picks: true,
       injuries: { include: { team: { select: { canonicalName: true } } } },
+      pin: { select: { gameId: true } },
     },
   });
   if (!g) return null;
@@ -363,6 +367,7 @@ export async function getGameDetail(id: string) {
 
   return {
     game: g,
+    pinned: g.pin != null,
     pred,
     ratings,
     lines,

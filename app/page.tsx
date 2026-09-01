@@ -1,5 +1,6 @@
 import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
 import { getWeekBoard } from "../lib/webData";
+import { isAdmin } from "../lib/adminAuth";
 import { GameCard } from "../components/GameCard";
 
 export const dynamic = "force-dynamic";
@@ -38,10 +39,12 @@ export default async function Home({
       : thisWeek;
   const byTime = sp.sort === "time";
   const badSpotOnly = sp.sort === "badspot";
+  const pinnedOnly = sp.sort === "pinned";
 
-  const [board, weeks] = await Promise.all([
+  const [board, weeks, canPin] = await Promise.all([
     getWeekBoard(season, week),
     weeksWithGames(season),
+    isAdmin(),
   ]);
 
   const prev = weeks.filter((w) => w < week).pop() ?? null;
@@ -69,7 +72,12 @@ export default async function Home({
 
   // ---- build the sections ----
   let sections: { label: string; games: typeof board }[];
-  if (badSpotOnly) {
+  if (pinnedOnly) {
+    const games = [...board].filter((g) => g.pinned).sort(byKick);
+    sections = games.length
+      ? [{ label: `Pinned games (${games.length})`, games }]
+      : [];
+  } else if (badSpotOnly) {
     const games = live.filter(hasBadSpot).sort(byKick);
     sections = games.length
       ? [{ label: `Bad-spot games (${games.length})`, games }]
@@ -95,8 +103,8 @@ export default async function Home({
       }));
   }
 
-  // trailing "Final" section (all modes except the bad-spot filter)
-  if (!badSpotOnly && done.length) {
+  // trailing "Final" section (not on the filtered views)
+  if (!badSpotOnly && !pinnedOnly && done.length) {
     sections.push({ label: `Final (${done.length})`, games: done });
   }
 
@@ -142,7 +150,7 @@ export default async function Home({
         <div className="sort-toggle">
           <a
             href={qs({ week: sp.week ? week : undefined })}
-            className={!byTime && !badSpotOnly ? "on" : ""}
+            className={!byTime && !badSpotOnly && !pinnedOnly ? "on" : ""}
           >
             By edge
           </a>
@@ -158,6 +166,12 @@ export default async function Home({
           >
             Bad spots
           </a>
+          <a
+            href={qs({ week: sp.week ? week : undefined, sort: "pinned" })}
+            className={pinnedOnly ? "on" : ""}
+          >
+            ★ Pinned
+          </a>
         </div>
       </div>
 
@@ -166,12 +180,17 @@ export default async function Home({
           No bad-spot games this week — no team has 2+ situational flags stacked.
         </p>
       )}
+      {pinnedOnly && sections.length === 0 && (
+        <p className="empty">
+          No pinned games. {canPin ? "Tap the ☆ on a card to pin it." : null}
+        </p>
+      )}
 
       {sections.map((s) => (
         <section key={s.label}>
           <div className="section-label">{s.label}</div>
           {s.games.map((g) => (
-            <GameCard key={g.id} g={g} />
+            <GameCard key={g.id} g={g} canPin={canPin} />
           ))}
         </section>
       ))}

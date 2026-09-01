@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { getGameDetail } from "../../../lib/webData";
+import { isAdmin } from "../../../lib/adminAuth";
 import { median } from "../../../lib/consensus";
 import { HOME_FIELD_ADVANTAGE } from "../../../lib/modelConfig";
 import { probToSpread } from "../../../lib/winProb";
+import { PinButton } from "../../../components/PinButton";
 import {
   TeamRow,
   FlagChip,
@@ -137,7 +139,7 @@ export default async function GamePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const data = await getGameDetail(id);
+  const [data, canPin] = await Promise.all([getGameDetail(id), isAdmin()]);
   if (!data) notFound();
 
   const {
@@ -212,13 +214,16 @@ export default async function GamePage({
 
   return (
     <div className="gpage">
-      <a
-        className="inline-link gback"
-        href="/"
-        style={{ color: "var(--text-faint)", fontSize: 12 }}
-      >
-        ← board
-      </a>
+      <div className="gpage-top">
+        <a
+          className="inline-link gback"
+          href="/"
+          style={{ color: "var(--text-faint)", fontSize: 12 }}
+        >
+          ← board
+        </a>
+        {canPin && <PinButton gameId={g.id} pinned={data.pinned} large />}
+      </div>
 
       <div className="ghero">
         <div className="ghero-teams">
@@ -452,6 +457,14 @@ export default async function GamePage({
         home={homeShort}
         awayTrend={awayTrend as TrendSplits | null}
         homeTrend={homeTrend as TrendSplits | null}
+      />
+
+      {/* ---------- current lines (per sportsbook) ---------- */}
+      <h2>Current lines</h2>
+      <CurrentLines
+        lines={lines as LineRowLite[]}
+        home={homeShort}
+        away={awayShort}
       />
 
       {/* ---------- line movement ---------- */}
@@ -743,6 +756,130 @@ function ModelRow({
         )}
       </div>
     </div>
+  );
+}
+
+const oddsStr = (p: number | null | undefined) =>
+  p == null ? "" : p > 0 ? `+${p}` : `${p}`;
+
+function CurrentLines({
+  lines,
+  home,
+  away,
+}: {
+  lines: LineRowLite[];
+  home: string;
+  away: string;
+}) {
+  // latest row per (book, market)
+  const latest = new Map<string, LineRowLite>();
+  for (const l of lines) {
+    if (l.market !== "spread" && l.market !== "total") continue;
+    const k = `${l.sportsbook}|${l.market}`;
+    const prev = latest.get(k);
+    if (!prev || l.capturedAt > prev.capturedAt) latest.set(k, l);
+  }
+  const books = [...new Set([...latest.values()].map((l) => l.sportsbook))].sort();
+  if (books.length === 0) {
+    return (
+      <p className="subhead">
+        No sportsbook lines captured for this game yet.
+      </p>
+    );
+  }
+
+  const rows = books.map((b) => ({
+    book: b,
+    spread: latest.get(`${b}|spread`) ?? null,
+    total: latest.get(`${b}|total`) ?? null,
+  }));
+
+  const spreadVals = rows.map((r) => r.spread?.lineValue).filter((x): x is number => x != null);
+  const totalVals = rows.map((r) => r.total?.lineValue).filter((x): x is number => x != null);
+  const bestHome = spreadVals.length ? Math.max(...spreadVals) : null; // lay fewest points
+  const bestAway = spreadVals.length ? Math.min(...spreadVals) : null; // get most points
+  const bestOver = totalVals.length ? Math.min(...totalVals) : null;
+  const bestUnder = totalVals.length ? Math.max(...totalVals) : null;
+
+  const freshest = [...latest.values()].reduce(
+    (m, l) => (l.capturedAt > m ? l.capturedAt : m),
+    latest.values().next().value!.capturedAt
+  );
+
+  return (
+    <>
+      <div style={{ overflowX: "auto" }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Book</th>
+              <th className="num">Spread ({home})</th>
+              <th className="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.book}>
+                <td>{r.book}</td>
+                <td className="num mono">
+                  {r.spread == null ? (
+                    "–"
+                  ) : (
+                    <span
+                      className={
+                        r.spread.lineValue === bestHome ||
+                        r.spread.lineValue === bestAway
+                          ? "cl-best"
+                          : ""
+                      }
+                    >
+                      {spreadStr(r.spread.lineValue)}{" "}
+                      <span className="dim">{oddsStr(r.spread.price)}</span>
+                    </span>
+                  )}
+                </td>
+                <td className="num mono">
+                  {r.total == null ? (
+                    "–"
+                  ) : (
+                    <span
+                      className={
+                        r.total.lineValue === bestOver ||
+                        r.total.lineValue === bestUnder
+                          ? "cl-best"
+                          : ""
+                      }
+                    >
+                      {trim(r.total.lineValue)}{" "}
+                      <span className="dim">{oddsStr(r.total.price)}</span>
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="subhead" style={{ marginTop: 8 }}>
+        {bestHome != null && bestHome !== bestAway && (
+          <>
+            Best <strong>{home}</strong> number{" "}
+            <span className="mono">{spreadStr(bestHome)}</span> · best{" "}
+            <strong>{away}</strong> number{" "}
+            <span className="mono">{spreadStr(-bestAway!)}</span>.{" "}
+          </>
+        )}
+        {bestOver != null && bestOver !== bestUnder && (
+          <>
+            Best <strong>over</strong> <span className="mono">{trim(bestOver)}</span> ·
+            best <strong>under</strong>{" "}
+            <span className="mono">{trim(bestUnder!)}</span>.{" "}
+          </>
+        )}
+        Latest snapshot {stampCT(freshest)}. Odds shown where the source
+        provides them (live pulls only). Spread is from {home}&apos;s side.
+      </p>
+    </>
   );
 }
 

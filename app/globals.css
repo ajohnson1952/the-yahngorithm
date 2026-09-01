@@ -197,6 +197,22 @@ a.card:hover .team-name { color: var(--blue); }
   border-radius: 3px; padding: 0 3px; vertical-align: 1px;
 }
 
+.card-wrap { position: relative; }
+.pin-btn {
+  position: absolute; top: -10px; right: 10px; z-index: 3;
+  width: 24px; height: 24px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; border-radius: 7px; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--border);
+  color: var(--text-faint);
+}
+.pin-btn:hover { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 50%, var(--border)); }
+.pin-btn.on { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 45%, var(--border)); }
+.pin-btn.lg { position: static; width: auto; height: auto; padding: 3px 9px; font-size: 15px; gap: 5px; }
+.pin-btn:disabled { opacity: 0.5; cursor: default; }
+.card.pinned { border-color: color-mix(in srgb, var(--amber) 40%, var(--border)); }
+.gpage-top { display: flex; align-items: center; justify-content: space-between; }
+
 .card-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) minmax(150px, 1.1fr);
@@ -332,6 +348,12 @@ a.card:hover .team-name { color: var(--blue); }
 .ybd-rating { color: var(--text); font-weight: 700; }
 .ybd-note { font-size: 11.5px; color: var(--text-faint); margin: 9px 0 0; line-height: 1.5; }
 .ybd-note strong { color: var(--text-dim); }
+
+.cl-best {
+  color: var(--green); font-weight: 700;
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  border-radius: 4px; padding: 0 4px;
+}
 
 /* ---------- game-detail: model rows / flag rows / pick rows ---------- */
 .mrows { display: flex; flex-direction: column; gap: 8px; max-width: 780px; }

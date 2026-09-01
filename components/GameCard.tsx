@@ -9,6 +9,7 @@ import {
   trim,
   teamShort,
 } from "./ui";
+import { PinButton } from "./PinButton";
 import { SPREAD_EDGE_THRESHOLD, TOTAL_EDGE_THRESHOLD } from "../lib/modelConfig";
 
 function EdgeTag({
@@ -32,7 +33,7 @@ function EdgeTag({
   );
 }
 
-export function GameCard({ g }: { g: GameView }) {
+export function GameCard({ g, canPin = false }: { g: GameView; canPin?: boolean }) {
   const homeWon =
     g.homeScore != null && g.awayScore != null && g.homeScore > g.awayScore;
   const awayWon =
@@ -55,13 +56,26 @@ export function GameCard({ g }: { g: GameView }) {
   const modelOnly =
     g.hasModel && g.marketSpread == null && g.marketTotal == null;
 
-  const cls = ["card", g.picks.length && "pick", modelOnly && "model-only"]
+  const cls = [
+    "card",
+    g.picks.length && "pick",
+    modelOnly && "model-only",
+    g.pinned && "pinned",
+  ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <a href={`/game/${g.id}`} className={cls}>
-      <div className="card-grid">
+    <div className="card-wrap">
+      {canPin ? (
+        <PinButton gameId={g.id} pinned={g.pinned} />
+      ) : g.pinned ? (
+        <span className="pin-btn on" aria-hidden>
+          ★
+        </span>
+      ) : null}
+      <a href={`/game/${g.id}`} className={cls}>
+        <div className="card-grid">
         <div className="gc-matchup">
           <TeamRow team={g.away} score={g.awayScore} won={awayWon} />
           <TeamRow team={g.home} score={g.homeScore} won={homeWon} />
@@ -178,7 +192,9 @@ export function GameCard({ g }: { g: GameView }) {
             </span>
           )}
         </div>
-      </div>
-    </a>
+        </div>
+      </a>
+    </div>
   );
 }
+
