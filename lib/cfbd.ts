@@ -156,14 +156,62 @@ function writeCalCache(season: number, cal: CfbdCalendarWeek[]): void {
   }
 }
 
+/** Last-resort: figure out the week from games already in our DB — the
+ *  earliest week with a game not yet 36 h past, else the latest week we have.
+ *  Keeps the whole pipeline alive when CFBD's /calendar is down. */
+async function deriveWeekFromGames(season: number, now: Date): Promise<number | null> {
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    const p = new PrismaClient();
+    try {
+      const cutoff = new Date(now.getTime() - 36 * 60 * 60 * 1000);
+      const upcoming = await p.game.findFirst({
+        where: { season, kickoffTime: { gte: cutoff } },
+        orderBy: { kickoffTime: "asc" },
+        select: { week: true },
+      });
+      if (upcoming) return upcoming.week;
+      const last = await p.game.findFirst({
+        where: { season },
+        orderBy: { week: "desc" },
+        select: { week: true },
+      });
+      return last?.week ?? null;
+    } finally {
+      await p.$disconnect();
+    }
+  } catch {
+    return null;
+  }
+}
+
 export async function getCurrentSeasonWeek(
   now: Date = new Date()
 ): Promise<{ season: number; week: number }> {
   const season = seasonForDate(now);
   let raw = readCalCache(season) ?? (await readCalDb(season));
   if (!raw) {
-    raw = await cfbdGet<CfbdCalendarWeek[]>(`/calendar?year=${season}`);
-    await writeCalDb(season, raw);
+    try {
+      raw = await cfbdGet<CfbdCalendarWeek[]>(`/calendar?year=${season}`);
+      await writeCalDb(season, raw);
+    } catch (err) {
+      const wk = await deriveWeekFromGames(season, now);
+      if (wk != null) {
+        // warm /tmp (not the DB) with a synthetic 1-week window so the other
+        // scripts in this same runner don't each re-hit the dead API.
+        writeCalCache(season, [
+          {
+            season,
+            week: wk,
+            seasonType: "regular",
+            startDate: new Date(now.getTime() - 7 * 864e5).toISOString(),
+            endDate: new Date(now.getTime() + 7 * 864e5).toISOString(),
+          },
+        ]);
+        return { season, week: wk };
+      }
+      throw err;
+    }
   }
   writeCalCache(season, raw);
   const cal = raw
