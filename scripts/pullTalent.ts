@@ -13,7 +13,8 @@
 // ============================================================
 
 import { PrismaClient } from "@prisma/client";
-import { cfbdGet, seasonForDate } from "../lib/cfbd";
+import { cfbdGet, seasonForDate, getCfbdCallCount } from "../lib/cfbd";
+import { recordCfbdUsage } from "../lib/apiUsage";
 import { buildTeamResolver } from "../lib/teamResolver";
 
 const prisma = new PrismaClient();
@@ -66,6 +67,7 @@ async function main() {
   }
   console.log("============================================================");
 
+  await recordCfbdUsage(prisma, getCfbdCallCount());
   await prisma.$disconnect();
 }
 

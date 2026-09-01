@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { getGameDetail } from "../../../lib/webData";
-import { isAdmin } from "../../../lib/adminAuth";
 import { median } from "../../../lib/consensus";
 import { HOME_FIELD_ADVANTAGE } from "../../../lib/modelConfig";
 import { probToSpread } from "../../../lib/winProb";
@@ -139,7 +138,7 @@ export default async function GamePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [data, canPin] = await Promise.all([getGameDetail(id), isAdmin()]);
+  const data = await getGameDetail(id);
   if (!data) notFound();
 
   const {
@@ -222,7 +221,7 @@ export default async function GamePage({
         >
           ← board
         </a>
-        {canPin && <PinButton gameId={g.id} pinned={data.pinned} large />}
+        <PinButton gameId={g.id} pinned={data.pinned} large />
       </div>
 
       <div className="ghero">

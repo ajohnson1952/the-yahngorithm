@@ -20,7 +20,8 @@
 // ============================================================
 
 import { PrismaClient } from "@prisma/client";
-import { cfbdGet, getCurrentSeasonWeek } from "../lib/cfbd";
+import { cfbdGet, getCurrentSeasonWeek, getCfbdCallCount } from "../lib/cfbd";
+import { recordCfbdUsage } from "../lib/apiUsage";
 import { buildTeamResolver } from "../lib/teamResolver";
 import { paceByTeamName } from "../lib/pace";
 
@@ -159,6 +160,7 @@ async function main() {
     console.log("Every FBS team has a rating row for this week.");
   }
 
+  await recordCfbdUsage(prisma, getCfbdCallCount());
   await prisma.$disconnect();
 }
 

@@ -606,6 +606,20 @@ tr:hover td { background: var(--panel); }
 .admin-limits ul { margin: 8px 0 0; padding-left: 18px; color: var(--text-dim); }
 .admin-limits li { margin: 3px 0; }
 
+.usage-row { margin: 12px 0 0; }
+.usage-top { display: flex; align-items: baseline; justify-content: space-between; }
+.usage-label { font-weight: 650; font-size: 12.5px; }
+.usage-num { font-size: 12px; color: var(--text-dim); }
+.usage-track {
+  height: 6px; border-radius: 4px; background: var(--panel-2);
+  margin-top: 5px; overflow: hidden;
+}
+.usage-fill { height: 100%; background: var(--blue); border-radius: 4px; }
+.usage-fill.warm { background: var(--amber); }
+.usage-fill.hot { background: var(--red); }
+.usage-detail { font-size: 11px; color: var(--text-faint); margin-top: 4px; line-height: 1.4; }
+.admin-usage-note { font-size: 11px; color: var(--text-faint); margin: 14px 0 0; padding-top: 10px; border-top: 1px solid var(--border); }
+
 .admin-grid { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
 .admin-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
 .admin-card-h { display: flex; align-items: center; gap: 12px; justify-content: space-between; }

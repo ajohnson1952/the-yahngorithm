@@ -2,14 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "../lib/db";
-import { isAdmin } from "../lib/adminAuth";
 
-/** Toggle a game's pin. Gated behind the admin cookie so a random visitor
- *  can't reorder the owner's board. Returns the new pinned state. */
+/** Toggle a game's pin. Open to anyone using the site — pins are a shared
+ *  "watch list" on this personal tool, not a protected setting. Returns
+ *  the new pinned state. */
 export async function togglePin(
   gameId: string
 ): Promise<{ ok: boolean; pinned?: boolean; error?: string }> {
-  if (!(await isAdmin())) return { ok: false, error: "Not signed in." };
   if (typeof gameId !== "string" || gameId.length < 8) {
     return { ok: false, error: "Bad game id." };
   }

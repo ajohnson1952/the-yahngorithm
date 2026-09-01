@@ -15,7 +15,8 @@
 // ============================================================
 
 import { PrismaClient, Prisma } from "@prisma/client";
-import { cfbdGet, seasonForDate } from "../lib/cfbd";
+import { cfbdGet, seasonForDate, getCfbdCallCount } from "../lib/cfbd";
+import { recordCfbdUsage } from "../lib/apiUsage";
 import { buildTeamResolver } from "../lib/teamResolver";
 
 const prisma = new PrismaClient();
@@ -166,6 +167,7 @@ async function main() {
     console.log(`    ${(nameById.get(r.teamId) ?? r.teamId).padEnd(22)} ${r.netScore.toFixed(1)}  (in ${r.inCount} / out ${r.outCount})`);
   console.log("============================================================");
 
+  await recordCfbdUsage(prisma, getCfbdCallCount());
   await prisma.$disconnect();
 }
 

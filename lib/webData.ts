@@ -525,3 +525,32 @@ export async function getGradeBoard(season: number) {
 
   return { rows, gamesGraded: byGame.size, closeMaeAll };
 }
+
+const CFBD_MONTHLY_BUDGET = 1000;
+const ODDS_MONTHLY_BUDGET = 500;
+
+export interface ApiUsageView {
+  cfbdCalls: number;
+  cfbdBudget: number;
+  oddsUsed: number; // budget - remaining, when we know remaining
+  oddsRemaining: number | null;
+  oddsBudget: number;
+  updatedAt: Date | null;
+}
+
+/** Current-month usage for the /admin budget panel. */
+export async function getApiUsage(): Promise<ApiUsageView> {
+  const ym = new Date().toISOString().slice(0, 7);
+  const rows = await db.apiUsage.findMany({ where: { yearMonth: ym } });
+  const cfbd = rows.find((r) => r.api === "cfbd");
+  const odds = rows.find((r) => r.api === "odds");
+  const updates = [cfbd?.updatedAt, odds?.updatedAt].filter((x): x is Date => x != null);
+  return {
+    cfbdCalls: cfbd?.calls ?? 0,
+    cfbdBudget: CFBD_MONTHLY_BUDGET,
+    oddsUsed: odds?.lastRemaining != null ? ODDS_MONTHLY_BUDGET - odds.lastRemaining : odds?.calls ?? 0,
+    oddsRemaining: odds?.lastRemaining ?? null,
+    oddsBudget: ODDS_MONTHLY_BUDGET,
+    updatedAt: updates.length ? new Date(Math.max(...updates.map((d) => d.getTime()))) : null,
+  };
+}

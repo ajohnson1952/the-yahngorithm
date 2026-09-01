@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/picks", label: "Picks" },
   { href: "/grades", label: "Grades" },
   { href: "/guide", label: "Guide" },
+  { href: "/admin", label: "Admin" },
 ];
 
 export function Nav() {

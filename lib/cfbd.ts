@@ -23,6 +23,13 @@ export function requireCfbdKey(): string {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Best-effort call counter for the /admin budget panel. CFBD has no quota
+// endpoint, so this is the only signal we have — process-scoped (each
+// script run is one process), read via getCfbdCallCount() and persisted
+// by the caller (see lib/apiUsage.ts) right before it disconnects.
+let cfbdCallCount = 0;
+export const getCfbdCallCount = () => cfbdCallCount;
+
 /** GET a CFBD endpoint. `path` is like "/ratings/sp?year=2026".
  *  Retries transient errors (429, 5xx) a few times with backoff. */
 export async function cfbdGet<T = unknown>(path: string, attempts = 4): Promise<T> {
@@ -41,7 +48,10 @@ export async function cfbdGet<T = unknown>(path: string, attempts = 4): Promise<
       await sleep(500 * 2 ** i);
       continue;
     }
-    if (res.ok) return (await res.json()) as T;
+    if (res.ok) {
+      cfbdCallCount++;
+      return (await res.json()) as T;
+    }
     lastErr = `${res.status} ${res.statusText}`;
     if (res.status !== 429 && res.status < 500) break; // client error — don't retry
     await sleep(500 * 2 ** i);

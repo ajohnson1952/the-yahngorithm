@@ -385,6 +385,23 @@ model PinnedGame {
   pinnedAt DateTime @default(now())
 }
 
+// ---------- API USAGE (rolling monthly counters for the /admin budget panel) ----------
+// 'cfbd' is a best-effort call COUNT (CFBD has no quota endpoint — each
+// script increments this by how many cfbdGet() calls it made). 'odds' is
+// the REAL remaining balance from The Odds API's own response headers,
+// updated on every pull-lines run.
+model ApiUsage {
+  id            String   @id @default(cuid())
+  api           String   // 'cfbd' | 'odds'
+  yearMonth     String   // "2026-09"
+  calls         Int      @default(0)
+  lastRemaining Int?     // odds only: x-requests-remaining as of the last pull
+  lastCost      Int?     // odds only: x-requests-last (credits the last call cost)
+  updatedAt     DateTime @updatedAt
+
+  @@unique([api, yearMonth])
+}
+
 // ============================================================
 // YAHN MODEL v2 — factor inputs
 // ============================================================

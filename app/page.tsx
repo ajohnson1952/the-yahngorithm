@@ -1,6 +1,5 @@
 import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
 import { getWeekBoard } from "../lib/webData";
-import { isAdmin } from "../lib/adminAuth";
 import { GameCard } from "../components/GameCard";
 
 export const dynamic = "force-dynamic";
@@ -41,10 +40,9 @@ export default async function Home({
   const badSpotOnly = sp.sort === "badspot";
   const pinnedOnly = sp.sort === "pinned";
 
-  const [board, weeks, canPin] = await Promise.all([
+  const [board, weeks] = await Promise.all([
     getWeekBoard(season, week),
     weeksWithGames(season),
-    isAdmin(),
   ]);
 
   const prev = weeks.filter((w) => w < week).pop() ?? null;
@@ -181,16 +179,14 @@ export default async function Home({
         </p>
       )}
       {pinnedOnly && sections.length === 0 && (
-        <p className="empty">
-          No pinned games. {canPin ? "Tap the ☆ on a card to pin it." : null}
-        </p>
+        <p className="empty">No pinned games. Tap the ☆ on a card to pin it.</p>
       )}
 
       {sections.map((s) => (
         <section key={s.label}>
           <div className="section-label">{s.label}</div>
           {s.games.map((g) => (
-            <GameCard key={g.id} g={g} canPin={canPin} />
+            <GameCard key={g.id} g={g} />
           ))}
         </section>
       ))}

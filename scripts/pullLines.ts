@@ -22,7 +22,8 @@
 // ============================================================
 
 import { PrismaClient, Prisma } from "@prisma/client";
-import { getCurrentSeasonWeek } from "../lib/cfbd";
+import { getCurrentSeasonWeek, getCfbdCallCount } from "../lib/cfbd";
+import { recordCfbdUsage, recordOddsUsage } from "../lib/apiUsage";
 import { buildTeamResolver } from "../lib/teamResolver";
 import { fetchNcaafOdds } from "../lib/oddsApi";
 
@@ -106,6 +107,7 @@ async function main() {
           `week ${week} — skipping (re-run with --force to add another "${type}" ` +
           `snapshot anyway).`
       );
+      await recordCfbdUsage(prisma, getCfbdCallCount());
       await prisma.$disconnect();
       return;
     }
@@ -120,6 +122,7 @@ async function main() {
     `  -> ${events.length} events. Cost ${creditsLastCost ?? "?"} credits, ` +
       `${creditsRemaining ?? "?"} remaining this month.`
   );
+  await recordOddsUsage(prisma, { remaining: creditsRemaining, cost: creditsLastCost });
 
   const rows: Prisma.LineCreateManyInput[] = [];
   let matchedGames = 0;
@@ -229,6 +232,7 @@ async function main() {
     );
   }
 
+  await recordCfbdUsage(prisma, getCfbdCallCount());
   await prisma.$disconnect();
 }
 
