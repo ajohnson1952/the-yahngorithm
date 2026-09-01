@@ -125,11 +125,12 @@ async function main() {
     { name: "compute-trends", args: [], on: run.sunday },
   ];
   const plan = steps.filter((s) => s.on);
+  const activeGroups = (Object.keys(run) as Group[]).filter((g) => run[g]);
 
   const stamp = `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dow]} ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} CT`;
   console.log(`tick — ${stamp}`);
   console.log(
-    `  groups: ${(Object.keys(run) as Group[]).filter((g) => run[g]).join(", ") || "(none)"}` +
+    `  groups: ${activeGroups.join(", ") || "(none)"}` +
       (onlyArg ? `   [--only ${onlyArg.join(",")}]` : "")
   );
   console.log(
@@ -156,6 +157,15 @@ async function main() {
       failed.push(label);
     }
   }
+
+  // heartbeat marker for the /admin freshness panel — "the scheduler fired"
+  await prisma.meta
+    .upsert({
+      where: { key: "lastTick" },
+      update: { value: { groups: activeGroups, failed } },
+      create: { key: "lastTick", value: { groups: activeGroups, failed } },
+    })
+    .catch(() => {});
 
   await prisma.$disconnect();
   console.log(
