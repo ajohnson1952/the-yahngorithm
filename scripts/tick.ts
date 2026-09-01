@@ -62,9 +62,10 @@ const minsAgo = (ms: number) => (ms === 0 ? Infinity : (Date.now() - ms) / 60000
 
 async function main() {
   const { dow, hour, minute } = centralNow();
-  const isGameDay = dow !== 2; // every day but Tuesday has FBS games in some week
   const activeHours = hour >= 8 || hour <= 1; // 8am–1am CT covers late West-coast kicks
-  const midweekDaytime = (dow === 2 || dow === 3) && hour >= 2 && hour < 17;
+  // No scores/lines pulls all day Tuesday (the weekly pull covers it) or before
+  // ~5pm Wednesday — the only mid-week games are Tue/Wed-night MACtion in Nov.
+  const midweekQuiet = dow === 2 || (dow === 3 && hour < 17);
 
   const [lastGames, lastLines, lastRatings, lastTrends, lastWeather] = await Promise.all([
     latestMs(prisma.game.findFirst({ orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }), "updatedAt"),
@@ -84,14 +85,13 @@ async function main() {
     // scores: game windows, skip the mid-week daytime dead zone. Rate-limit so
     // it's ~30 min on Saturday, ~hourly otherwise.
     scores:
-      activeHours && !midweekDaytime &&
+      activeHours && !midweekQuiet &&
       minsAgo(lastGames) >= (satCore ? 25 : 55),
 
-    // lines: game windows, never Tuesday (openers come from the weekly pull).
-    // 30 min in the Saturday core, ~2.75 h elsewhere. pull-lines also self-
-    // limits when the monthly Odds credits run low.
+    // lines: game windows. 30 min in the Saturday core, ~2.75 h elsewhere.
+    // pull-lines also self-limits when the monthly Odds credits run low.
     lines:
-      isGameDay && dow !== 2 && activeHours &&
+      activeHours && !midweekQuiet &&
       minsAgo(lastLines) >= (satCore ? 25 : 165),
 
     // weekly heavy pull: Tuesday morning, once (last ratings pull > 20 h ago).
@@ -158,8 +158,26 @@ async function main() {
   }
 
   await prisma.$disconnect();
-  console.log(`\ntick done — ${plan.length - failed.length}/${plan.length} ok` + (failed.length ? `, failed: ${failed.join(", ")}` : ""));
-  if (failed.length) process.exit(1);
+  console.log(
+    `\ntick done — ${plan.length - failed.length}/${plan.length} ok` +
+      (failed.length ? `, failed: ${failed.join(", ")}` : "")
+  );
+
+  // A failed data pull (CFBD / Odds / Kalshi 5xx/timeout) is almost always an
+  // upstream outage — the next tick retries. Only hard-fail the run (→ red on
+  // cron-job.org, failure email) when a pure-compute step broke, or when this
+  // was an explicit --only / weekly run the operator is watching.
+  const COMPUTE = new Set([
+    "compute-flags", "compute-market-flags", "run-model", "generate-picks",
+    "grade-picks", "compute-trends",
+  ]);
+  const hardFail = failed.some(
+    (f) => onlyArg != null || run.weekly || COMPUTE.has(f.split(" ")[0])
+  );
+  if (failed.length && !hardFail) {
+    console.log("  (data-pull failures only — treating as a transient upstream outage, not failing the tick)");
+  }
+  if (hardFail) process.exit(1);
 }
 
 main().catch(async (err) => {
