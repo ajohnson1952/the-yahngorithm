@@ -539,6 +539,52 @@ export interface ApiUsageView {
   updatedAt: Date | null;
 }
 
+export interface FreshnessRow {
+  label: string;
+  at: Date | null;
+  source: string;
+  /** age past which this row is considered stale (amber); 2× = red */
+  warnHrs: number;
+}
+
+/** "When did each data source last update?" — the /admin heartbeat panel.
+ *  Answers the recurring "did the automation actually run?" question. */
+export async function getDataFreshness(): Promise<FreshnessRow[]> {
+  const latest = async (
+    q: Promise<{ [k: string]: unknown } | null>,
+    field: string
+  ): Promise<Date | null> => {
+    const row = await q;
+    const v = row?.[field];
+    return v instanceof Date ? v : null;
+  };
+
+  const [lines, model, kalshi, scores, weather, grades, picks, ratings, trends] =
+    await Promise.all([
+      latest(db.line.findFirst({ orderBy: { capturedAt: "desc" }, select: { capturedAt: true } }), "capturedAt"),
+      latest(db.modelPrediction.findFirst({ orderBy: { generatedAt: "desc" }, select: { generatedAt: true } }), "generatedAt"),
+      latest(db.predictionMarket.findFirst({ orderBy: { capturedAt: "desc" }, select: { capturedAt: true } }), "capturedAt"),
+      latest(db.game.findFirst({ orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }), "updatedAt"),
+      latest(db.weather.findFirst({ orderBy: { pulledAt: "desc" }, select: { pulledAt: true } }), "pulledAt"),
+      latest(db.modelGrade.findFirst({ orderBy: { gradedAt: "desc" }, select: { gradedAt: true } }), "gradedAt"),
+      latest(db.pick.findFirst({ orderBy: { suggestedAt: "desc" }, select: { suggestedAt: true } }), "suggestedAt"),
+      latest(db.teamRatingWeekly.findFirst({ orderBy: { pulledAt: "desc" }, select: { pulledAt: true } }), "pulledAt"),
+      latest(db.teamTrend.findFirst({ orderBy: { computedAt: "desc" }, select: { computedAt: true } }), "computedAt"),
+    ]);
+
+  return [
+    { label: "Betting lines", at: lines, source: "pull-lines · every game-day run", warnHrs: 10 },
+    { label: "Model (spreads + totals)", at: model, source: "run-model · every 3h + game days", warnHrs: 5 },
+    { label: "Picks", at: picks, source: "generate-picks · with the model", warnHrs: 5 },
+    { label: "Kalshi markets", at: kalshi, source: "pull-kalshi · every 3h", warnHrs: 5 },
+    { label: "Scores / schedule", at: scores, source: "pull-games · every game-day run", warnHrs: 10 },
+    { label: "Grades", at: grades, source: "grade-picks · ~30 min after a final", warnHrs: 999 },
+    { label: "Weather", at: weather, source: "pull-weather · 2×/day", warnHrs: 20 },
+    { label: "Ratings (SP+ / SRS)", at: ratings, source: "pull-ratings · Tuesdays", warnHrs: 999 },
+    { label: "Team trends", at: trends, source: "compute-trends · Sundays", warnHrs: 999 },
+  ];
+}
+
 /** Current-month usage for the /admin budget panel. */
 export async function getApiUsage(): Promise<ApiUsageView> {
   const ym = new Date().toISOString().slice(0, 7);

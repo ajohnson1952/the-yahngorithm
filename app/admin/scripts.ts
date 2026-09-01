@@ -99,3 +99,24 @@ export const RUNNABLE: Record<
     note: "CFBD — ~3 calls (historical SP+). Rare; run once a year.",
   },
 };
+
+// "Run everything" chain — the full weekly pipeline in dependency order, minus
+// the annual factor feeds (talent / returning / portal / hfa). The admin panel
+// fires these one at a time, in order, stopping the run if a step fails.
+// ~10–15 CFBD calls + 2 Odds credits total.
+export const RUN_ALL_ORDER: string[] = [
+  "pull-ratings",
+  "pull-rankings",
+  "pull-games",
+  "pull-advanced",
+  "pull-lines-daily",
+  "pull-kalshi",
+  "pull-weather",
+  "pull-injuries",
+  "compute-flags",
+  "compute-market-flags",
+  "run-model",
+  "generate-picks",
+  "grade-picks",
+  "compute-trends",
+];

@@ -1,7 +1,7 @@
 import { isAdmin } from "../../lib/adminAuth";
-import { getApiUsage } from "../../lib/webData";
+import { getApiUsage, getDataFreshness, type FreshnessRow } from "../../lib/webData";
 import { LoginForm } from "../rankings/LoginForm";
-import { RUNNABLE } from "./scripts";
+import { RUNNABLE, RUN_ALL_ORDER } from "./scripts";
 import { RunPanel } from "./RunPanel";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +36,62 @@ function UsageBar({
   );
 }
 
+function ago(d: Date | null): string {
+  if (!d) return "never";
+  const sec = (Date.now() - d.getTime()) / 1000;
+  if (sec < 90) return "just now";
+  const min = sec / 60;
+  if (min < 90) return `${Math.round(min)}m ago`;
+  const hr = min / 60;
+  if (hr < 36) return `${Math.round(hr)}h ago`;
+  return `${Math.round(hr / 24)}d ago`;
+}
+
+function freshnessState(r: FreshnessRow): "" | "warm" | "hot" {
+  if (!r.at) return "hot";
+  const hr = (Date.now() - r.at.getTime()) / 3.6e6;
+  if (hr > r.warnHrs * 2) return "hot";
+  if (hr > r.warnHrs) return "warm";
+  return "";
+}
+
+function FreshnessPanel({ rows }: { rows: FreshnessRow[] }) {
+  const worst = rows.map(freshnessState);
+  const allFresh = worst.every((s) => s === "");
+  return (
+    <div className="admin-limits">
+      <strong>Data freshness — when each source last updated</strong>
+      <table className="fresh-table">
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={r.label} className={freshnessState(r)}>
+              <td className="fresh-label">{r.label}</td>
+              <td className="fresh-age mono">{ago(r.at)}</td>
+              <td className="fresh-abs mono">
+                {r.at
+                  ? r.at.toLocaleString("en-US", {
+                      timeZone: "America/Chicago",
+                      weekday: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })
+                  : "—"}
+              </td>
+              <td className="fresh-src">{r.source}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="admin-usage-note">
+        {allFresh
+          ? "Everything is current — the automation is running."
+          : "Amber / red rows are past their expected refresh window. If several are stale, the GitHub Actions schedule may not be firing — use “Run everything” below, or check the Actions tab."}{" "}
+        Times shown in CT.
+      </p>
+    </div>
+  );
+}
+
 export default async function AdminPage() {
   const admin = await isAdmin();
 
@@ -49,7 +105,7 @@ export default async function AdminPage() {
     );
   }
 
-  const usage = await getApiUsage();
+  const [usage, freshness] = await Promise.all([getApiUsage(), getDataFreshness()]);
 
   const scripts = Object.entries(RUNNABLE).map(([name, s]) => ({
     name,
@@ -65,6 +121,8 @@ export default async function AdminPage() {
         own — these are for catching up or forcing a refresh. Each runs on the
         server against the live database.
       </p>
+
+      <FreshnessPanel rows={freshness} />
 
       <div className="admin-limits">
         <strong>Monthly API budgets</strong>
@@ -93,7 +151,7 @@ export default async function AdminPage() {
         </p>
       </div>
 
-      <RunPanel scripts={scripts} />
+      <RunPanel scripts={scripts} runAllOrder={RUN_ALL_ORDER} />
 
       <p className="foot">
         Typical weekly order: <span className="mono">pull-ratings → pull-rankings
