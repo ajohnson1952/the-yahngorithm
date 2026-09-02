@@ -522,10 +522,14 @@ below 15, as protection against manual runs or an unusual bowl stretch. The
 - **Line-movement arrow** — the small **▲ / ▼ + points** next to a card's spread
   or total is how far that number has moved from the **first line we recorded**
   for the game (the opening number, or the earliest live pull we have). Hover it
-  for what it opened at. Hidden when the move is under half a point. ▲ = the
-  displayed number went up (total higher / home spread less negative), ▼ = down.
-  It's *context*, not a signal — a big move tells you the market has an opinion,
-  not which way to bet (§9 covers `steam` / `rlm`, which do read the move).
+  for what it opened at. Hidden when the move is under half a point.
+  - **Spread** — measured on the line's **distance from pick'em**, not its sign.
+    **▲ green** = the line *grew* (a bigger favorite): `Duke -7.5 → -9.5`, or a
+    dog `+7.5 → +9.5`. **▼ red** = it *shrank toward pick'em*: `Duke -9.5 → -7.5`.
+    So both sides of the number behave the same way — bigger is up, smaller is down.
+  - **Total** — plain: **▲** the total went up, **▼** it came down.
+  - It's *context*, not a signal — a big move tells you the market has an
+    opinion, not which way to bet (§9 covers `steam` / `rlm`, which read the move).
 - **Completed games** drop to a "Final" section at the bottom of every view.
 - Each game page has a **Current lines** table — every book's latest number and
   odds, with the best price for each side flagged, for line-shopping — plus a

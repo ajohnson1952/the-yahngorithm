@@ -60,8 +60,8 @@ export interface GameView {
   marketTotal: number | null;
   spreadOpen: number | null; // first recorded home spread — for the movement arrow
   totalOpen: number | null;
-  spreadMove: number | null; // marketSpread - spreadOpen (neg = moved toward home)
-  totalMove: number | null; // marketTotal - totalOpen
+  spreadMove: number | null; // |marketSpread| − |spreadOpen|: + = line grew off pick'em, − = shrank toward it
+  totalMove: number | null; // marketTotal − totalOpen: + = total went up
   books: number;
 
   modelSpreadSp: number | null; // predicted home margin
@@ -308,12 +308,17 @@ async function buildWeekBoard(
     const modelTotal = pred?.predictedTotal ?? null;
     const marketTotal = c?.totalBook ?? null;
 
-    // movement since the opening number (null unless we have both ends)
+    // movement since the opening number (null unless we have both ends).
+    // Spread move is measured on the line's DISTANCE FROM PICK'EM, not its
+    // signed value — so "Duke -9.5 -> -7.5" reads as the line shrinking 2 pts
+    // toward zero (down), and "-7.5 -> -9.5" as growing 2 (up), the same way
+    // a positive dog line +7.5 -> +9.5 would. (A rare zero-crossing shows the
+    // net change in distance, which understates the raw points moved.)
     const spreadOpen = oc?.spreadBook ?? null;
     const totalOpen = oc?.totalBook ?? null;
     const spreadMove =
       marketSpread != null && spreadOpen != null
-        ? r1(marketSpread - spreadOpen)
+        ? r1(Math.abs(marketSpread) - Math.abs(spreadOpen))
         : null;
     const totalMove =
       marketTotal != null && totalOpen != null
