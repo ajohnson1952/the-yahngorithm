@@ -119,6 +119,13 @@ flags and obvious market mispricings.
 - `edge < 0` → model likes the **away** side
 - `|edge|` = points of disagreement
 
+**The "market" number is a real, bettable line — not an average.** Books rarely
+all post the same spread, so the site shows the number the **most books are
+actually posting** (the mode), not the median across books. The median can land
+between books — a "median total" of 58.3 is not a line you could bet, and
+showing it made picks read like *"Over 58.3."* The model's own prediction stays
+exact; only the market side snaps to a number a book really offers.
+
 From the brief: a game is only a *pick candidate* if `|edge| ≥ 2.5` **and** a
 second independent signal (SRS agreement, or a situational flag) corroborates it.
 A lone model disagreement is not a pick.
@@ -334,7 +341,9 @@ corroborators.
 
 A pick is **logged once, the first time it qualifies**, with the model line,
 market line, and edge frozen as of that moment. It is never rewritten — that's
-what makes the grading honest.
+what makes the grading honest. The market line it's frozen at is a **real number
+a book was posting** at that moment (§2), so it stays gradeable against a real
+closing line later.
 
 Expect **few picks** — often 0–4 a week, sometimes zero. Early in the season
 there are fewer still, because the SRS corroborator isn't available yet. That's
@@ -487,6 +496,13 @@ every game window. A pick is only ever logged **before kickoff**, and a game is
 graded **as soon as it's final** — the **Grades** page is current within the hour
 on a Saturday.
 
+**One caveat on freshness:** the pages cache their database results for a short
+window — about **2 minutes** for the board and game pages, **10–15 minutes** for
+`/grades` and `/picks` (they only change after a final). So a hard refresh
+right after a score changes may show the old number for a beat. The `/admin`
+freshness panel is **never cached** — it's the ground truth for "did the
+pipeline actually run?"
+
 The line-snapshot cadence is sized to stay inside The Odds API's 500-credit
 monthly budget even in a five-Saturday peak month — October 2026 is the worst
 case (5 Thursdays + 5 Fridays + 5 Saturdays) and lands around 92%, with every
@@ -503,9 +519,17 @@ below 15, as protection against manual runs or an unusual bowl stretch. The
 - **Pin** a game with the star on its card or page to add it to the Pinned
   filter. Pins are remembered per browser (an anonymous cookie — no login), so
   everyone keeps their own watch list.
+- **Line-movement arrow** — the small **▲ / ▼ + points** next to a card's spread
+  or total is how far that number has moved from the **first line we recorded**
+  for the game (the opening number, or the earliest live pull we have). Hover it
+  for what it opened at. Hidden when the move is under half a point. ▲ = the
+  displayed number went up (total higher / home spread less negative), ▼ = down.
+  It's *context*, not a signal — a big move tells you the market has an opinion,
+  not which way to bet (§9 covers `steam` / `rlm`, which do read the move).
 - **Completed games** drop to a "Final" section at the bottom of every view.
 - Each game page has a **Current lines** table — every book's latest number and
-  odds, with the best price for each side flagged, for line-shopping.
+  odds, with the best price for each side flagged, for line-shopping — plus a
+  full snapshot-by-snapshot line-movement history.
 
 ---
 
@@ -519,7 +543,8 @@ below 15, as protection against manual runs or an unusual bowl stretch. The
 | **push** | A tie against the number — the bet neither wins nor loses. Shown as the third figure in a record (6–2–**1**). |
 | **cover** | A side "covers" when it beats the spread (a −7 favorite that wins by 10 covers; by 3 does not). |
 | **break-even (52.4%)** | The win rate you need at standard −110 odds just to not lose money (risk 110 to win 100). |
-| **edge** | Predicted margin − market margin, in points. How far the model disagrees with the line. |
+| **edge** | Predicted margin − market margin, in points. How far the model disagrees with the line. The market side is the most-posted real book number (§2), not an average. |
+| **line movement** | How far a spread or total has moved from the first number we recorded to now. Shown as a ▲/▼ chip on each card; the full history is on the game page. |
 | **MAE** | Mean absolute error — the average size of the miss between a predicted margin and the actual result. Lower = more accurate. The Grades page shows each model's MAE next to the **closing line's own MAE** on the same games (~12 points over a full season) — green means the model out-predicted the market. Note: beating the market on MAE is *not* the same as beating it ATS. |
 | **CLV** | Closing-line value — how many points better your number was than the closing line, from your side. The single best indicator that a process is finding value. |
 | **the close / closing line** | The final line right before kickoff — the sharpest price the market makes. Everything here is graded against it. |

@@ -91,8 +91,11 @@ over the closing line.** Use it as decision support:
 
 - **A workflow failed** (GitHub → Actions, red X) — open it, read the step log.
   Usually a transient CFBD/Odds 5xx; just re-run the job.
-- **The board looks stale** — hit the relevant button on `/admin` (each is one
-  pipeline step; the page lists API cost per button).
+- **The board looks stale** — first check it's not just the page cache: the
+  board/game pages hold their DB results for ~2 min, `/grades` and `/picks` for
+  10–15 min (`/admin` is never cached). If it's genuinely behind, hit the
+  relevant button on `/admin` (each is one pipeline step; the page lists API
+  cost per button). A redeploy also clears every cache.
 - **Repo secrets missing** — `DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY` in
   GitHub → Settings → Secrets → Actions. Without them every workflow no-ops.
 - **`/admin` buttons fail in prod** — `CFBD_API_KEY` / `ODDS_API_KEY` also need

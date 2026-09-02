@@ -79,16 +79,24 @@ Standalone scripts in `scripts/`, each an npm script:
 | `compute-trends` | team ATS/SU/O-U splits |
 | `seed-rivalries` | load `data/rivalries.ts` |
 
-### Schedule (GitHub Actions, `.github/workflows/`)
+### Schedule ("the tick")
 
-- **Tue** — ratings, rankings, games, opening lines, flags, model, picks
-- **Thu–Sat, hourly** — line + Kalshi snapshots, market flags, re-run model/picks
-- **Sun** — final scores, grade picks, refresh trends
-- **Daily** — weather + injuries
+GitHub's own `schedule:` trigger was firing 2–3 h late on this repo, so it's not
+used. Instead **cron-job.org** hits the GitHub API every ~30 min to dispatch
+`.github/workflows/tick.yml`, and **`scripts/tick.ts`** reads the wall clock +
+how stale each source is and runs exactly what's due:
 
-Scheduled workflows run **only from the default branch** and need three repo
-secrets: `DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY`. The `/admin` page
-(password-gated) can also trigger any script on demand.
+- **every tick (~30 min)** — Kalshi, market flags, model, picks
+- **game windows** (all week except Tue daytime) — scores + grading; line
+  snapshots every ~30 min in the Sat 9a–8p core, every ~2–3 h otherwise
+- **Tue ~9am** — the heavy weekly pull: ratings, polls, schedule, advanced +
+  EPA, opening lines, flags, model, picks, grade last week
+- **Sun ~10am** — advanced-stat checkpoint + team trends
+- **~6am & ~4pm** — weather + injuries
+
+The dispatched workflow needs three repo secrets: `DATABASE_URL`, `CFBD_API_KEY`,
+`ODDS_API_KEY`. Each group also has a manual `workflow_dispatch` workflow (and
+`/admin` can trigger any script on demand). Full detail: `docs/OPERATIONS.md`.
 
 ---
 
@@ -96,13 +104,19 @@ secrets: `DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY`. The `/admin` page
 
 | Route | |
 |---|---|
-| `/` | the week's board — toggle: by edge / by kickoff / bad spots; page between weeks |
-| `/game/[id]` | full breakdown: three spread models + Yahn breakdown, totals math, flags, line movement, Kalshi panel, weather, injuries, trends, picks |
+| `/` | the week's board — toggle: by edge / by kickoff / bad spots / pinned; page between weeks; each card shows the market number (most-posted book line), the model line, the edge, and a ▲/▼ line-movement chip |
+| `/game/[id]` | full breakdown: three spread models + Yahn breakdown, totals math, flags, snapshot-by-snapshot line movement, Kalshi panel, weather, injuries, trends, picks |
 | `/picks` | season pick log with ATS record + CLV |
 | `/grades` | season-to-date: every spread model + every flag graded vs the closing line |
 | `/admin` | manual pipeline runs (password gate) |
 | `/guide` | renders the interpretation guide |
 | `/rankings` | "My Top 25" editor — **parked**, off the nav, not wired to anything |
+
+Each page's DB work runs behind `unstable_cache` keyed on `(season, week)` —
+~2 min for the board / game pages, 10–15 min for `/picks` and `/grades`. Keeps a
+burst of visitors from each re-running the same queries (a `force-dynamic`
+homepage doing exactly that once ran Neon past its free-tier transfer cap).
+Per-visitor pins are a separate uncached lookup; `/admin` is never cached.
 
 ---
 

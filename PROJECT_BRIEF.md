@@ -16,10 +16,15 @@ time.
 
 ## Current status
 
-The database schema (`prisma/schema.prisma`) and the team-name-matching logic
-(`lib/nameMatching.ts`, `scripts/matchTeamAliases.ts`) are built. Nothing else is
-built yet. The person is a coding novice — please explain steps clearly and confirm
-before running anything that touches real API keys or the database.
+> **This section is the original kickoff brief — kept for intent/context.**
+> For where the project actually stands now (fully built and deployed, in
+> "watch football and grade live" mode), see **`docs/STATUS.md`** and
+> **`README.md`**.
+
+_Original:_ The database schema (`prisma/schema.prisma`) and the
+team-name-matching logic are built; nothing else is yet. The person is a coding
+novice — explain steps clearly and confirm before running anything that touches
+real API keys or the database.
 
 ## Build order — please follow this sequence, don't skip ahead
 

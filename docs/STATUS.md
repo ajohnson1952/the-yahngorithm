@@ -23,6 +23,32 @@ backtests. **We're in "watch football and grade live" mode.**
 
 ## Built this cycle
 
+### Sept 2 — performance + line-honesty pass
+
+- **Neon transfer cap fix.** A `force-dynamic` homepage was re-running
+  `getWeekBoard` on every visit, and its `line` / `modelPrediction` queries
+  pulled the *entire* per-game history to use only the newest snapshot — 5 GB
+  of free-tier transfer gone in days. Now: each page's DB work sits behind
+  `unstable_cache` keyed on `(season, week)` (~2 min board / game, 10–15 min
+  `/grades` `/picks`); line + prediction reads are anchored per-game to just
+  the latest (and, for the movement arrow, earliest) snapshot batch via
+  `groupBy`. Per-visitor pins split into a separate uncached lookup. `/admin`
+  never cached.
+- **Picks lock to a real book line.** `lib/consensus.ts` `modalLine()` — the
+  most-posted number across books, not the inter-book `median()` (which gave
+  un-bettable lines like "Over 58.3"). `generate-picks` and the board's market
+  spread/total + edges now use it; the model's own prediction stays exact.
+  `median()` still backs `compute-trends` / `grade-picks`. One-off: the
+  existing wk-1 Hawai'i pick was hand-corrected 58.3 → 58.
+- **Line-movement arrow** on each board card — ▲/▼ + points from the first
+  recorded line (open, or earliest live pull; baseline resolved per-game).
+- Guide (§2, §6, §10) + README updated for all of the above.
+- Bug found & fixed in the same pass: the per-visit query trim briefly made
+  **completed games drop their market line** on the board (their last pull is
+  days old); fixed by the per-game window above.
+
+### (prior cycle)
+
 - **Yahn model v2** — `lib/yahnModel.ts`: SP+ backbone + EPA adj (ramps up
   through the season) + roster adj (talent z-score nudge + returning + portal
   net, decays to 0 by wk 5) + per-team HFA. Component breakdown on the game
