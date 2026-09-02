@@ -133,18 +133,21 @@ async function main() {
     const label = `${away} @ ${home}`;
 
     // ---------- SPREAD ----------
+    // Lock the pick against a line a book is actually posting, not the
+    // inter-book median (which can be a number like -6.3 that you can't bet).
     if (
       !have.has("spread") &&
       pred.predictedSpreadSpPlus != null &&
-      c.spread != null
+      c.spreadBook != null
     ) {
       const mSp = pred.predictedSpreadSpPlus;
-      const mktMargin = -c.spread; // + = home favored by
+      const bookSpread = c.spreadBook; // home spread, neg = home favored
+      const mktMargin = -bookSpread; // + = home favored by
       const edge = mSp - mktMargin;
 
       if (Math.abs(edge) >= SPREAD_EDGE_THRESHOLD) {
-        if (Math.abs(c.spread) > LARGE_SPREAD_CAP) {
-          nearMiss.push(`${label}: spread edge ${r1(edge)} but market ${r1(c.spread)} too big`);
+        if (Math.abs(bookSpread) > LARGE_SPREAD_CAP) {
+          nearMiss.push(`${label}: spread edge ${r1(edge)} but market ${r1(bookSpread)} too big`);
         } else {
           const backHome = edge > 0;
           const backedId = backHome ? g.homeTeamId : g.awayTeamId;
@@ -178,7 +181,7 @@ async function main() {
               flagsPresent: corr,
             });
             explain.push(
-              `SPREAD  ${label}\n    take ${backedName} ${backHome ? r1(c.spread) : "+" + r1(-c.spread)}` +
+              `SPREAD  ${label}\n    take ${backedName} ${backHome ? r1(bookSpread) : "+" + r1(-bookSpread)}` +
                 `  | model ${r1(mSp)} vs market ${r1(mktMargin)} (edge ${r1(edge)})` +
                 `  | ${corr.join(", ")}`
             );
@@ -190,14 +193,17 @@ async function main() {
     }
 
     // ---------- TOTAL ----------
+    // Same rule: grade against a total a book actually posts, not the median.
     if (
       !have.has("total") &&
       pred.predictedTotal != null &&
-      c.total != null
+      c.totalBook != null
     ) {
-      const edge = pred.predictedTotal - c.total;
+      const bookTotal = c.totalBook;
+      const edge = pred.predictedTotal - bookTotal;
       if (Math.abs(edge) >= TOTAL_EDGE_THRESHOLD) {
-        const spreadMag = c.spread != null ? Math.abs(c.spread) : 0;
+        const spreadMag =
+          c.spreadBook != null ? Math.abs(c.spreadBook) : 0;
         if (spreadMag > TOTALS_COMPETITIVE_CAP) {
           nearMiss.push(`${label}: total edge ${r1(edge)} but game not competitive (spread ${r1(spreadMag)})`);
         } else {
@@ -215,12 +221,12 @@ async function main() {
               market: "total",
               method: "sp_plus",
               modelLine: r1(pred.predictedTotal),
-              marketLine: r1(c.total),
+              marketLine: r1(bookTotal),
               edge: r1(edge),
               flagsPresent: corr,
             });
             explain.push(
-              `TOTAL   ${label}\n    ${over ? "OVER" : "UNDER"} ${r1(c.total)}` +
+              `TOTAL   ${label}\n    ${over ? "OVER" : "UNDER"} ${r1(bookTotal)}` +
                 `  | model ${r1(pred.predictedTotal)} (edge ${r1(edge)})` +
                 `  | ${corr.join(", ")}`
             );

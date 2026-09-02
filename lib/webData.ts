@@ -58,6 +58,10 @@ export interface GameView {
 
   marketSpread: number | null; // home spread (neg = home favored)
   marketTotal: number | null;
+  spreadOpen: number | null; // first recorded home spread — for the movement arrow
+  totalOpen: number | null;
+  spreadMove: number | null; // marketSpread - spreadOpen (neg = moved toward home)
+  totalMove: number | null; // marketTotal - totalOpen
   books: number;
 
   modelSpreadSp: number | null; // predicted home margin
@@ -213,7 +217,7 @@ async function buildWeekBoard(
     ? new Date(newestLine.capturedAt.getTime() - 95 * 60_000)
     : new Date(0);
 
-  const [preds, lines, weather, apRanks] = await Promise.all([
+  const [preds, lines, openLines, weather, apRanks] = await Promise.all([
     db.modelPrediction.findMany({
       where: { gameId: { in: gameIds }, generatedAt: { gte: predsSince } },
       orderBy: { generatedAt: "desc" },
@@ -233,6 +237,15 @@ async function buildWeekBoard(
         sportsbook: true, snapshotType: true, capturedAt: true,
       },
     }),
+    // the opening number, for the line-movement arrow. One captured snapshot
+    // per game (pull-lines guards against re-capturing "open"), so it's small.
+    db.line.findMany({
+      where: { gameId: { in: gameIds }, snapshotType: "open" },
+      select: {
+        gameId: true, market: true, lineValue: true,
+        sportsbook: true, snapshotType: true, capturedAt: true,
+      },
+    }),
     db.weather.findMany({
       where: { gameId: { in: gameIds } },
       orderBy: { pulledAt: "desc" },
@@ -247,6 +260,7 @@ async function buildWeekBoard(
   for (const w of weather) if (!wxByGame.has(w.gameId)) wxByGame.set(w.gameId, w);
 
   const consensus = consensusByGame(lines);
+  const openConsensus = consensusByGame(openLines);
 
   const toLite = (t: (typeof games)[number]["homeTeam"]): TeamLite => ({
     id: t.id,
@@ -262,15 +276,29 @@ async function buildWeekBoard(
   const views: GameView[] = games.map((g) => {
     const pred = predByGame.get(g.id);
     const c = consensus.get(g.id);
+    const oc = openConsensus.get(g.id);
     const wx = wxByGame.get(g.id);
 
-    const marketSpread = c?.spread ?? null;
+    // the number a book is actually posting (not the inter-book median)
+    const marketSpread = c?.spreadBook ?? null;
     const marketHomeMargin = marketSpread != null ? -marketSpread : null;
     const modelSpreadSp = pred?.predictedSpreadSpPlus ?? null;
     const modelSpreadSrs = pred?.predictedSpreadSrs ?? null;
     const modelSpreadYahn = pred?.predictedSpreadYahn ?? null;
     const modelTotal = pred?.predictedTotal ?? null;
-    const marketTotal = c?.total ?? null;
+    const marketTotal = c?.totalBook ?? null;
+
+    // movement since the opening number (null unless we have both ends)
+    const spreadOpen = oc?.spreadBook ?? null;
+    const totalOpen = oc?.totalBook ?? null;
+    const spreadMove =
+      marketSpread != null && spreadOpen != null
+        ? r1(marketSpread - spreadOpen)
+        : null;
+    const totalMove =
+      marketTotal != null && totalOpen != null
+        ? r1(marketTotal - totalOpen)
+        : null;
 
     const spreadEdge =
       modelSpreadSp != null && marketHomeMargin != null
@@ -346,6 +374,10 @@ async function buildWeekBoard(
       awayScore: g.awayScore,
       marketSpread: marketSpread != null ? r1(marketSpread) : null,
       marketTotal: marketTotal != null ? r1(marketTotal) : null,
+      spreadOpen: spreadOpen != null ? r1(spreadOpen) : null,
+      totalOpen: totalOpen != null ? r1(totalOpen) : null,
+      spreadMove,
+      totalMove,
       books: c?.books ?? 0,
       modelSpreadSp: modelSpreadSp != null ? r1(modelSpreadSp) : null,
       modelSpreadSrs: modelSpreadSrs != null ? r1(modelSpreadSrs) : null,

@@ -12,6 +12,21 @@ import {
 import { PinButton } from "./PinButton";
 import { SPREAD_EDGE_THRESHOLD, TOTAL_EDGE_THRESHOLD } from "../lib/modelConfig";
 
+/** tiny line-movement chip: arrow + points moved since the opening number */
+function Move({ move, opened }: { move: number | null; opened: string | null }) {
+  if (move == null || Math.abs(move) < 0.5) return null;
+  const up = move > 0;
+  return (
+    <span
+      className={`mm-move ${up ? "up" : "down"}`}
+      title={opened ? `opened ${opened}` : undefined}
+    >
+      {up ? "▲" : "▼"}
+      {trim(Math.abs(move))}
+    </span>
+  );
+}
+
 function EdgeTag({
   edge,
   threshold,
@@ -91,6 +106,14 @@ export function GameCard({ g }: { g: GameView }) {
                 <span className="mkt mono">
                   {teamShort(g.home)} {spreadStr(g.marketSpread)}
                 </span>
+                <Move
+                  move={g.spreadMove}
+                  opened={
+                    g.spreadOpen != null
+                      ? `${teamShort(g.home)} ${spreadStr(g.spreadOpen)}`
+                      : null
+                  }
+                />
               </span>
               <span className="mm-line">
                 <span className="mdl mono">
@@ -130,6 +153,10 @@ export function GameCard({ g }: { g: GameView }) {
             <>
               <span className="mm-line">
                 <span className="mkt mono">{trim(g.marketTotal)}</span>
+                <Move
+                  move={g.totalMove}
+                  opened={g.totalOpen != null ? trim(g.totalOpen) : null}
+                />
               </span>
               <span className="mm-line">
                 <span className="mdl mono">
