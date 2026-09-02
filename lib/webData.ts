@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { db } from "./db";
 import { consensusByGame } from "./consensus";
 import {
@@ -130,10 +131,38 @@ function clvOf(p: {
   return r1(backHome ? p.closingLine - p.marketLine : p.marketLine - p.closingLine);
 }
 
-export async function getWeekBoard(
+/** How long the per-week board stays cached (seconds). The pipeline refreshes
+ *  the underlying data every ~30 min; this window just stops a burst of visitors
+ *  from each re-running the board's queries (a full `force-dynamic` homepage
+ *  doing exactly that is what blew the Neon transfer cap). */
+const WEEK_BOARD_TTL = 120;
+
+const cachedWeekBoard = unstable_cache(buildWeekBoard, ["week-board"], {
+  revalidate: WEEK_BOARD_TTL,
+  tags: ["week-board"],
+});
+
+/** The per-week board, WITHOUT per-visitor pin state — cached in the Next data
+ *  cache keyed on (season, week). Callers layer pins on top via
+ *  {@link getPinnedGameIds}, which is a cheap uncached per-visitor lookup. */
+export function getWeekBoard(season: number, week: number): Promise<GameView[]> {
+  return cachedWeekBoard(season, week);
+}
+
+/** Game ids this visitor has pinned. Tiny (a visitor pins a handful of games),
+ *  so we fetch them all rather than filtering by the current week's ids. */
+export async function getPinnedGameIds(uid: string): Promise<Set<string>> {
+  if (!uid) return new Set();
+  const rows = await db.pinnedGame.findMany({
+    where: { uid },
+    select: { gameId: true },
+  });
+  return new Set(rows.map((r) => r.gameId));
+}
+
+async function buildWeekBoard(
   season: number,
-  week: number,
-  uid: string
+  week: number
 ): Promise<GameView[]> {
   const games = await db.game.findMany({
     where: {
@@ -151,20 +180,54 @@ export async function getWeekBoard(
         include: { team: { select: { canonicalName: true, abbreviation: true } } },
       },
       picks: true,
-      pins: { where: { uid }, select: { gameId: true } },
     },
     orderBy: { kickoffTime: "asc" },
   });
 
   const gameIds = games.map((g) => g.id);
 
-  const [preds, lines, weather, apRanks] = await Promise.all([
-    db.modelPrediction.findMany({
+  // Only the newest generation batch of predictions and the newest pull-run of
+  // lines are ever read below — everything older is history we'd pay Neon
+  // egress for and immediately discard. `distinct` / `take` won't help here
+  // (Prisma applies them after the rows are already off the wire), so first
+  // find where the newest batch starts, then fetch only that slice.
+  const [newestPred, newestLine] = await Promise.all([
+    db.modelPrediction.findFirst({
       where: { gameId: { in: gameIds } },
       orderBy: { generatedAt: "desc" },
+      select: { generatedAt: true },
+    }),
+    db.line.findFirst({
+      where: { gameId: { in: gameIds } },
+      orderBy: { capturedAt: "desc" },
+      select: { capturedAt: true },
+    }),
+  ]);
+  // one model run writes every game in a couple of minutes; one line pull-run
+  // spans ~90 min. Widen each a little for slack, and when the table has
+  // nothing for these games fall back to "everything" (which is also nothing).
+  const predsSince = newestPred
+    ? new Date(newestPred.generatedAt.getTime() - 60 * 60_000)
+    : new Date(0);
+  const linesSince = newestLine
+    ? new Date(newestLine.capturedAt.getTime() - 95 * 60_000)
+    : new Date(0);
+
+  const [preds, lines, weather, apRanks] = await Promise.all([
+    db.modelPrediction.findMany({
+      where: { gameId: { in: gameIds }, generatedAt: { gte: predsSince } },
+      orderBy: { generatedAt: "desc" },
+      select: {
+        gameId: true,
+        predictedSpreadSpPlus: true,
+        predictedSpreadSrs: true,
+        predictedSpreadYahn: true,
+        predictedTotal: true,
+        predictedPossessions: true,
+      },
     }),
     db.line.findMany({
-      where: { gameId: { in: gameIds } },
+      where: { gameId: { in: gameIds }, capturedAt: { gte: linesSince } },
       select: {
         gameId: true, market: true, lineValue: true,
         sportsbook: true, snapshotType: true, capturedAt: true,
@@ -307,7 +370,7 @@ export async function getWeekBoard(
       picks,
       hasModel,
       sortRank,
-      pinned: g.pins.length > 0,
+      pinned: false, // layered on per-visitor by the caller (see getPinnedGameIds)
     };
   });
 
@@ -352,6 +415,12 @@ export async function getGameDetail(id: string, uid: string) {
     }),
     db.line.findMany({
       where: { gameId: id },
+      // one game's line history is naturally bounded (open -> kickoff), but only
+      // these six columns are read downstream — skip id/gameId/source over the wire
+      select: {
+        sportsbook: true, market: true, lineValue: true,
+        price: true, snapshotType: true, capturedAt: true,
+      },
       orderBy: [{ capturedAt: "asc" }],
     }),
     db.weather.findMany({ where: { gameId: id }, orderBy: { pulledAt: "asc" } }),

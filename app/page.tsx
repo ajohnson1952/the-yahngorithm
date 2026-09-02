@@ -1,9 +1,12 @@
 import { cookies } from "next/headers";
 import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
-import { getWeekBoard } from "../lib/webData";
+import { getWeekBoard, getPinnedGameIds } from "../lib/webData";
 import { BoardView } from "../components/BoardView";
 
-export const dynamic = "force-dynamic";
+// The page itself still renders per request (it reads ?week=/?sort= and the
+// yahn_uid cookie), but the expensive part — getWeekBoard's queries — is cached
+// in the data layer keyed on (season, week). Pins are the only per-visitor bit
+// and they come from a cheap uncached lookup layered on below.
 
 const RANK_LABEL: Record<number, string> = {
   0: "Picks",
@@ -42,10 +45,14 @@ export default async function Home({
   const pinnedOnly = sp.sort === "pinned";
 
   const uid = (await cookies()).get("yahn_uid")?.value ?? "";
-  const [board, weeks] = await Promise.all([
-    getWeekBoard(season, week, uid),
+  const [rawBoard, weeks, pins] = await Promise.all([
+    getWeekBoard(season, week),
     weeksWithGames(season),
+    getPinnedGameIds(uid),
   ]);
+  const board = pins.size
+    ? rawBoard.map((g) => (pins.has(g.id) ? { ...g, pinned: true } : g))
+    : rawBoard;
 
   const prev = weeks.filter((w) => w < week).pop() ?? null;
   const next = weeks.find((w) => w > week) ?? null;
