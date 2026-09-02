@@ -42,6 +42,9 @@ backtests. **We're in "watch football and grade live" mode.**
   existing wk-1 Hawai'i pick was hand-corrected 58.3 → 58.
 - **Line-movement arrow** on each board card — ▲/▼ + points from the first
   recorded line (open, or earliest live pull; baseline resolved per-game).
+  Spread arrow measures **distance from pick'em**, not signed value (a
+  favorite line coming down = ▼, not ▲); crossings show the full points moved.
+  Rationale + portable fix for Cavepicks: `docs/LINE_MOVEMENT_ARROWS.md`.
 - Guide (§2, §6, §10) + README updated for all of the above.
 - Bug found & fixed in the same pass: the per-visit query trim briefly made
   **completed games drop their market line** on the board (their last pull is

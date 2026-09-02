@@ -60,7 +60,7 @@ export interface GameView {
   marketTotal: number | null;
   spreadOpen: number | null; // first recorded home spread — for the movement arrow
   totalOpen: number | null;
-  spreadMove: number | null; // |marketSpread| − |spreadOpen|: + = line grew off pick'em, − = shrank toward it
+  spreadMove: number | null; // raw pts moved, signed: + = line grew off pick'em, − = shrank toward it
   totalMove: number | null; // marketTotal − totalOpen: + = total went up
   books: number;
 
@@ -308,17 +308,22 @@ async function buildWeekBoard(
     const modelTotal = pred?.predictedTotal ?? null;
     const marketTotal = c?.totalBook ?? null;
 
-    // movement since the opening number (null unless we have both ends).
-    // Spread move is measured on the line's DISTANCE FROM PICK'EM, not its
-    // signed value — so "Duke -9.5 -> -7.5" reads as the line shrinking 2 pts
-    // toward zero (down), and "-7.5 -> -9.5" as growing 2 (up), the same way
-    // a positive dog line +7.5 -> +9.5 would. (A rare zero-crossing shows the
-    // net change in distance, which understates the raw points moved.)
+    // Movement since the opening number (null unless we have both ends).
+    // The spread arrow tracks the line's DISTANCE FROM PICK'EM, not its signed
+    // value: "Duke -9.5 -> -7.5" is the line shrinking 2 toward zero (▼), and
+    // "-7.5 -> -9.5" is it growing 2 (▲) — same as a dog line "+7.5 -> +9.5".
+    //   points shown = |now - open|                 (the real move)
+    //   sign / arrow = did |line| grow (▲) or shrink (▼)
+    // On a pick'em crossing the two disagree; the raw points win, and an exact
+    // flip (-2 -> +2) counts as ▲ rather than vanishing. See docs/LINE_MOVEMENT_ARROWS.md.
     const spreadOpen = oc?.spreadBook ?? null;
     const totalOpen = oc?.totalBook ?? null;
     const spreadMove =
       marketSpread != null && spreadOpen != null
-        ? r1(Math.abs(marketSpread) - Math.abs(spreadOpen))
+        ? r1(
+            (Math.abs(marketSpread) - Math.abs(spreadOpen) >= 0 ? 1 : -1) *
+              Math.abs(marketSpread - spreadOpen)
+          )
         : null;
     const totalMove =
       marketTotal != null && totalOpen != null
