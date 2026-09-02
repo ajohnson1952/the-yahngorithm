@@ -217,7 +217,7 @@ async function buildWeekBoard(
     ? new Date(newestLine.capturedAt.getTime() - 95 * 60_000)
     : new Date(0);
 
-  const [preds, lines, openLines, weather, apRanks] = await Promise.all([
+  const [preds, lines, weather, apRanks] = await Promise.all([
     db.modelPrediction.findMany({
       where: { gameId: { in: gameIds }, generatedAt: { gte: predsSince } },
       orderBy: { generatedAt: "desc" },
@@ -237,21 +237,39 @@ async function buildWeekBoard(
         sportsbook: true, snapshotType: true, capturedAt: true,
       },
     }),
-    // the opening number, for the line-movement arrow. One captured snapshot
-    // per game (pull-lines guards against re-capturing "open"), so it's small.
-    db.line.findMany({
-      where: { gameId: { in: gameIds }, snapshotType: "open" },
-      select: {
-        gameId: true, market: true, lineValue: true,
-        sportsbook: true, snapshotType: true, capturedAt: true,
-      },
-    }),
     db.weather.findMany({
       where: { gameId: { in: gameIds } },
       orderBy: { pulledAt: "desc" },
     }),
     apRankMap(season, week),
   ]);
+
+  // Baseline for the line-movement arrow: each game's FIRST recorded snapshot
+  // (the "open" backfill, or the earliest live pull if there's no open — games
+  // enter the feed at different times, so this has to be per-game). groupBy for
+  // each game's min capture time, then fetch just that opening batch — bounded,
+  // never the full history. 'close' is excluded: CFBD backfills it with a
+  // synthetic early timestamp that would otherwise look like the open.
+  const firstCaps = await db.line.groupBy({
+    by: ["gameId"],
+    where: { gameId: { in: gameIds }, snapshotType: { in: ["open", "daily"] } },
+    _min: { capturedAt: true },
+  });
+  const firstWindows = firstCaps
+    .filter((f) => f._min.capturedAt)
+    .map((f) => ({
+      gameId: f.gameId,
+      capturedAt: { lte: new Date(f._min.capturedAt!.getTime() + 90 * 60_000) },
+    }));
+  const firstLines = firstWindows.length
+    ? await db.line.findMany({
+        where: { snapshotType: { in: ["open", "daily"] }, OR: firstWindows },
+        select: {
+          gameId: true, market: true, lineValue: true,
+          sportsbook: true, snapshotType: true, capturedAt: true,
+        },
+      })
+    : [];
 
   const predByGame = new Map<string, (typeof preds)[number]>();
   for (const p of preds) if (!predByGame.has(p.gameId)) predByGame.set(p.gameId, p);
@@ -260,7 +278,9 @@ async function buildWeekBoard(
   for (const w of weather) if (!wxByGame.has(w.gameId)) wxByGame.set(w.gameId, w);
 
   const consensus = consensusByGame(lines);
-  const openConsensus = consensusByGame(openLines);
+  // each game's first batch is already narrowed to <= min+90min, so
+  // consensusByGame (which anchors on the latest row per game) resolves it fine
+  const firstConsensus = consensusByGame(firstLines);
 
   const toLite = (t: (typeof games)[number]["homeTeam"]): TeamLite => ({
     id: t.id,
@@ -276,7 +296,7 @@ async function buildWeekBoard(
   const views: GameView[] = games.map((g) => {
     const pred = predByGame.get(g.id);
     const c = consensus.get(g.id);
-    const oc = openConsensus.get(g.id);
+    const oc = firstConsensus.get(g.id);
     const wx = wxByGame.get(g.id);
 
     // the number a book is actually posting (not the inter-book median)
