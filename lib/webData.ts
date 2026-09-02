@@ -454,7 +454,21 @@ export async function getGameDetail(id: string, uid: string) {
   };
 }
 
-export async function getPickLog(season: number) {
+/** Pick log is append-mostly: a new row appears only when a fresh edge clears
+ *  the filters, and results/CLV land after `grade-picks` runs post-final. A few
+ *  minutes of lag is invisible here. */
+const PICK_LOG_TTL = 10 * 60;
+
+const cachedPickLog = unstable_cache(buildPickLog, ["pick-log"], {
+  revalidate: PICK_LOG_TTL,
+  tags: ["pick-log"],
+});
+
+export function getPickLog(season: number) {
+  return cachedPickLog(season);
+}
+
+async function buildPickLog(season: number) {
   const picks = await db.pick.findMany({
     where: { game: { season } },
     include: {
@@ -547,8 +561,21 @@ const GRADE_LABEL: Record<string, string> = {
 const meanAbs = (a: number[]) =>
   a.length ? r1(a.reduce((s, x) => s + Math.abs(x), 0) / a.length) : null;
 
-/** Season-to-date scoreboard: each spread model + each flag vs the closing line. */
-export async function getGradeBoard(season: number) {
+/** Season-to-date scoreboard: each spread model + each flag vs the closing line.
+ *  A row only moves when a game goes final and `grade-picks` runs, so a ~15-min
+ *  cache is invisible — the numbers are stable between results. */
+const GRADE_BOARD_TTL = 15 * 60;
+
+const cachedGradeBoard = unstable_cache(buildGradeBoard, ["grade-board"], {
+  revalidate: GRADE_BOARD_TTL,
+  tags: ["grade-board"],
+});
+
+export function getGradeBoard(season: number) {
+  return cachedGradeBoard(season);
+}
+
+async function buildGradeBoard(season: number) {
   const grades = await db.modelGrade.findMany({
     where: { season },
     select: {
