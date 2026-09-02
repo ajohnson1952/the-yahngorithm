@@ -189,35 +189,60 @@ async function buildWeekBoard(
   });
 
   const gameIds = games.map((g) => g.id);
+  if (gameIds.length === 0) return [];
 
-  // Only the newest generation batch of predictions and the newest pull-run of
-  // lines are ever read below — everything older is history we'd pay Neon
-  // egress for and immediately discard. `distinct` / `take` won't help here
-  // (Prisma applies them after the rows are already off the wire), so first
-  // find where the newest batch starts, then fetch only that slice.
-  const [newestPred, newestLine] = await Promise.all([
+  const lineSelect = {
+    gameId: true, market: true, lineValue: true,
+    sportsbook: true, snapshotType: true, capturedAt: true,
+  } as const;
+
+  // We only ever read the latest snapshot of each line and the newest batch of
+  // predictions — pulling the full history is what blew the Neon transfer cap,
+  // and `distinct`/`take` don't help (Prisma applies them after the rows are
+  // off the wire). run-model rewrites every game each tick, so one 60-min
+  // window off the newest prediction covers the whole batch. Lines are
+  // different: a game's most recent pull can be hours old (finals, odd
+  // sub-slates), so a single global window would drop their number entirely —
+  // anchor per game with a groupBy, then fetch just each game's latest batch
+  // (and its earliest open/daily batch, the baseline for the movement arrow).
+  const [newestPred, lineMax, lineMin] = await Promise.all([
     db.modelPrediction.findFirst({
       where: { gameId: { in: gameIds } },
       orderBy: { generatedAt: "desc" },
       select: { generatedAt: true },
     }),
-    db.line.findFirst({
+    db.line.groupBy({
+      by: ["gameId"],
       where: { gameId: { in: gameIds } },
-      orderBy: { capturedAt: "desc" },
-      select: { capturedAt: true },
+      _max: { capturedAt: true },
+    }),
+    db.line.groupBy({
+      by: ["gameId"],
+      // 'close' excluded: CFBD backfills it with a synthetic early timestamp
+      // that would otherwise masquerade as the opening number
+      where: { gameId: { in: gameIds }, snapshotType: { in: ["open", "daily"] } },
+      _min: { capturedAt: true },
     }),
   ]);
-  // one model run writes every game in a couple of minutes; one line pull-run
-  // spans ~90 min. Widen each a little for slack, and when the table has
-  // nothing for these games fall back to "everything" (which is also nothing).
+
   const predsSince = newestPred
     ? new Date(newestPred.generatedAt.getTime() - 60 * 60_000)
     : new Date(0);
-  const linesSince = newestLine
-    ? new Date(newestLine.capturedAt.getTime() - 95 * 60_000)
-    : new Date(0);
+  // one pull-run spans ~90 min; ±95 covers a game's whole latest / first batch
+  const currentWindows = lineMax
+    .filter((c) => c._max.capturedAt)
+    .map((c) => ({
+      gameId: c.gameId,
+      capturedAt: { gte: new Date(c._max.capturedAt!.getTime() - 95 * 60_000) },
+    }));
+  const firstWindows = lineMin
+    .filter((c) => c._min.capturedAt)
+    .map((c) => ({
+      gameId: c.gameId,
+      capturedAt: { lte: new Date(c._min.capturedAt!.getTime() + 95 * 60_000) },
+    }));
 
-  const [preds, lines, weather, apRanks] = await Promise.all([
+  const [preds, lines, firstLines, weather, apRanks] = await Promise.all([
     db.modelPrediction.findMany({
       where: { gameId: { in: gameIds }, generatedAt: { gte: predsSince } },
       orderBy: { generatedAt: "desc" },
@@ -230,46 +255,21 @@ async function buildWeekBoard(
         predictedPossessions: true,
       },
     }),
-    db.line.findMany({
-      where: { gameId: { in: gameIds }, capturedAt: { gte: linesSince } },
-      select: {
-        gameId: true, market: true, lineValue: true,
-        sportsbook: true, snapshotType: true, capturedAt: true,
-      },
-    }),
+    currentWindows.length
+      ? db.line.findMany({ where: { OR: currentWindows }, select: lineSelect })
+      : Promise.resolve([]),
+    firstWindows.length
+      ? db.line.findMany({
+          where: { snapshotType: { in: ["open", "daily"] }, OR: firstWindows },
+          select: lineSelect,
+        })
+      : Promise.resolve([]),
     db.weather.findMany({
       where: { gameId: { in: gameIds } },
       orderBy: { pulledAt: "desc" },
     }),
     apRankMap(season, week),
   ]);
-
-  // Baseline for the line-movement arrow: each game's FIRST recorded snapshot
-  // (the "open" backfill, or the earliest live pull if there's no open — games
-  // enter the feed at different times, so this has to be per-game). groupBy for
-  // each game's min capture time, then fetch just that opening batch — bounded,
-  // never the full history. 'close' is excluded: CFBD backfills it with a
-  // synthetic early timestamp that would otherwise look like the open.
-  const firstCaps = await db.line.groupBy({
-    by: ["gameId"],
-    where: { gameId: { in: gameIds }, snapshotType: { in: ["open", "daily"] } },
-    _min: { capturedAt: true },
-  });
-  const firstWindows = firstCaps
-    .filter((f) => f._min.capturedAt)
-    .map((f) => ({
-      gameId: f.gameId,
-      capturedAt: { lte: new Date(f._min.capturedAt!.getTime() + 90 * 60_000) },
-    }));
-  const firstLines = firstWindows.length
-    ? await db.line.findMany({
-        where: { snapshotType: { in: ["open", "daily"] }, OR: firstWindows },
-        select: {
-          gameId: true, market: true, lineValue: true,
-          sportsbook: true, snapshotType: true, capturedAt: true,
-        },
-      })
-    : [];
 
   const predByGame = new Map<string, (typeof preds)[number]>();
   for (const p of preds) if (!predByGame.has(p.gameId)) predByGame.set(p.gameId, p);
