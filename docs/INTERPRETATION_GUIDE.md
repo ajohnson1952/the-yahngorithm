@@ -276,7 +276,7 @@ Not every chip is a situational flag. A card can also show:
 | Chip | Colour | Source | What it means |
 |---|---|---|---|
 | **`steam`** | amber (help) | market (§9) | The consensus spread made a fast, synchronized move toward this team across books — real money came in on them quickly. |
-| **`reverse line move`** (`rlm`) | red (hurt) | market (§9) | The book's number moved toward this team while the Kalshi market (real money, no vig) moved the other way. Public's on this team; the sharp market isn't — **lean the other side.** |
+| **`reverse line move`** (`rlm`) | red (hurt) | market (§9) | In the last ~30 h the book's number moved toward this team while the Kalshi market (real money, no vig) didn't follow. Looks like public money, not a real shift — **lean the other side.** |
 | **`fast pace`** (`fast_pace`) | blue | totals model | The game projects to **≥ 26 possessions** — an up-tempo matchup. Shown when it's the second signal behind an **OVER** pick. |
 | **`slow pace`** (`slow_pace`) | blue | totals model | The game projects to **≤ 21 possessions** — a grind. Shown when it's the second signal behind an **UNDER** pick. |
 
@@ -428,31 +428,35 @@ losing play — the value's already gone — but it tells you which side the
 sharp money is on, which is useful as a corroborator or a "don't fade this"
 signal.
 
-*Needs frequent line snapshots to detect. Until `pull-lines` runs more than
-once a day it will stay quiet — that's expected, not a bug.*
+`pull-lines` snapshots the board every ~2.75 h during game windows (every 25 min
+in the Saturday 9a–8p core), which is enough to see these moves — `steam` and
+`rlm` both fire in a normal week. The one gap: a fast move that starts *and*
+finishes inside a single 2.75 h window on a Thursday or Friday can be missed.
 
 > **Backtest note.** Using open→close as a stand-in for line movement,
 > **neither following nor fading the move beats the close** (49.5% / 50.5%,
 > n=2,077). By definition the closing number already contains the move — the
-> only value in "steam" is catching it *before* the close, which needs
-> intra-day snapshots we don't yet have. Treat `steam` as a "which side is
-> the sharp money on / don't fade this" signal, not a bet trigger.
+> only value in "steam" is catching it *before* the close. Treat `steam` as a
+> "which side is the sharp money on / don't fade this" signal, not a bet trigger.
 
 ### `rlm` (reverse line movement)
 
-The sportsbook's number moved **toward** one team, while the **Kalshi
-prediction market** (real money, no vig, CFTC-regulated) moved the **other
-way** — on a market with real volume (≥ 500 contracts). 
+**Within the last ~30 hours**, the sportsbook's number moved **toward** one team
+while the **Kalshi prediction market** (real money, no vig, CFTC-regulated)
+*didn't move with it* — on a market with real volume (≥ 500 contracts).
 
-The read: the public is piling onto the team the book moved toward, and the
-book shaded the line to balance its action — but the sharp, no-vig market
-doesn't agree the team got better. **Lean the other side.** The flag fires on
-the *public* team (the one to fade).
+The read: the line drifting toward this team looks like public money, not new
+information — the sharp, no-vig market isn't re-rating the game. **Lean the
+other side.** The flag fires on the team the book moved *toward* (the one to fade).
 
-Kalshi's win-probability markets are converted to an implied spread with a
-normal model (σ ≈ 13.5, the historical SD of a CFB result). We're comparing
-*movement direction*, not exact numbers, so the conversion doesn't need to be
-perfect.
+The window matters: a line that settled 2 points off a soft opener on Tuesday
+and then held is **not** `rlm` — that's price discovery, and by Friday it's old
+news. `rlm` only fires while the divergence is *live*. (A standing book-vs-Kalshi
+gap that isn't moving is a different idea — a "fair-value gap" — not yet built.)
+
+Kalshi's win-probability is converted to an implied spread with a normal model
+(σ ≈ 13.5, the historical SD of a CFB result); we compare *movement over the
+window*, not exact numbers, so the conversion doesn't need to be perfect.
 
 ### Reading the Kalshi panel on a game page
 

@@ -32,9 +32,10 @@ const STEAM_PTS = 1.5; // consensus move that counts as steam
 const STEAM_WINDOW_H = 8; // ...within this many hours
 const STEAM_MIN_BOOKS = 3;
 
+const RLM_LOOKBACK_H = 30; // book move must fall within this trailing window
 const RLM_MIN_VOLUME = 500; // Kalshi contracts on the event
-const RLM_BOOK_MOVE = 0.03; // book implied-prob move to count
-const RLM_KALSHI_TOL = 0.01; // Kalshi "didn't follow" band
+const RLM_BOOK_MOVE = 0.03; // book implied-prob move over the window to count
+const RLM_KALSHI_TOL = 0.015; // Kalshi "didn't follow" band (Kalshi prices in ~1¢)
 
 function parseArgs() {
   const a = process.argv.slice(2);
@@ -140,40 +141,54 @@ async function main() {
     }
 
     // ---- rlm ----
-    const openSpread =
-      snaps.find((s) => s.type === "open")?.spread ?? snaps[0]?.spread ?? null;
-    const nowSpread = snaps[snaps.length - 1]?.spread ?? null;
+    // Trailing-window RLM: the book moved toward one team within the last
+    // RLM_LOOKBACK_H, and the sharp (Kalshi) market didn't confirm it over the
+    // same window. A move that finished days ago and then held is NOT rlm —
+    // that's just the line settling off a soft opener. Needs a real snapshot
+    // old enough to sit before the window (a fresh line can't have rlm yet),
+    // so we never fall back to a noisy first pull.
     const pm = g.predictionMarkets;
     const pmNow = pm[pm.length - 1];
-    if (openSpread != null && nowSpread != null && pmNow) {
-      const bookHomeProbOpen = spreadToProb(-openSpread);
-      const bookHomeProbNow = spreadToProb(-nowSpread);
-      const bookMove = bookHomeProbNow - bookHomeProbOpen; // + = book moved toward home
-      const kalshiPrev =
-        pm[0].homePrevProb ?? pm[0].homeWinProb; // oldest signal we have
-      const kalshiMove = pmNow.homeWinProb - kalshiPrev;
+    const nowSnap = snaps[snaps.length - 1];
+    if (nowSnap?.spread != null && pmNow) {
+      const cutoff = nowSnap.at.getTime() - RLM_LOOKBACK_H * 3_600_000;
+      const thenSnap = [...snaps]
+        .reverse()
+        .find((s) => s.at.getTime() <= cutoff && s.spread != null);
 
-      const bookMoved = Math.abs(bookMove) >= RLM_BOOK_MOVE;
-      const kalshiDidNotFollow =
-        Math.sign(bookMove) !== Math.sign(kalshiMove) ||
-        Math.abs(kalshiMove) < RLM_KALSHI_TOL;
-      const enoughVolume = pmNow.volume >= RLM_MIN_VOLUME;
+      if (thenSnap?.spread != null && thenSnap !== nowSnap) {
+        const bookMove =
+          spreadToProb(-nowSnap.spread) - spreadToProb(-thenSnap.spread); // + = toward home
 
-      if (bookMoved && kalshiDidNotFollow && enoughVolume) {
-        const towardTeamId = bookMove > 0 ? g.homeTeamId : g.awayTeamId;
-        rows.push({
-          gameId: g.id,
-          teamId: towardTeamId,
-          flagType: "rlm",
-          detail: {
-            bookMovePts:
-              Math.round((nowSpread - openSpread) * -10) / 10, // home-margin pts
-            kalshiProb: Math.round(pmNow.homeWinProb * 100) / 100,
-            kalshiMove: Math.round(kalshiMove * 100) / 100,
-            volume: Math.round(pmNow.volume),
-          },
-        });
-        rlm++;
+        // Kalshi over the SAME window: its reading at the first snapshot on or
+        // after the window start (fall back to the oldest we have).
+        const kThen =
+          pm.find((p) => p.capturedAt.getTime() >= thenSnap.at.getTime()) ?? pm[0];
+        const kalshiMove = pmNow.homeWinProb - kThen.homeWinProb;
+
+        const bookMoved = Math.abs(bookMove) >= RLM_BOOK_MOVE;
+        const kalshiDidNotFollow =
+          Math.sign(bookMove) !== Math.sign(kalshiMove) ||
+          Math.abs(kalshiMove) < RLM_KALSHI_TOL;
+        const enoughVolume = pmNow.volume >= RLM_MIN_VOLUME;
+
+        if (bookMoved && kalshiDidNotFollow && enoughVolume) {
+          const towardTeamId = bookMove > 0 ? g.homeTeamId : g.awayTeamId;
+          rows.push({
+            gameId: g.id,
+            teamId: towardTeamId,
+            flagType: "rlm",
+            detail: {
+              windowH: RLM_LOOKBACK_H,
+              bookMovePts:
+                Math.round((nowSnap.spread - thenSnap.spread) * -10) / 10, // home-margin pts
+              kalshiProb: Math.round(pmNow.homeWinProb * 100) / 100,
+              kalshiMove: Math.round(kalshiMove * 100) / 100,
+              volume: Math.round(pmNow.volume),
+            },
+          });
+          rlm++;
+        }
       }
     }
   }

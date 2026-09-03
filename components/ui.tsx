@@ -48,7 +48,7 @@ export const FLAG_MEANING: Record<string, string> = {
   bad_spot:
     "Two or more situational negatives stacked on this team (e.g. a long trip on a short week, or a letdown spot after a long trip). Backtests ~57% ATS on the fade — a decision aid, not a lock. Take the points against this team.",
   rlm:
-    "The book's number moved toward this team while the Kalshi prediction market (real money, no vig) moved the other way, on a market with real volume. The public is on this team; the sharp market isn't. Lean the other side.",
+    "Within the last day or so, the book's number moved toward this team while the Kalshi prediction market (real money, no vig) didn't move with it, on a market with real volume. The line drifting this way looks like public money, not a real shift — the sharp market isn't backing it. Lean the other side.",
   steam:
     "The consensus spread made a fast, synchronized move toward this team across the books — a sign real money came in on them quickly.",
   heat:
@@ -88,7 +88,9 @@ export function flagDetail(flagType: string, detail: unknown): string {
         : "";
     case "rlm":
       return [
-        d.bookMovePts != null ? `book ${d.bookMovePts}` : "",
+        d.bookMovePts != null
+          ? `book ${d.bookMovePts}${d.windowH ? `/${d.windowH}h` : ""}`
+          : "",
         d.volume != null ? `${d.volume} vol` : "",
       ]
         .filter(Boolean)

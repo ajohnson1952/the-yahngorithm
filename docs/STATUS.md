@@ -50,6 +50,20 @@ backtests. **We're in "watch football and grade live" mode.**
   **completed games drop their market line** on the board (their last pull is
   days old); fixed by the per-game window above.
 
+### Sept 3 — RLM flag reworked
+
+- `rlm` in `compute-market-flags` was comparing open→now for the book (so a
+  line that settled 2 pts off a soft opener days ago and then held kept the
+  flag on all week — e.g. Tulane/Duke), and it fell back to a noisy first-daily
+  line when there was no `open` snapshot.
+- Now: **trailing 30 h window**. The book must have moved within the last ~30 h,
+  and Kalshi must not have confirmed it over the *same* window; needs a real
+  snapshot old enough to sit before the window, so it never anchors to a thin
+  first pull. Guide §9 + the stale "steam is dormant" note fixed (`pull-lines`
+  runs ~6×/day now — steam fires in a normal week).
+- Result: wk-1 `rlm` went 1 → 0 (the stale Tulane/Duke one cleared); `steam`
+  still firing (Akron @ Wake Forest, 2 pts / 2.7 h).
+
 ### Sept 3 — Neon plan / cost
 
 - Upgraded Neon Free → **Launch** (usage-based, ~$5/mo) after the transfer-leak
