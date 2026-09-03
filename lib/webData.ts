@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { db } from "./db";
 import { consensusByGame } from "./consensus";
+import { fetchNeonProjectUsage } from "./neonUsage";
 import {
   SPREAD_EDGE_THRESHOLD,
   TOTAL_EDGE_THRESHOLD,
@@ -751,6 +752,14 @@ export async function getDataFreshness(): Promise<FreshnessRow[]> {
     { label: "Team trends", at: trends, source: "compute-trends · Sundays", warnHrs: 999 },
   ];
 }
+
+/** Neon compute / transfer / storage for the /admin panel. Cached 10 min — the
+ *  numbers only update ~hourly on Neon's side, and this hits an external API. */
+export type { NeonUsageView } from "./neonUsage";
+export const getNeonUsage = unstable_cache(fetchNeonProjectUsage, ["neon-usage"], {
+  revalidate: 600,
+  tags: ["neon-usage"],
+});
 
 /** Current-month usage for the /admin budget panel. */
 export async function getApiUsage(): Promise<ApiUsageView> {

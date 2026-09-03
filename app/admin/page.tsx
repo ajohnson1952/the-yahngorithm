@@ -1,5 +1,11 @@
 import { isAdmin } from "../../lib/adminAuth";
-import { getApiUsage, getDataFreshness, type FreshnessRow } from "../../lib/webData";
+import {
+  getApiUsage,
+  getDataFreshness,
+  getNeonUsage,
+  type FreshnessRow,
+} from "../../lib/webData";
+import type { NeonUsageView, NeonMetric } from "../../lib/neonUsage";
 import { LoginForm } from "../rankings/LoginForm";
 import { RUNNABLE, RUN_ALL_ORDER } from "./scripts";
 import { RunPanel } from "./RunPanel";
@@ -32,6 +38,106 @@ function UsageBar({
         <div className={`usage-fill ${hot}`} style={{ width: `${pct}%` }} />
       </div>
       <div className="usage-detail">{detail}</div>
+    </div>
+  );
+}
+
+const nfmt = (n: number) => n.toFixed(n < 10 ? 2 : n < 100 ? 1 : 0);
+
+/** Like UsageBar, but the fill tracks the straight-line PROJECTION to period
+ *  end (the "will I blow the cap" number), with the raw figure alongside it. */
+function NeonBar({
+  label,
+  m,
+  detail,
+}: {
+  label: string;
+  m: NeonMetric;
+  detail: string;
+}) {
+  const shown = m.projected ?? m.used;
+  const raw = (shown / m.cap) * 100;
+  const hot = raw >= 100 ? "hot" : raw >= 70 ? "warm" : "";
+  return (
+    <div className="usage-row">
+      <div className="usage-top">
+        <span className="usage-label">{label}</span>
+        <span className="usage-num mono">
+          {nfmt(m.used)}
+          {m.projected != null ? ` → ~${nfmt(m.projected)}` : ""} / {m.cap} {m.unit}
+        </span>
+      </div>
+      <div className="usage-track">
+        <div
+          className={`usage-fill ${hot}`}
+          style={{ width: `${Math.min(100, Math.round(raw))}%` }}
+        />
+      </div>
+      <div className="usage-detail">{detail}</div>
+    </div>
+  );
+}
+
+function NeonPanel({ u }: { u: NeonUsageView }) {
+  if (!u.configured) {
+    return (
+      <div className="admin-limits">
+        <strong>Neon — database host</strong>
+        <p className="admin-usage-note">
+          Set <span className="mono">NEON_API_KEY</span> in the Render service env
+          (a personal key from console.neon.tech) to show compute / transfer /
+          storage here. Works locally already via <span className="mono">.env</span>.
+        </p>
+      </div>
+    );
+  }
+  if (u.error || !u.compute || !u.transfer || !u.storage) {
+    return (
+      <div className="admin-limits">
+        <strong>Neon — database host</strong>
+        <p className="admin-usage-note">
+          Neon API error: {u.error ?? "no data returned"}.
+        </p>
+      </div>
+    );
+  }
+  const pctIn = Math.round((u.daysElapsed! / u.daysTotal!) * 100);
+  return (
+    <div className="admin-limits">
+      <strong>Neon — database host (bars vs Free-tier caps)</strong>
+      <NeonBar
+        label="Compute"
+        m={u.compute}
+        detail={`${u.compute.activeHours}h active this period, avg ${u.compute.avgCu} CU. Pinned min=max 0.25 CU, 5-min autosuspend.`}
+      />
+      <NeonBar
+        label="Data transfer"
+        m={u.transfer}
+        detail="Egress to clients — pipeline reads + cached web. The metric that forced the Sept Launch upgrade."
+      />
+      <NeonBar
+        label="Storage"
+        m={u.storage}
+        detail="Current DB size (a level, not accrued). 6-hour history retention."
+      />
+      <p className="admin-usage-note">
+        Period {u.periodStart!.slice(0, 10)} → {u.periodEnd!.slice(0, 10)} ·{" "}
+        {u.daysElapsed} of {u.daysTotal} days ({pctIn}%). On the{" "}
+        <strong>Launch</strong> plan (usage-based, ~$5/mo); the bars project
+        against the <em>Free</em> caps to judge when to move back. Projections are
+        straight-line — noisy early, skewed by heavy manual runs.{" "}
+        <span className="dim">
+          Checked{" "}
+          {new Date(u.fetchedAt).toLocaleString("en-US", {
+            timeZone: "America/Chicago",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })}{" "}
+          CT · cached 10 min.
+        </span>
+      </p>
     </div>
   );
 }
@@ -105,7 +211,11 @@ export default async function AdminPage() {
     );
   }
 
-  const [usage, freshness] = await Promise.all([getApiUsage(), getDataFreshness()]);
+  const [usage, freshness, neon] = await Promise.all([
+    getApiUsage(),
+    getDataFreshness(),
+    getNeonUsage(),
+  ]);
 
   const scripts = Object.entries(RUNNABLE).map(([name, s]) => ({
     name,
@@ -150,6 +260,8 @@ export default async function AdminPage() {
           <span className="dim"> Open-Meteo / ESPN / Kalshi are free, no key — not tracked here.</span>
         </p>
       </div>
+
+      <NeonPanel u={neon} />
 
       <RunPanel scripts={scripts} runAllOrder={RUN_ALL_ORDER} />
 

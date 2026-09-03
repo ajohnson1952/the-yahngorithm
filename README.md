@@ -114,7 +114,7 @@ The dispatched workflow needs three repo secrets: `DATABASE_URL`, `CFBD_API_KEY`
 | `/game/[id]` | full breakdown: three spread models + Yahn breakdown, totals math, flags, snapshot-by-snapshot line movement, Kalshi panel, weather, injuries, trends, picks |
 | `/picks` | season pick log with ATS record + CLV |
 | `/grades` | season-to-date: every spread model + every flag graded vs the closing line |
-| `/admin` | manual pipeline runs (password gate) |
+| `/admin` | manual pipeline runs, data-freshness panel, API + Neon usage bars (password gate) |
 | `/guide` | renders the interpretation guide |
 | `/rankings` | "My Top 25" editor — **parked**, off the nav, not wired to anything |
 
