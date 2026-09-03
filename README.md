@@ -124,6 +124,10 @@ burst of visitors from each re-running the same queries (a `force-dynamic`
 homepage doing exactly that once ran Neon past its free-tier transfer cap).
 Per-visitor pins are a separate uncached lookup; `/admin` is never cached.
 
+**Analytics:** Cloudflare Web Analytics (cookieless page views, zero backend).
+`app/layout.tsx` injects the beacon only when `CF_BEACON_TOKEN` is set — put it
+in the Render env, leave it unset locally.
+
 ---
 
 ## Local development

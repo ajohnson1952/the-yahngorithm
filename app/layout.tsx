@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { Nav } from "../components/Nav";
 
@@ -13,6 +14,10 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Cloudflare Web Analytics — cookieless page views. Only injected when
+  // CF_BEACON_TOKEN is set in the env (so: prod only, no rebuild to toggle).
+  const cfBeacon = process.env.CF_BEACON_TOKEN;
+
   return (
     <html lang="en">
       <body>
@@ -26,6 +31,13 @@ export default function RootLayout({
           </div>
         </header>
         <main className="wrap">{children}</main>
+        {cfBeacon && (
+          <Script
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            strategy="afterInteractive"
+            data-cf-beacon={JSON.stringify({ token: cfBeacon })}
+          />
+        )}
       </body>
     </html>
   );
