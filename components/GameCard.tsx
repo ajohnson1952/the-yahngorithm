@@ -166,8 +166,8 @@ export function GameCard({ g }: { g: GameView }) {
               <EdgeTag
                 edge={g.totalEdge}
                 threshold={TOTAL_EDGE_THRESHOLD}
-                overLabel="OVER"
-                underLabel="UNDER"
+                overLabel="over"
+                underLabel="under"
               />
             </>
           ) : g.modelTotal != null ? (

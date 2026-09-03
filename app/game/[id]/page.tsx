@@ -385,8 +385,8 @@ export default async function GamePage({
                   : Math.abs(totEdge) < 3.5
                     ? "under the 3.5-pt bar — noise"
                     : totEdge > 0
-                      ? "model leans OVER"
-                      : "model leans UNDER"
+                      ? "model leans over"
+                      : "model leans under"
               }
             />
           </div>
