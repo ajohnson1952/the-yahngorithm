@@ -28,6 +28,7 @@
     "compute-trends": "tsx --env-file=.env scripts/computeTeamTrends.ts",
     "tick": "tsx --env-file=.env scripts/tick.ts",
     "seed-rivalries": "tsx --env-file=.env scripts/seedRivalries.ts",
+    "neon-usage": "tsx --env-file=.env scripts/neonUsage.ts",
     "compute-flags": "tsx --env-file=.env scripts/computeFlags.ts",
     "compute-market-flags": "tsx --env-file=.env scripts/computeMarketFlags.ts",
     "compute-weather-flags": "tsx --env-file=.env scripts/computeWeatherFlags.ts",

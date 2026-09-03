@@ -50,6 +50,19 @@ backtests. **We're in "watch football and grade live" mode.**
   **completed games drop their market line** on the board (their last pull is
   days old); fixed by the per-game window above.
 
+### Sept 3 — Neon plan / cost
+
+- Upgraded Neon Free → **Launch** (usage-based, ~$5/mo) after the transfer-leak
+  bug. Compute pinned min=max **0.25 CU** (endpoint was set to autoscale to 8!),
+  autosuspend stays 5 min (Launch won't allow lower). Storage 71 MB, history
+  retention 6 h — both minimal.
+- `npm run neon-usage` — new read-only script, prints compute / transfer /
+  storage for the billing period vs the Free-tier caps (100 CU-h / 5 GB / 0.5 GB)
+  with a straight-line projection. Needs `NEON_API_KEY` in `.env`.
+- Plan: run normally ~2 weeks, then use `neon-usage` to decide whether to move
+  both projects back to Free. Compute + storage will fit easily; **transfer is
+  the swing factor** (steady-state estimate ~3–4.5 GB/mo vs the 5 GB Free cap).
+
 ### Sept 3 — FBS-vs-FCS lines not pulling
 
 - `matchTeamAliases` only seeds from CFBD `/teams/fbs`, so FCS opponents never

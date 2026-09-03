@@ -54,6 +54,12 @@ for how to read any of this.
 | Kalshi | none (public reads) | none | — |
 | Open-Meteo | none | fair use | negligible |
 | ESPN (unofficial) | none | none published | fine |
+| Neon (Postgres host) | `NEON_API_KEY` (optional) | Free: 100 CU-h + 5 GB transfer + 0.5 GB storage / mo | `npm run neon-usage` |
+
+On the **Launch** plan as of Sept 2026 (usage-based, ~$5/mo) — moved off Free only
+because of a transfer-leak bug (see `docs/STATUS.md` + git history). `npm run
+neon-usage` shows compute / transfer / storage for the period vs the Free caps,
+to decide when to move back.
 
 ---
 
