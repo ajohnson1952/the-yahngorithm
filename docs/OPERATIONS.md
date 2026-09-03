@@ -98,6 +98,13 @@ over the closing line.** Use it as decision support:
   cost per button). A redeploy also clears every cache.
 - **Repo secrets missing** — `DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY` in
   GitHub → Settings → Secrets → Actions. Without them every workflow no-ops.
+- **An FBS game shows no betting line** (esp. vs an FCS opponent) — `pull-lines`
+  couldn't match the Odds API's name for one team. It now self-heals for
+  FBS-vs-FCS games (it names the FCS side from our schedule and learns the
+  alias), but if a **real FBS team** name is new to the Odds board it can miss.
+  The `pull-lines` log prints any it couldn't resolve; add the alias by hand
+  (`team_source_aliases`, source `odds_api`) or re-run
+  `npx tsx scripts/matchTeamAliases.ts` to refresh from the current board.
 - **`/admin` buttons fail in prod** — `CFBD_API_KEY` / `ODDS_API_KEY` also need
   to be in the Render service env.
 

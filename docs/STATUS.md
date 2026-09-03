@@ -50,6 +50,17 @@ backtests. **We're in "watch football and grade live" mode.**
   **completed games drop their market line** on the board (their last pull is
   days old); fixed by the per-game window above.
 
+### Sept 3 — FBS-vs-FCS lines not pulling
+
+- `matchTeamAliases` only seeds from CFBD `/teams/fbs`, so FCS opponents never
+  got an `odds_api` alias — the Odds API's "Tennessee State Tigers" wouldn't
+  resolve and `pull-lines` dropped the **whole event**, costing the FBS side
+  (e.g. Georgia) its line. ~48 of 99 week-1 games affected.
+- `pull-lines` now rescues these: when one side resolves, it names the other
+  from our own schedule (leading-name overlap, or the known team's only game
+  near that kickoff) and learns the alias. Week 1 went 43 → 99/99 games with a
+  line. Added the missing `Maryland Terrapins` alias by hand.
+
 ### (prior cycle)
 
 - **Yahn model v2** — `lib/yahnModel.ts`: SP+ backbone + EPA adj (ramps up
