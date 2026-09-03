@@ -7,16 +7,25 @@ import { FLAG_LABEL } from "./ui";
 
 type Section = { label: string; games: GameView[] };
 
-// situational-flag filter chips, in display order (rollup, then the rest)
-const SITUATIONAL = [
-  "bad_spot",
-  "travel",
-  "revenge",
-  "lookahead",
-  "letdown",
-  "short_week",
-  "off_bye",
-] as const;
+// every flag the board can filter by, in display order:
+// situational → market → weather. Short chip labels (the card / guide use
+// the longer FLAG_LABEL). Only flags with games this week actually render.
+const FILTER_FLAGS: { flag: string; label: string }[] = [
+  { flag: "bad_spot", label: "bad spot" },
+  { flag: "travel", label: "travel" },
+  { flag: "revenge", label: "revenge" },
+  { flag: "lookahead", label: "lookahead" },
+  { flag: "letdown", label: "letdown" },
+  { flag: "short_week", label: "short week" },
+  { flag: "off_bye", label: "off bye" },
+  { flag: "steam", label: "steam" },
+  { flag: "rlm", label: "reverse line" },
+  { flag: "heat", label: "heat" },
+  { flag: "cold", label: "cold" },
+  { flag: "wind", label: "wind" },
+  { flag: "rain", label: "rain" },
+  { flag: "snow", label: "snow" },
+];
 
 function haystack(g: GameView): string {
   return [
@@ -49,9 +58,9 @@ export function BoardView({ sections }: { sections: Section[] }) {
   // only offer chips for flags that actually have games this week
   const flagChips = useMemo(
     () =>
-      SITUATIONAL.map((ft) => ({
-        flag: ft as string,
-        label: (FLAG_LABEL[ft] ?? ft).replace(/^./, (c) => c.toUpperCase()),
+      FILTER_FLAGS.map(({ flag: ft, label }) => ({
+        flag: ft,
+        label: label.replace(/^./, (c) => c.toUpperCase()),
         count: allGames.filter((g) => g.flags.some((f) => f.flagType === ft)).length,
       })).filter((c) => c.count > 0),
     [allGames]

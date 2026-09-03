@@ -520,11 +520,13 @@ below 15, as protection against manual runs or an unusual bowl stretch. The
 - **View toggle** — *By kickoff* (grouped by day — the default), *By edge* (the
   model's disagreement groups, sub-sorted by kickoff), *★ Pinned* (your watch
   list).
-- **Flag filter** — the chip row below the search box. Tap a situational flag
-  (`bad spot`, `travel`, `revenge`, `lookahead`, `letdown`, `short week`,
-  `off bye`) to show only games where a team carries it; the number on each chip
-  is how many games this week. Only flags with games appear. Tap again or hit
-  *clear* to reset. Works with the search box (search within the filtered set).
+- **Flag filter** — the chip row below the search box. Tap any flag —
+  situational (`bad spot`, `travel`, `revenge`, `lookahead`, `letdown`,
+  `short week`, `off bye`), market (`steam`, `reverse line`), or weather
+  (`heat`, `cold`, `wind`, `rain`, `snow`) — to show only games where a team
+  carries it; the number on each chip is how many games this week. Only flags
+  with games appear. Tap again or hit *clear* to reset. Works with the search
+  box (search within the filtered set).
 - **Pin** a game with the star on its card or page to add it to the Pinned
   view. Pins are remembered per browser (an anonymous cookie — no login), so
   everyone keeps their own watch list.
