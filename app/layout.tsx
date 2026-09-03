@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "./globals.css";
 import { Nav } from "../components/Nav";
 
@@ -32,9 +31,9 @@ export default function RootLayout({
         </header>
         <main className="wrap">{children}</main>
         {cfBeacon && (
-          <Script
+          <script
+            type="module"
             src="https://static.cloudflareinsights.com/beacon.min.js"
-            strategy="afterInteractive"
             data-cf-beacon={JSON.stringify({ token: cfBeacon })}
           />
         )}
