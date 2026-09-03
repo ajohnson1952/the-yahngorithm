@@ -25,6 +25,7 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { getCurrentSeasonWeek, getCfbdCallCount } from "../lib/cfbd";
 import { recordCfbdUsage, recordOddsUsage } from "../lib/apiUsage";
 import { buildTeamResolver } from "../lib/teamResolver";
+import { normalize } from "../lib/nameMatching";
 import { fetchNcaafOdds } from "../lib/oddsApi";
 
 const prisma = new PrismaClient();
@@ -82,14 +83,64 @@ async function main() {
       homeTeamId: true,
       awayTeamId: true,
       kickoffTime: true,
+      homeTeam: { select: { canonicalName: true } },
+      awayTeam: { select: { canonicalName: true } },
     },
   });
   const gamesByPair = new Map<string, typeof games>();
+  const gamesByTeam = new Map<string, typeof games>();
   for (const g of games) {
     const k = pairKey(g.homeTeamId, g.awayTeamId);
-    const list = gamesByPair.get(k);
-    if (list) list.push(g);
-    else gamesByPair.set(k, [g]);
+    (gamesByPair.get(k) ?? gamesByPair.set(k, []).get(k)!).push(g);
+    (gamesByTeam.get(g.homeTeamId) ?? gamesByTeam.set(g.homeTeamId, []).get(g.homeTeamId)!).push(g);
+    (gamesByTeam.get(g.awayTeamId) ?? gamesByTeam.set(g.awayTeamId, []).get(g.awayTeamId)!).push(g);
+  }
+
+  /**
+   * One side of an Odds API event resolved to a team we track, the other
+   * didn't — almost always an FBS-vs-FCS tune-up where the Odds API's FCS name
+   * ("Tennessee State Tigers") has no alias, which would otherwise drop the
+   * whole event and cost the FBS team its line too. Use OUR schedule to name
+   * the mystery team: it must be the known team's opponent this week.
+   */
+  function rescueOpponent(
+    knownId: string,
+    oddsName: string,
+    commenceMs: number
+  ): { id: string; canonicalName: string } | null {
+    const ev = normalize(oddsName);
+    if (ev.length === 0) return null;
+    const scored = (gamesByTeam.get(knownId) ?? []).map((g) => {
+      const opp =
+        g.homeTeamId === knownId
+          ? { id: g.awayTeamId, canonicalName: g.awayTeam.canonicalName }
+          : { id: g.homeTeamId, canonicalName: g.homeTeam.canonicalName };
+      const on = normalize(opp.canonicalName);
+      return {
+        opp,
+        // opponent's full name is the leading run of words in the Odds name
+        prefix: on.length > 0 && on.every((w, i) => ev[i] === w),
+        dt: Math.abs(g.kickoffTime.getTime() - commenceMs),
+      };
+    });
+    // 1) name lines up cleanly — confident even if the team has a bye-less
+    //    doubleheader somewhere
+    const clean = scored.filter((s) => s.prefix);
+    if (clean.length === 1) return clean[0].opp;
+    // 2) name doesn't line up ("Albany" vs our "UAlbany", "Citadel" vs "The
+    //    Citadel"), but the known team has exactly one game this week and its
+    //    kickoff matches the event — the opponent is whoever that is.
+    const near = scored.filter((s) => s.dt <= 26 * 3_600_000);
+    if (near.length === 1) return near[0].opp;
+    return null;
+  }
+
+  async function learnAlias(sourceName: string, teamId: string) {
+    await prisma.teamSourceAlias.upsert({
+      where: { source_sourceName: { source: "odds_api", sourceName } },
+      update: { teamId, confidence: "auto_matched" },
+      create: { source: "odds_api", sourceName, teamId, confidence: "auto_matched" },
+    });
   }
 
   // Guard against an accidental double-run of the once-only snapshots.
@@ -150,12 +201,33 @@ async function main() {
   const rows: Prisma.LineCreateManyInput[] = [];
   let matchedGames = 0;
   let unresolvedEvents = 0;
+  let rescued = 0;
   let noGame = 0;
   const gamesWithLines = new Set<string>();
 
   for (const ev of events) {
-    const homeId = teams.resolve(ev.home_team);
-    const awayId = teams.resolve(ev.away_team);
+    let homeId = teams.resolve(ev.home_team);
+    let awayId = teams.resolve(ev.away_team);
+
+    // rescue an FBS-vs-FCS event where only the FCS name failed to resolve
+    if (homeId && !awayId) {
+      const r = rescueOpponent(homeId, ev.away_team, Date.parse(ev.commence_time));
+      if (r) {
+        awayId = r.id;
+        teams.register(ev.away_team, r.id);
+        await learnAlias(ev.away_team, r.id);
+        rescued++;
+      }
+    } else if (awayId && !homeId) {
+      const r = rescueOpponent(awayId, ev.home_team, Date.parse(ev.commence_time));
+      if (r) {
+        homeId = r.id;
+        teams.register(ev.home_team, r.id);
+        await learnAlias(ev.home_team, r.id);
+        rescued++;
+      }
+    }
+
     if (!homeId || !awayId) {
       unresolvedEvents++;
       continue;
@@ -235,12 +307,16 @@ async function main() {
   console.log(`   - spreads:                ${rows.filter((r) => r.market === "spread").length}`);
   console.log(`   - totals:                 ${rows.filter((r) => r.market === "total").length}`);
   console.log(`  Games matched to a line:   ${gamesWithLines.size} / ${games.length}`);
+  if (rescued > 0) {
+    console.log(`  FCS opponents rescued via the schedule (alias learned): ${rescued}`);
+  }
   console.log("============================================================\n");
 
   if (unresolvedEvents > 0) {
     console.log(
       `${unresolvedEvents} Odds API events had a team we couldn't resolve ` +
-        "(usually FCS-vs-FCS games we don't track) — skipped."
+        "(FCS-vs-FCS we don't track, or an FCS name the schedule rescue couldn't " +
+        "pin to an opponent) — skipped."
     );
   }
   if (noGame > 0) {
