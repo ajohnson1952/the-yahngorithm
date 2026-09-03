@@ -267,7 +267,7 @@ deliberately conservative — we'd rather miss a soft flag than raise a false on
 | **`revenge`** | This team **lost the last meeting** (within the last 2 seasons), that loss was **a rivalry game or by ≤ 10 points** (a close one they let slip, not a blowout by a better team), **and** this year's game is projected within 14 points (close enough for motivation to matter). Detail carries the date and margin. | The "one that got away" angle. Real effect is modest and the market prices some of it — a tiebreaker, not a driver. |
 | **`lookahead`** | This team is at least decent, favored by **≥ 13 points** (SP+ model) this week, **and** next week they play a rivalry game or a genuinely tough opponent (projected within ~6 points). | Classic trap: a good team with one eye on next week's big game can come out flat. **Fade this team / take the points.** |
 | **`letdown`** | Last week this team **won** a game that was either a rivalry or against a team rated within 3 SP+ points (an emotional, "played up" win) **and** this week's opponent is rated **≥ 10 SP+ points weaker**. | Emotional hangover after a big win, against a team they may overlook. **Fade this team / take the points.** |
-| **`bad_spot`** | **Two or more** of `travel` / `lookahead` / `letdown` / `short_week` stacked on the same team (e.g. a long trip on a short week). A rollup — the red chip. | The genuinely nasty spots — ~1 per week. Backtests ~57% ATS on the fade (small sample). **Take the points against this team.** Filter the board to these with the "Bad spots" toggle. Does *not* corroborate picks (its components already do). |
+| **`bad_spot`** | **Two or more** of `travel` / `lookahead` / `letdown` / `short_week` stacked on the same team (e.g. a long trip on a short week). A rollup — the red chip. | The genuinely nasty spots — ~1 per week. Backtests ~57% ATS on the fade (small sample). **Take the points against this team.** Filter the board to these with the `bad spot` flag chip. Does *not* corroborate picks (its components already do). |
 
 ### The other chips you'll see on a card
 
@@ -517,11 +517,16 @@ below 15, as protection against manual runs or an unusual bowl stretch. The
 
 ### Using the board
 
-- **Sort toggle** — *By edge* (the model's disagreement groups, sub-sorted by
-  kickoff), *By kickoff* (grouped by day), *Bad spots* (only games with a
-  `bad_spot` flag), *★ Pinned* (your watch list).
+- **View toggle** — *By kickoff* (grouped by day — the default), *By edge* (the
+  model's disagreement groups, sub-sorted by kickoff), *★ Pinned* (your watch
+  list).
+- **Flag filter** — the chip row below the search box. Tap a situational flag
+  (`bad spot`, `travel`, `revenge`, `lookahead`, `letdown`, `short week`,
+  `off bye`) to show only games where a team carries it; the number on each chip
+  is how many games this week. Only flags with games appear. Tap again or hit
+  *clear* to reset. Works with the search box (search within the filtered set).
 - **Pin** a game with the star on its card or page to add it to the Pinned
-  filter. Pins are remembered per browser (an anonymous cookie — no login), so
+  view. Pins are remembered per browser (an anonymous cookie — no login), so
   everyone keeps their own watch list.
 - **Line-movement arrow** — the small **▲ / ▼ + points** next to a card's spread
   or total is how far that number has moved from the **first line we recorded**

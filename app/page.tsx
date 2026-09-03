@@ -40,8 +40,9 @@ export default async function Home({
     sp.week && Number.isInteger(parsedWeek) && parsedWeek >= 1 && parsedWeek <= 25
       ? parsedWeek
       : thisWeek;
-  const byTime = sp.sort === "time";
-  const badSpotOnly = sp.sort === "badspot";
+  // default view is by kickoff; ?sort=edge for the edge groups, ?sort=pinned
+  // for the watch list. (?sort=time still works — it's the default.)
+  const byEdge = sp.sort === "edge";
   const pinnedOnly = sp.sort === "pinned";
 
   const uid = (await cookies()).get("yahn_uid")?.value ?? "";
@@ -66,8 +67,6 @@ export default async function Home({
 
   const pickCount = board.filter((g) => g.picks.length > 0).length;
 
-  const hasBadSpot = (g: (typeof board)[number]) =>
-    g.flags.some((f) => f.flagType === "bad_spot");
   const byKick = (a: (typeof board)[number], b: (typeof board)[number]) =>
     Date.parse(a.kickoff) - Date.parse(b.kickoff);
 
@@ -84,19 +83,7 @@ export default async function Home({
     sections = games.length
       ? [{ label: `Pinned games (${games.length})`, games }]
       : [];
-  } else if (badSpotOnly) {
-    const games = live.filter(hasBadSpot).sort(byKick);
-    sections = games.length
-      ? [{ label: `Bad-spot games (${games.length})`, games }]
-      : [];
-  } else if (byTime) {
-    const byDay = new Map<string, typeof board>();
-    for (const g of [...live].sort(byKick)) {
-      const k = dayLabel(g.kickoff);
-      (byDay.get(k) ?? byDay.set(k, []).get(k)!).push(g);
-    }
-    sections = [...byDay.entries()].map(([label, games]) => ({ label, games }));
-  } else {
+  } else if (byEdge) {
     const groups = new Map<number, typeof board>();
     for (const g of live) {
       (groups.get(g.sortRank) ?? groups.set(g.sortRank, []).get(g.sortRank)!).push(g);
@@ -108,10 +95,18 @@ export default async function Home({
         label: RANK_LABEL[r],
         games: [...groups.get(r)!].sort(byKick),
       }));
+  } else {
+    // default: grouped by day
+    const byDay = new Map<string, typeof board>();
+    for (const g of [...live].sort(byKick)) {
+      const k = dayLabel(g.kickoff);
+      (byDay.get(k) ?? byDay.set(k, []).get(k)!).push(g);
+    }
+    sections = [...byDay.entries()].map(([label, games]) => ({ label, games }));
   }
 
-  // trailing "Final" section (not on the filtered views)
-  if (!badSpotOnly && !pinnedOnly && done.length) {
+  // trailing "Final" section (not on the pinned view)
+  if (!pinnedOnly && done.length) {
     sections.push({ label: `Final (${done.length})`, games: done });
   }
 
@@ -157,21 +152,15 @@ export default async function Home({
         <div className="sort-toggle">
           <a
             href={qs({ week: sp.week ? week : undefined })}
-            className={!byTime && !badSpotOnly && !pinnedOnly ? "on" : ""}
-          >
-            By edge
-          </a>
-          <a
-            href={qs({ week: sp.week ? week : undefined, sort: "time" })}
-            className={byTime ? "on" : ""}
+            className={!byEdge && !pinnedOnly ? "on" : ""}
           >
             By kickoff
           </a>
           <a
-            href={qs({ week: sp.week ? week : undefined, sort: "badspot" })}
-            className={badSpotOnly ? "on" : ""}
+            href={qs({ week: sp.week ? week : undefined, sort: "edge" })}
+            className={byEdge ? "on" : ""}
           >
-            Bad spots
+            By edge
           </a>
           <a
             href={qs({ week: sp.week ? week : undefined, sort: "pinned" })}
@@ -182,11 +171,6 @@ export default async function Home({
         </div>
       </div>
 
-      {badSpotOnly && sections.length === 0 && (
-        <p className="empty">
-          No bad-spot games this week — no team has 2+ situational flags stacked.
-        </p>
-      )}
       {pinnedOnly && sections.length === 0 && (
         <p className="empty">No pinned games. Tap the ☆ on a card to pin it.</p>
       )}

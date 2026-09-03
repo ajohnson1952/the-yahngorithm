@@ -13,7 +13,7 @@ export const MARKET_FLAGS = new Set(["rlm", "steam"]);
 export const SPOT_FLAGS = new Set(["bad_spot"]);
 export const WEATHER_FLAGS = new Set(["heat", "cold", "wind", "rain", "snow"]);
 
-const FLAG_LABEL: Record<string, string> = {
+export const FLAG_LABEL: Record<string, string> = {
   short_week: "short week",
   off_bye: "off bye",
   travel: "travel",
