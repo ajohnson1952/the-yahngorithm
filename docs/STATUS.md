@@ -50,6 +50,17 @@ backtests. **We're in "watch football and grade live" mode.**
   **completed games drop their market line** on the board (their last pull is
   days old); fixed by the per-game window above.
 
+### Sept 4 — `/watch`: quadbox viewing guide
+
+New page/tab, not a betting tool — plans a day of watching. `lib/watchGuide.ts`
+scores every game 0–100 (40% projected competitiveness, 30% ranked-team
+stakes, 15% pace, 15% rivalry via the `Rivalry` table; FBS-vs-FCS capped low)
+and slices the day into windows of "which 4 games to have on," recomputed only
+when the actual top-4 changes (fixed ~3h40m game length, 45-min kickoff
+clustering). Pure computation over the already-cached `getWeekBoard` output +
+a tiny cached rivalry lookup — no new DB load. Day/week nav, added in `Nav.tsx`,
+guide §11.
+
 ### Sept 4 — stop recording lines after kickoff
 
 - The Odds API keeps serving **live in-game prices** after a game starts (a team

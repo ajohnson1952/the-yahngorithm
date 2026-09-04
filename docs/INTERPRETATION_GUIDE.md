@@ -548,6 +548,35 @@ below 15, as protection against manual runs or an unusual bowl stretch. The
 
 ---
 
+## 11. The watch guide (`/watch`)
+
+A different kind of tool — not decision support for betting, but a plan for
+which games to actually put on a quadbox for a day of watching. It slices the
+day into windows ("11:00 AM CT," "3:15 PM CT," …) and shows the **4 best
+games live in that window**, ranked by a 0–100 **watchability score**:
+
+| Signal | Weight | What it rewards |
+|---|---|---|
+| Projected competitiveness | 40% | a market spread near pick'em |
+| Ranked-team stakes | 30% | an AP-ranked team, more for two |
+| Projected pace | 15% | a high total (shootout potential) |
+| Rivalry | 15% | a known rivalry matchup (flat bonus) |
+
+FBS-vs-FCS games are capped low regardless (almost always lopsided). A huge
+market spread (24+ pts) gets flagged **"likely blowout"** even if it still
+cracks a weak window — the reasons chip on each card always says *why* it's
+there.
+
+A window only changes when the actual top-4 changes — a game starting or
+ending elsewhere doesn't reshuffle the board on its own. It assumes a fixed
+~3h40m game length and clusters kickoffs within 45 minutes into one window,
+so it's an estimate, not a live feed. **It's built from pregame data and does
+not react to how a game is actually playing** — it won't notice a projected
+blowout turn into a nailbiter, or vice versa. Plan your day with it in the
+morning; it isn't a live re-optimizer.
+
+---
+
 ## Glossary
 
 | Term | Meaning |

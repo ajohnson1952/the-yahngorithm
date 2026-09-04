@@ -111,6 +111,7 @@ The dispatched workflow needs three repo secrets: `DATABASE_URL`, `CFBD_API_KEY`
 | Route | |
 |---|---|
 | `/` | the week's board — view by kickoff (default) / by edge / pinned, filter by any flag (situational / market / weather), search by team; page between weeks; each card shows the market number (most-posted book line), the model line, the edge, and a ▲/▼ line-movement chip |
+| `/watch` | quadbox viewing guide — the day's games sliced into windows of "which 4 to have on," ranked by a watchability score (competitiveness, pace, ranked-team stakes, rivalries); day/week nav |
 | `/game/[id]` | full breakdown: three spread models + Yahn breakdown, totals math, flags, snapshot-by-snapshot line movement, Kalshi panel, weather, injuries, trends, picks |
 | `/picks` | season pick log with ATS record + CLV |
 | `/grades` | season-to-date: every spread model + every flag graded vs the closing line |
