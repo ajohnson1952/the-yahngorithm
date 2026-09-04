@@ -23,6 +23,8 @@ import {
 export const dynamic = "force-dynamic";
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
+const RECENT_LINES = 5; // line-movement rows shown (newest first)
+const RECENT_WEATHER = 3; // weather snapshots shown (newest first)
 
 interface LineRowLite {
   sportsbook: string;
@@ -168,6 +170,7 @@ export default async function GamePage({
 
   const spreadTL = lineTimeline(lines as LineRowLite[], "spread");
   const totalTL = lineTimeline(lines as LineRowLite[], "total");
+  const lineTimelineRows = mergeTimelines(spreadTL, totalTL); // newest first
   const mktSpread = spreadTL[0]?.median ?? null; // home spread, neg = home favored
   const mktTotal = totalTL[0]?.median ?? null;
   const mktHomeMargin = mktSpread != null ? -mktSpread : null;
@@ -354,19 +357,17 @@ export default async function GamePage({
               sub={`${pred!.homeExpectedPpp != null ? trim(r1(pred!.homeExpectedPpp)) : "–"} pts/poss`}
             />
             <Tile
-              k="Possessions"
-              v={
-                pred!.predictedPossessions != null
-                  ? trim(r1(pred!.predictedPossessions))
-                  : "–"
-              }
-              sub={paceNote(pred!.predictedPossessions)}
-            />
-            <Tile
               k="Model total"
               v={trim(r1(modelTotal))}
               sub={
-                mktTotal != null ? `market ${trim(r1(mktTotal))}` : "no market total"
+                [
+                  mktTotal != null ? `market ${trim(r1(mktTotal))}` : "no market total",
+                  pred!.predictedPossessions != null
+                    ? `${trim(r1(pred!.predictedPossessions))} poss, ${paceNote(pred!.predictedPossessions)}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
               }
             />
             <Tile
@@ -474,39 +475,47 @@ export default async function GamePage({
 
       {/* ---------- line movement ---------- */}
       <h2>Line movement</h2>
-      {spreadTL.length === 0 && totalTL.length === 0 ? (
+      {lineTimelineRows.length === 0 ? (
         <p className="subhead">No sportsbook lines captured for this game yet.</p>
       ) : (
-        <ul className="hist">
-          {mergeTimelines(spreadTL, totalTL).map((row, i) => (
-            <li key={i}>
-              <span className="hist-when">
-                {stampCT(row.at)} <span className="dim">· {row.type}</span>
-              </span>
-              <span className="hist-vals mono">
-                {row.spread != null && (
-                  <span>
-                    {spreadForm(-row.spread)}
-                    {row.spreadRange && (
-                      <span className="dim"> ({row.spreadRange})</span>
-                    )}
-                  </span>
-                )}
-                {row.total != null && (
-                  <span>
-                    o/u {trim(r1(row.total))}
-                    {row.totalRange && (
-                      <span className="dim"> ({row.totalRange})</span>
-                    )}
-                  </span>
-                )}
-                <span className="dim">
-                  {row.books} book{row.books === 1 ? "" : "s"}
+        <>
+          <ul className="hist">
+            {lineTimelineRows.slice(0, RECENT_LINES).map((row, i) => (
+              <li key={i}>
+                <span className="hist-when">
+                  {stampCT(row.at)} <span className="dim">· {row.type}</span>
                 </span>
-              </span>
-            </li>
-          ))}
-        </ul>
+                <span className="hist-vals mono">
+                  {row.spread != null && (
+                    <span>
+                      {spreadForm(-row.spread)}
+                      {row.spreadRange && (
+                        <span className="dim"> ({row.spreadRange})</span>
+                      )}
+                    </span>
+                  )}
+                  {row.total != null && (
+                    <span>
+                      o/u {trim(r1(row.total))}
+                      {row.totalRange && (
+                        <span className="dim"> ({row.totalRange})</span>
+                      )}
+                    </span>
+                  )}
+                  <span className="dim">
+                    {row.books} book{row.books === 1 ? "" : "s"}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          {lineTimelineRows.length > RECENT_LINES && (
+            <p className="subhead" style={{ marginTop: 8 }}>
+              Showing the {RECENT_LINES} most recent snapshots of{" "}
+              {lineTimelineRows.length}.
+            </p>
+          )}
+        </>
       )}
 
       {/* ---------- prediction market ---------- */}
@@ -541,35 +550,48 @@ export default async function GamePage({
               hour). Each row is a snapshot — expect it to firm up as the game
               nears; the timestamp is when that snapshot was taken.
             </p>
-            <ul className="hist">
-              {dedupeWeather([...weather].reverse()).map((w) => (
-                <li key={w.id}>
-                  <span className="hist-when">{stampCT(w.pulledAt)}</span>
-                  <span className="hist-vals mono">
-                    <span>
-                      {w.tempF == null ? "–" : `${Math.round(w.tempF)}°F`}
-                      {w.feelsF != null &&
-                        Math.round(w.feelsF) !== Math.round(w.tempF ?? w.feelsF) &&
-                        ` (feels ${Math.round(w.feelsF)}°)`}
-                    </span>
-                    <span
-                      className={
-                        w.windMph != null && w.windMph >= 15 ? "wind-hi" : ""
-                      }
-                    >
-                      wind {w.windMph == null ? "–" : trim(r1(w.windMph))}
-                      {w.windGustMph != null && ` g${Math.round(w.windGustMph)}`}
-                    </span>
-                    <span className="dim">
-                      precip{" "}
-                      {w.precipProbability == null
-                        ? "–"
-                        : `${Math.round(w.precipProbability)}%`}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {(() => {
+              const rows = dedupeWeather([...weather].reverse());
+              return (
+                <>
+                  <ul className="hist">
+                    {rows.slice(0, RECENT_WEATHER).map((w) => (
+                      <li key={w.id}>
+                        <span className="hist-when">{stampCT(w.pulledAt)}</span>
+                        <span className="hist-vals mono">
+                          <span>
+                            {w.tempF == null ? "–" : `${Math.round(w.tempF)}°F`}
+                            {w.feelsF != null &&
+                              Math.round(w.feelsF) !== Math.round(w.tempF ?? w.feelsF) &&
+                              ` (feels ${Math.round(w.feelsF)}°)`}
+                          </span>
+                          <span
+                            className={
+                              w.windMph != null && w.windMph >= 15 ? "wind-hi" : ""
+                            }
+                          >
+                            wind {w.windMph == null ? "–" : trim(r1(w.windMph))}
+                            {w.windGustMph != null && ` g${Math.round(w.windGustMph)}`}
+                          </span>
+                          <span className="dim">
+                            precip{" "}
+                            {w.precipProbability == null
+                              ? "–"
+                              : `${Math.round(w.precipProbability)}%`}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {rows.length > RECENT_WEATHER && (
+                    <p className="subhead" style={{ marginTop: 8 }}>
+                      Showing the {RECENT_WEATHER} most recent of {rows.length}{" "}
+                      readings.
+                    </p>
+                  )}
+                </>
+              );
+            })()}
             </>
           )}
           <p className="subhead" style={{ marginTop: 10 }}>
