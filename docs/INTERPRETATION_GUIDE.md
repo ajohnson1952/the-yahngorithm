@@ -489,7 +489,7 @@ below are US Central. Full detail is in `docs/OPERATIONS.md`.
 | When | What updates |
 |---|---|
 | **Every ~30 min, all week** | Kalshi, market flags, model + picks re-run |
-| **Game windows** (all week except Tue) | **Live scores** + **grading** — a final is graded within ~30 min. **Line snapshots** every ~30 min in the Saturday 9a–8p core, every ~2–3 h otherwise |
+| **Game windows** (all week except Tue) | **Live scores** + **grading** — a final is graded within ~30 min. **Line snapshots** every ~30 min in the Saturday 9a–8p core, every ~2–3 h otherwise. A game's last snapshot **before kickoff** is its closing line — we stop recording once it starts (the book's live in-game price is not a market line). |
 | **Tuesday ~9am** | grade last week, then ratings / polls / schedule / advanced stats + EPA / **opening lines** / Kalshi / situational flags / model / picks |
 | **Sunday ~10am** | advanced-stat checkpoint, team trends |
 | **~6am & ~4pm** | Weather forecast, injury report |

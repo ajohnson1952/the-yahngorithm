@@ -199,10 +199,13 @@ async function main() {
   await recordOddsUsage(prisma, { remaining: creditsRemaining, cost: creditsLastCost });
 
   const rows: Prisma.LineCreateManyInput[] = [];
+  const now = Date.now();
+  const GRACE_MS = 10 * 60_000; // a pull landing within 10 min of kickoff still counts
   let matchedGames = 0;
   let unresolvedEvents = 0;
   let rescued = 0;
   let noGame = 0;
+  let liveSkipped = 0;
   const gamesWithLines = new Set<string>();
 
   for (const ev of events) {
@@ -247,6 +250,15 @@ async function main() {
         ? g
         : best
     );
+
+    // Once a game kicks off The Odds API keeps serving LIVE in-game prices
+    // (a team up 21 shows as -35). Recording those poisons everything
+    // downstream — consensus, the movement arrow, steam/rlm all read a
+    // ~40-pt "move". The last pre-kick pull is our de facto close; stop there.
+    if (game.kickoffTime.getTime() + GRACE_MS <= now && !force) {
+      liveSkipped++;
+      continue;
+    }
     matchedGames++;
 
     for (const bk of ev.bookmakers) {
@@ -298,6 +310,24 @@ async function main() {
     await prisma.line.createMany({ data: rows });
   }
 
+  // Safety net: sweep any post-kickoff odds_api rows that slipped in before this
+  // guard existed, from a --force run, or a kickoff that got pushed back. The
+  // GRACE_MS window keeps a pull that lands right at kickoff as the close.
+  const kickedOff = games.filter((g) => g.kickoffTime.getTime() + GRACE_MS <= now);
+  let swept = 0;
+  if (kickedOff.length > 0) {
+    const r = await prisma.line.deleteMany({
+      where: {
+        source: "odds_api",
+        OR: kickedOff.map((g) => ({
+          gameId: g.id,
+          capturedAt: { gt: new Date(g.kickoffTime.getTime() + GRACE_MS) },
+        })),
+      },
+    });
+    swept = r.count;
+  }
+
   const gamesNoLine = games.length - gamesWithLines.size;
 
   // ---------- Report ----------
@@ -309,6 +339,12 @@ async function main() {
   console.log(`  Games matched to a line:   ${gamesWithLines.size} / ${games.length}`);
   if (rescued > 0) {
     console.log(`  FCS opponents rescued via the schedule (alias learned): ${rescued}`);
+  }
+  if (liveSkipped > 0) {
+    console.log(`  Skipped ${liveSkipped} events for games already kicked off (live prices).`);
+  }
+  if (swept > 0) {
+    console.log(`  Swept ${swept} stale post-kickoff line rows.`);
   }
   console.log("============================================================\n");
 

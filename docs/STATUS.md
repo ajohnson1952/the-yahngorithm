@@ -50,6 +50,19 @@ backtests. **We're in "watch football and grade live" mode.**
   **completed games drop their market line** on the board (their last pull is
   days old); fixed by the per-game window above.
 
+### Sept 4 — stop recording lines after kickoff
+
+- The Odds API keeps serving **live in-game prices** after a game starts (a team
+  up 21 shows as −35). `pull-lines` was recording them as `Line` rows, which read
+  as ~40-pt "line moves" everywhere downstream — consensus, the movement arrow,
+  steam/rlm. Hit a bunch of Thursday-night wk-1 games.
+- Fix (`scripts/pullLines.ts`): skip any event whose game kicked off > 10 min
+  ago (`--force` overrides), plus a self-healing sweep every run that deletes
+  post-kickoff `odds_api` rows. The last pre-kick snapshot is the de facto close.
+- Cleaned 109 stale rows; re-ran `compute-market-flags` (garbage steam flags
+  cleared, 10 → 2). Grading was already safe (`closingConsensus` filters
+  `capturedAt <= kickoff`).
+
 ### Sept 3 — RLM flag reworked
 
 - `rlm` in `compute-market-flags` was comparing open→now for the book (so a
