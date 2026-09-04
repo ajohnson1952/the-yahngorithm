@@ -25,6 +25,7 @@ export const dynamic = "force-dynamic";
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const RECENT_LINES = 5; // line-movement rows shown (newest first)
 const RECENT_WEATHER = 3; // weather snapshots shown (newest first)
+const RECENT_KALSHI = 5; // kalshi history rows shown (oldest-of-the-recent first)
 
 interface LineRowLite {
   sportsbook: string;
@@ -1191,19 +1192,26 @@ function KalshiPanel({
       </p>
 
       {history.length > 1 && (
-        <ul className="hist">
-          {history.map((h, i) => (
-            <li key={i}>
-              <span className="hist-when">{stampCT(h.capturedAt)}</span>
-              <span className="hist-vals mono">
-                <span>
-                  {home} {(h.homeWinProb * 100).toFixed(0)}%
+        <>
+          <ul className="hist">
+            {history.slice(-RECENT_KALSHI).map((h, i) => (
+              <li key={i}>
+                <span className="hist-when">{stampCT(h.capturedAt)}</span>
+                <span className="hist-vals mono">
+                  <span>
+                    {home} {(h.homeWinProb * 100).toFixed(0)}%
+                  </span>
+                  <span className="dim">{kNum(h.volume)} vol</span>
                 </span>
-                <span className="dim">{kNum(h.volume)} vol</span>
-              </span>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+          {history.length > RECENT_KALSHI && (
+            <p className="subhead" style={{ marginTop: 8 }}>
+              Showing the {RECENT_KALSHI} most recent of {history.length} snapshots.
+            </p>
+          )}
+        </>
       )}
     </>
   );
