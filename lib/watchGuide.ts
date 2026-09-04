@@ -13,10 +13,12 @@
 
 import { unstable_cache } from "next/cache";
 import { db } from "./db";
-import type { GameView, TeamLite } from "./webData";
+import type { GameView, TeamLite, FlagView } from "./webData";
 
 // ---------- scoring ----------
-// Weights sum to 1. Tune here, not scattered through the formula.
+// Weights sum to 1, plus a small additive chaos bonus (situational flags) on
+// top — capped so it nudges borderline games, never dominates. Tune here,
+// not scattered through the formula.
 const W_CLOSE = 0.4; // projected competitiveness
 const W_PACE = 0.15; // projected scoring
 const W_QUALITY = 0.3; // ranked-team stakes
@@ -24,6 +26,18 @@ const W_RIVALRY = 0.15; // rivalry atmosphere
 
 const NO_MODEL_CAP = 15; // FBS-vs-FCS ceiling — almost always a blowout
 const BLOWOUT_MARGIN = 24; // |spread| past this gets called out as likely lopsided
+
+// A team flagged for one of these plays worse than its number more often than
+// not — i.e. real upset potential, which is its own kind of watchable even
+// when the market says blowout.
+function chaosBonus(flags: FlagView[]): { bonus: number; reason: string | null } {
+  const types = new Set(flags.map((f) => f.flagType));
+  if (types.has("bad_spot")) return { bonus: 10, reason: "trap game — upset watch" };
+  if (types.has("lookahead") || types.has("letdown"))
+    return { bonus: 5, reason: "lookahead/letdown spot — upset watch" };
+  if (types.has("revenge")) return { bonus: 3, reason: "revenge spot" };
+  return { bonus: 0, reason: null };
+}
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -56,8 +70,10 @@ export interface WatchGame {
   neutralSite: boolean;
   marketSpread: number | null;
   marketTotal: number | null;
+  predictedPossessions: number | null;
   hasModel: boolean;
   rivalry: string | null;
+  flags: FlagView[];
   score: number; // 0-100 watchability
   reasons: string[];
 }
@@ -81,6 +97,9 @@ function scoreGame(g: GameView, rivalryName: string | null): { score: number; re
     score = Math.min(score, NO_MODEL_CAP);
     return { score: Math.round(clamp(score, 0, 100)), reasons: ["FBS vs. lower division — likely lopsided"] };
   }
+  const { bonus, reason: chaosReason } = chaosBonus(g.flags);
+  score += bonus;
+
   if (margin != null && margin <= 3) reasons.push(`toss-up (${r1(margin)}-pt line)`);
   else if (margin != null && margin <= 7) reasons.push(`close game (${r1(margin)}-pt line)`);
   if (totalSrc != null && totalSrc >= 62) reasons.push(`shootout pace (${r1(totalSrc)} total)`);
@@ -91,6 +110,7 @@ function scoreGame(g: GameView, rivalryName: string | null): { score: number; re
     reasons.push(parts.join(" vs. "));
   }
   if (rivalryName) reasons.push(rivalryName);
+  if (chaosReason) reasons.push(chaosReason);
   if (margin != null && margin >= BLOWOUT_MARGIN) reasons.push(`likely blowout (${r1(margin)}-pt line)`);
   if (reasons.length === 0) reasons.push("nothing standing out — a default watch");
 
@@ -113,8 +133,10 @@ export function toWatchGame(g: GameView, rivalryMap: Map<string, string>): Watch
     neutralSite: g.neutralSite,
     marketSpread: g.marketSpread,
     marketTotal: g.marketTotal,
+    predictedPossessions: g.predictedPossessions,
     hasModel: g.hasModel,
     rivalry,
+    flags: g.flags,
     score,
     reasons,
   };

@@ -1,5 +1,5 @@
 import type { WatchGame } from "../lib/watchGuide";
-import { TeamRow, kickoffStr } from "./ui";
+import { TeamRow, FlagChip, kickoffStr, spreadStr, trim, teamShort } from "./ui";
 
 export function WatchCard({ g, rank }: { g: WatchGame; rank?: number }) {
   const homeWon =
@@ -19,6 +19,21 @@ export function WatchCard({ g, rank }: { g: WatchGame; rank?: number }) {
         <TeamRow team={g.away} score={g.awayScore} won={awayWon} />
         <TeamRow team={g.home} score={g.homeScore} won={homeWon} />
       </div>
+      {(g.marketSpread != null || g.marketTotal != null) && (
+        <div className="watch-lines">
+          {g.marketSpread != null && (
+            <span className="watch-line mono">
+              {teamShort(g.home)} {spreadStr(g.marketSpread)}
+            </span>
+          )}
+          {g.marketTotal != null && (
+            <span className="watch-line mono">
+              O/U {trim(g.marketTotal)}
+              {g.predictedPossessions != null ? ` · ${trim(g.predictedPossessions)} poss` : ""}
+            </span>
+          )}
+        </div>
+      )}
       <div className="watch-card-meta">
         {kickoffStr(g.kickoff)}
         {g.broadcast ? ` · ${g.broadcast}` : ""}
@@ -30,6 +45,13 @@ export function WatchCard({ g, rank }: { g: WatchGame; rank?: number }) {
             <span key={i} className="watch-reason">
               {r}
             </span>
+          ))}
+        </div>
+      )}
+      {g.flags.length > 0 && (
+        <div className="chips watch-flags">
+          {g.flags.map((f, i) => (
+            <FlagChip key={i} flag={f} showTeam />
           ))}
         </div>
       )}

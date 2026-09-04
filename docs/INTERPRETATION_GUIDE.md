@@ -567,6 +567,15 @@ market spread (24+ pts) gets flagged **"likely blowout"** even if it still
 cracks a weak window — the reasons chip on each card always says *why* it's
 there.
 
+On top of the weighted score, a small **upset-watch bonus** is added for a
+team carrying a fade-prone situational flag — `bad_spot` +10, `lookahead` /
+`letdown` +5, `revenge` +3 (see §5). The market says one thing; these say the
+favorite might not show up, which is its own kind of watchable. Each card
+shows the actual **spread and total** (not just a reasons blurb), the
+projected pace in possessions, and every situational/market/weather flag on
+the game — the same chips as the board, so you can see *why* a game scored
+the way it did.
+
 A window only changes when the actual top-4 changes — a game starting or
 ending elsewhere doesn't reshuffle the board on its own. It assumes a fixed
 ~3h40m game length and clusters kickoffs within 45 minutes into one window,
