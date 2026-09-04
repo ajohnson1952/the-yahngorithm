@@ -93,6 +93,15 @@ a.inline-link:hover { color: var(--blue); }
 @media (max-width: 640px) {
   .topbar-inner { flex-wrap: nowrap; }
   .nav {
+    /* the actual fix: a flex item's default min-width is its content's full
+       width, so .nav was growing to fit every link instead of being capped
+       at the space left after .brand — nothing ever overflowed *inside* it
+       to scroll, it just overflowed the page, which body{overflow-x:hidden}
+       (above) then silently clipped. min-width:0 + flex-shrink:1 forces .nav
+       to actually stop at the available width so its own overflow (from the
+       nowrap links below) has somewhere to go: its own scrollbar. */
+    flex-shrink: 1;
+    min-width: 0;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; /* Firefox */
