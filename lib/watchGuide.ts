@@ -269,15 +269,17 @@ export function buildWatchWindows(games: WatchGame[], now = Date.now()): WatchWi
   for (let i = 0; i < starts.length; i++) {
     const winStart = starts[i];
     const winEnd = starts[i + 1] ?? winStart + GAME_DURATION_MS;
-    // for the current / upcoming windows, trust ESPN over the duration
-    // estimate: an in-progress game counts even if it's run long; a
-    // just-finished one still shows (it sinks to the bench on score) but
-    // one that ended hours ago doesn't clutter the board.
-    const current = winEnd > now;
+    // In the window that's on RIGHT NOW, trust ESPN over the duration
+    // estimate — a game that's still in progress counts even if it's run
+    // past its estimated end. Every other window (including later ones) is
+    // built purely from the kickoff/length estimate: a game in progress
+    // now must NOT be force-fed into the 7pm and 10pm windows, or they'd
+    // all look identical to the current one and get collapsed away.
+    const isNowWindow = now >= winStart && now < winEnd;
     const live = games.filter((g) => {
       const k = Date.parse(g.kickoff);
       const overlaps = k < winEnd && k + GAME_DURATION_MS > winStart;
-      if (current && g.live?.state === "in") return true;
+      if (isNowWindow && g.live?.state === "in") return true;
       return overlaps;
     });
     if (live.length === 0) continue;
