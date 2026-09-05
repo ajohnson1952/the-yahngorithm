@@ -612,6 +612,11 @@ control appears at the top of the page — on by default, refreshing every 60s,
 with a manual ↻ button and an on/off toggle. Off-slate, none of this runs and
 the guide is a pure pregame plan.
 
+As the day goes on, once a later window has started the finished windows
+collapse into a **"earlier windows today"** roll-up at the top — so mid-
+afternoon you're looking at what's on now and next, not the noon slate. (Only
+on today's date; past and future days show every window.)
+
 ---
 
 ## Glossary

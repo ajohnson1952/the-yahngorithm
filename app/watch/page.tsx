@@ -110,6 +110,56 @@ export default async function WatchPage({
     return now >= start && now < end;
   });
 
+  // Once a later window has started, roll the finished ones up into a
+  // collapsed "earlier today" section — only when we're actually watching
+  // today's slate unfold.
+  const pastCount = day === today && nowWindowIdx > 0 ? nowWindowIdx : 0;
+  const pastWindows = windows.slice(0, pastCount);
+  const liveWindows = windows.slice(pastCount);
+
+  const renderWindow = (w: (typeof windows)[number], i: number) => (
+    <section key={w.start} className="watch-window">
+      <div className="watch-window-head">
+        <span className="watch-window-time">{windowLabel(w.start)}</span>
+        {i === nowWindowIdx && <span className="watch-now">now</span>}
+        {w.lineup.length < QUADBOX_SIZE && (
+          <span className="watch-window-note">
+            {w.lineup.length} of {QUADBOX_SIZE} slots — that&apos;s everything live
+          </span>
+        )}
+      </div>
+      {(w.added.length > 0 || w.dropped.length > 0) && i > 0 && (
+        <div className="watch-swap">
+          {w.dropped.length > 0 && (
+            <span>
+              out: {w.dropped.map((g) => g.away.abbr ?? g.away.name).join(", ")}
+            </span>
+          )}
+          {w.added.length > 0 && (
+            <span>
+              in: {w.added.map((g) => g.away.abbr ?? g.away.name).join(", ")}
+            </span>
+          )}
+        </div>
+      )}
+      <div className="watch-lineup">
+        {w.lineup.map((g, gi) => (
+          <WatchCard key={g.id} g={g} rank={gi + 1} />
+        ))}
+      </div>
+      {w.bench.length > 0 && (
+        <details className="watch-bench">
+          <summary>next best ({w.bench.length})</summary>
+          <div className="watch-lineup watch-lineup-bench">
+            {w.bench.map((g) => (
+              <WatchCard key={g.id} g={g} />
+            ))}
+          </div>
+        </details>
+      )}
+    </section>
+  );
+
   return (
     <>
       <h1>Watch guide</h1>
@@ -182,48 +232,17 @@ export default async function WatchPage({
             {watchGames.length} game{watchGames.length === 1 ? "" : "s"} ·{" "}
             {windows.length} viewing window{windows.length === 1 ? "" : "s"}
           </p>
-          {windows.map((w, i) => (
-            <section key={w.start} className="watch-window">
-              <div className="watch-window-head">
-                <span className="watch-window-time">{windowLabel(w.start)}</span>
-                {i === nowWindowIdx && <span className="watch-now">now</span>}
-                {w.lineup.length < QUADBOX_SIZE && (
-                  <span className="watch-window-note">
-                    {w.lineup.length} of {QUADBOX_SIZE} slots — that&apos;s everything live
-                  </span>
-                )}
+          {pastWindows.length > 0 && (
+            <details className="watch-past">
+              <summary>
+                {pastWindows.length} earlier window{pastWindows.length === 1 ? "" : "s"} today
+              </summary>
+              <div className="watch-past-body">
+                {pastWindows.map((w, i) => renderWindow(w, i))}
               </div>
-              {(w.added.length > 0 || w.dropped.length > 0) && i > 0 && (
-                <div className="watch-swap">
-                  {w.dropped.length > 0 && (
-                    <span>
-                      out: {w.dropped.map((g) => g.away.abbr ?? g.away.name).join(", ")}
-                    </span>
-                  )}
-                  {w.added.length > 0 && (
-                    <span>
-                      in: {w.added.map((g) => g.away.abbr ?? g.away.name).join(", ")}
-                    </span>
-                  )}
-                </div>
-              )}
-              <div className="watch-lineup">
-                {w.lineup.map((g, gi) => (
-                  <WatchCard key={g.id} g={g} rank={gi + 1} />
-                ))}
-              </div>
-              {w.bench.length > 0 && (
-                <details className="watch-bench">
-                  <summary>next best ({w.bench.length})</summary>
-                  <div className="watch-lineup watch-lineup-bench">
-                    {w.bench.map((g) => (
-                      <WatchCard key={g.id} g={g} />
-                    ))}
-                  </div>
-                </details>
-              )}
-            </section>
-          ))}
+            </details>
+          )}
+          {liveWindows.map((w, idx) => renderWindow(w, idx + pastCount))}
         </>
       )}
 
@@ -231,7 +250,8 @@ export default async function WatchPage({
         Windows use an estimated ~3h40m per game and a 45-min kickoff-clustering
         window, and change only when the top {QUADBOX_SIZE} actually change. Live
         scores come from ESPN on each refresh — a finished game frees its slot, an
-        in-progress one holds it even if it runs long.
+        in-progress one holds it even if it runs long. Once a later window starts,
+        the finished ones collapse into &ldquo;earlier windows today.&rdquo;
       </p>
     </>
   );
