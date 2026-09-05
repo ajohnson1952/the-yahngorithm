@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { db } from "./db";
 
 /** The CFB season a date belongs to (Jan bowls still belong to the prior year). */
@@ -27,15 +28,20 @@ export async function currentWeek(season: number = currentSeason()): Promise<num
   return last?.week ?? 1;
 }
 
-/** Every week number that has at least one game this season, ascending. */
-export async function weeksWithGames(
-  season: number = currentSeason()
-): Promise<number[]> {
-  const rows = await db.game.findMany({
-    where: { season },
-    distinct: ["week"],
-    select: { week: true },
-    orderBy: { week: "asc" },
-  });
-  return rows.map((r) => r.week);
-}
+/** Every week number that has at least one game this season, ascending.
+ *  Cached 10 min: it changes only when a new week's schedule lands, and it's
+ *  hit on every render of most pages (incl. the /watch live-refresh loop).
+ *  `groupBy` pushes the dedupe to Postgres — `distinct` doesn't (Prisma
+ *  applies it after the rows are already off the wire). */
+export const weeksWithGames = unstable_cache(
+  async (season: number = currentSeason()): Promise<number[]> => {
+    const rows = await db.game.groupBy({
+      by: ["week"],
+      where: { season },
+      orderBy: { week: "asc" },
+    });
+    return rows.map((r) => r.week);
+  },
+  ["weeks-with-games"],
+  { revalidate: 600, tags: ["weeks-with-games"] }
+);

@@ -1,5 +1,6 @@
 import { currentSeason, currentWeek, weeksWithGames } from "../../lib/currentWeek";
 import { getWeekBoard } from "../../lib/webData";
+import { getLiveScores, type LiveGame } from "../../lib/liveScores";
 import {
   getRivalryPairs,
   toWatchGame,
@@ -8,6 +9,7 @@ import {
   type WatchGame,
 } from "../../lib/watchGuide";
 import { WatchCard } from "../../components/WatchCard";
+import { WatchAutoRefresh } from "../../components/WatchAutoRefresh";
 
 export const metadata = { title: "Watch guide · the yahngorithm" };
 
@@ -75,12 +77,33 @@ export default async function WatchPage({
   const day = sp.day && byDay.has(sp.day) ? sp.day : defaultDay;
 
   const dayGames = day ? byDay.get(day)! : [];
+
+  // Live scores (ESPN) only for a day that's actually in play — the current CT
+  // day or the one just past (late West-coast games spill past midnight).
+  const yesterday = new Date(Date.now() - 24 * 3600_000).toLocaleDateString("en-CA", {
+    timeZone: "America/Chicago",
+  });
+  const live: Map<string, LiveGame> =
+    day && (day === today || day === yesterday)
+      ? await getLiveScores(
+          dayGames.map((g) => ({ id: g.id, home: g.home, away: g.away })),
+          day
+        )
+      : new Map();
+
   const watchGames: WatchGame[] = dayGames
-    .map((g) => toWatchGame(g, rivalryMap))
+    .map((g) => toWatchGame(g, rivalryMap, live.get(g.id) ?? null))
     .sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
-  const windows = buildWatchWindows(watchGames);
 
   const now = Date.now();
+  const windows = buildWatchWindows(watchGames, now);
+
+  const anyLive = [...live.values()].some((l) => l.state === "in");
+  const kickingSoon = dayGames.some((g) => {
+    const dt = Date.parse(g.kickoff) - now;
+    return dt > -4 * 3600_000 && dt < 45 * 60_000;
+  });
+  const refreshActive = anyLive || kickingSoon;
   const nowWindowIdx = windows.findIndex((w, i) => {
     const start = Date.parse(w.start);
     const end = windows[i + 1] ? Date.parse(windows[i + 1].start) : Infinity;
@@ -93,10 +116,14 @@ export default async function WatchPage({
       <p className="subhead">
         A quadbox plan for the day — the {QUADBOX_SIZE} best games to have on at
         every point, ranked by projected competitiveness, pace, ranked-team
-        stakes, and rivalries. Built from pregame data (lines, ratings,
-        rankings), not live scores — plan your day with it, don&apos;t expect
-        it to re-shuffle mid-game.
+        stakes, and rivalries. Once games kick off it re-ranks on the live
+        score (ESPN): a one-score game late jumps the board, a blowout drops
+        to the bench.
       </p>
+
+      {refreshActive && (
+        <WatchAutoRefresh active={refreshActive} renderedAt={now} intervalSec={60} />
+      )}
 
       <div className="weeknav">
         <div className="weeknav-ctl">
@@ -201,9 +228,10 @@ export default async function WatchPage({
       )}
 
       <p className="foot">
-        Estimated ~3h40m per game and a 45-min kickoff-clustering window — real
-        games run long or short. A window changes only when the top{" "}
-        {QUADBOX_SIZE} by score actually changes, not on every kickoff.
+        Windows use an estimated ~3h40m per game and a 45-min kickoff-clustering
+        window, and change only when the top {QUADBOX_SIZE} actually change. Live
+        scores come from ESPN on each refresh — a finished game frees its slot, an
+        in-progress one holds it even if it runs long.
       </p>
     </>
   );

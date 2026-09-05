@@ -507,6 +507,11 @@ right after a score changes may show the old number for a beat. The `/admin`
 freshness panel is **never cached** — it's the ground truth for "did the
 pipeline actually run?"
 
+The **watch guide** (`/watch`) is the exception during a slate: it reads live
+scores straight from ESPN's public scoreboard on every refresh (not from our
+DB, not the pipeline), so its scores and re-ranking are near-real-time —
+see §11.
+
 The line-snapshot cadence is sized to stay inside The Odds API's 500-credit
 monthly budget even in a five-Saturday peak month — October 2026 is the worst
 case (5 Thursdays + 5 Fridays + 5 Saturdays) and lands around 92%, with every
@@ -578,11 +583,34 @@ the way it did.
 
 A window only changes when the actual top-4 changes — a game starting or
 ending elsewhere doesn't reshuffle the board on its own. It assumes a fixed
-~3h40m game length and clusters kickoffs within 45 minutes into one window,
-so it's an estimate, not a live feed. **It's built from pregame data and does
-not react to how a game is actually playing** — it won't notice a projected
-blowout turn into a nailbiter, or vice versa. Plan your day with it in the
-morning; it isn't a live re-optimizer.
+~3h40m game length and clusters kickoffs within 45 minutes into one window.
+
+### Live re-ranking
+
+Once games kick off, the guide pulls live scores from **ESPN's public
+scoreboard** (on page load and on each refresh — never stored, never in the
+pipeline) and adjusts the watchability score by what's actually happening:
+
+| Live state | Adjustment |
+|---|---|
+| One-score game (≤ 8) | **+12 rising to +36** as the game goes late |
+| Within two scores (≤ 16) | +2 → +7 |
+| Pulling away (17–24) | −6 → −18 |
+| Blowout (25+) | −16 → −46 (benched) |
+| Overtime | +36 |
+| Final | −70 (drops to the bench with the result) |
+
+The late-game ramp means a 1st-quarter score barely moves the board (it hasn't
+told us much yet); a one-score 4th quarter rockets to the top. So a projected
+blowout that's 24–21 late will jump onto the quadbox, and a "toss-up" that's
+35–3 at halftime drops off it. The live status leads the reasons on each card
+(`one-score game (24–27) · 3:12 4th`), and a green **● LIVE** badge shows
+ESPN's clock.
+
+When any game is in progress (or kickoff is within ~45 min), an **auto-refresh**
+control appears at the top of the page — on by default, refreshing every 60s,
+with a manual ↻ button and an on/off toggle. Off-slate, none of this runs and
+the guide is a pure pregame plan.
 
 ---
 
