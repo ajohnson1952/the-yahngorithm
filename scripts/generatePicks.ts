@@ -33,6 +33,7 @@ import {
   WIND_UNDER_CORROBORATION,
 } from "../lib/modelConfig";
 import { consensusByGame } from "../lib/consensus";
+import { latestLineBatchByGame } from "../lib/lineWindows";
 import { spPlusFreshness } from "../lib/ratingsFreshness";
 
 const prisma = new PrismaClient();
@@ -115,13 +116,12 @@ async function main() {
   const predByGame = new Map<string, (typeof preds)[number]>();
   for (const p of preds) if (!predByGame.has(p.gameId)) predByGame.set(p.gameId, p);
 
-  const lines = await prisma.line.findMany({
-    where: { game: { season, week } },
-    select: {
-      gameId: true, market: true, lineValue: true,
-      sportsbook: true, snapshotType: true, capturedAt: true,
-    },
-  });
+  // Latest snapshot batch per game only — consensusByGame reads just the newest
+  // batch, and the full week's Line history is 40k+ rows by Saturday.
+  const lines = await latestLineBatchByGame(
+    prisma,
+    games.map((g) => g.id)
+  );
   const consensus = consensusByGame(lines);
 
   const wxRows = await prisma.weather.findMany({

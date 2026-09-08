@@ -23,13 +23,40 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
       locally. `CF_BEACON_TOKEN=5ee1b043463a4b58bd546d9eac3122c3`.
 - [ ] Confirm `ADMIN_PASSWORD` + `ADMIN_SESSION_SECRET` are set in the Render
       dashboard (else `/admin` + pinning fall back to the public default `2142`).
-- [ ] Decide re: Neon Free — staying on Launch is fine; going back needs the
-      pipeline transfer fix (backlog). Not urgent.
+- [ ] Decide re: Neon Free — the pipeline transfer fix landed (Sept 8), so the
+      egress blocker is gone. Let a full week run, re-check `npm run neon-usage`
+      / the `/admin` panel, then move both projects back to Free if transfer
+      projects under 5 GB/mo. Not urgent; Launch is fine meanwhile.
 - [ ] Apply the line-movement-arrow fix + the post-kickoff live-lines fix to
       **Cavepicks** (`docs/LINE_MOVEMENT_ARROWS.md`; the live-lines bug is the
       same one described in the Sept 4 entry).
 
 ## Built this cycle
+
+### Sept 8 — pipeline-side transfer fix (Neon egress)
+
+- `run-model`, `generate-picks` and `compute-market-flags` each ran
+  `prisma.line.findMany({ where: { game: { season, week } } })` — the **whole
+  week's** `Line` history — on every ~30-min heartbeat. By Saturday that's 40k+
+  rows (wk 1: 41,399); three consumers × 48 ticks/day re-reading all of it was
+  the bulk of the ~29 GB/mo Neon transfer. Pipeline twin of the Sept 2 webapp
+  fix.
+- New `lib/lineWindows.ts` mirrors `buildWeekBoard`'s pattern: `groupBy` gameId
+  on `_max(capturedAt)`, then a per-game windowed `findMany` (per-game anchor,
+  not one global cutoff — a game's last pull can be hours old).
+  - `latestLineBatchByGame` → just each game's newest snapshot batch
+    (`capturedAt >= max − 95 min`). Used by `run-model` + `generate-picks`;
+    `consensusByGame` only ever reads the latest batch. **wk-1 check: 41,399 →
+    4,838 rows off the wire (−88%), consensus byte-identical for all 99 games.**
+  - `recentLinesByGame` → a trailing 40 h window per game (clears RLM's 30 h
+    lookback with margin). Used by `compute-market-flags` for its steam (8 h) /
+    RLM (30 h) scans. Smaller cut than the other two mid-week — a steam move
+    older than ~40 h no longer registers, which matches the Sept 3 "trailing
+    window" intent.
+- Also trims the `select` to the six columns anyone reads (drops id/source/
+  price). `lib/webData.ts` left as-is (already fixed Sept 2, more elaborate
+  shape). Est. transfer after: well under the 5 GB Free cap → Neon Free viable
+  again.
 
 ### Sept 8 — budget check + ATS-trends fix + `/venues` cache
 
@@ -266,19 +293,9 @@ guide §11.
 - [x] **`/admin` gets a live API budget panel** — CFBD call count (best-effort,
       `ApiUsage` table) and The Odds API's real remaining credits (from its own
       response headers), both as progress bars. "Admin" added to the nav.
-- [ ] **Pipeline-side transfer fix (needed only to make Neon Free viable
-      again).** `run-model`, `generate-picks`, and `compute-market-flags` each
-      run `prisma.line.findMany({ where: { game: { season, week } } })` — the
-      *entire* current week's line history — every ~30-min tick. By Saturday a
-      week is 40k+ `Line` rows (wk 1 hit 41,399); three consumers × 48 ticks/day
-      re-reading all of it is the bulk of the ~29 GB/mo transfer. This is the
-      pipeline twin of the Sept 2 webapp fix. Apply the same pattern
-      (`lib/webData.ts` `buildWeekBoard`): per-game `groupBy` `_max(capturedAt)`,
-      then fetch only `capturedAt >= max − 95 min` for the current consensus
-      (`consensusByGame` already just wants the latest batch). `compute-market-
-      flags` also needs the opening / trailing-window rows for its move
-      calcs — mirror `buildWeekBoard`'s `firstWindows` there. ~25× fewer rows
-      per tick. Est. transfer after: well under 5 GB/mo → Free-tier viable.
+- [x] **Pipeline-side transfer fix** — done Sept 8 (see "Built this cycle").
+      `lib/lineWindows.ts`; `run-model` / `generate-picks` −88% rows off the
+      wire, `compute-market-flags` on a trailing 40 h window.
 - [ ] Isolate the EPA signal as its own small flag (only Yahn component with a
       stable coefficient vs the market — but small).
 - [ ] Kalshi "fair-value gap" flag (static book-vs-market divergence).

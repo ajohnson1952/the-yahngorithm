@@ -23,7 +23,8 @@
 
 import { PrismaClient, Prisma } from "@prisma/client";
 import { getCurrentSeasonWeek } from "../lib/cfbd";
-import { median } from "../lib/consensus";
+import { median, type LineRow } from "../lib/consensus";
+import { recentLinesByGame } from "../lib/lineWindows";
 import { spreadToProb } from "../lib/winProb";
 
 const prisma = new PrismaClient();
@@ -94,25 +95,26 @@ async function main() {
       awayTeamId: true,
       homeTeam: { select: { canonicalName: true } },
       awayTeam: { select: { canonicalName: true } },
-      lines: {
-        select: {
-          lineValue: true,
-          sportsbook: true,
-          snapshotType: true,
-          capturedAt: true,
-          market: true,
-        },
-      },
       predictionMarkets: { orderBy: { capturedAt: "asc" } },
     },
   });
+
+  // Only a trailing window of Line rows per game — steam scans an 8 h window and
+  // RLM a 30 h one; pulling the whole week's history (40k+ rows by Saturday)
+  // every heartbeat tick was the bulk of the Neon egress.
+  const linesByGame = new Map<string, LineRow[]>();
+  for (const l of await recentLinesByGame(prisma, games.map((g) => g.id))) {
+    const arr = linesByGame.get(l.gameId);
+    if (arr) arr.push(l);
+    else linesByGame.set(l.gameId, [l]);
+  }
 
   const rows: Prisma.GameFlagCreateManyInput[] = [];
   let steam = 0;
   let rlm = 0;
 
   for (const g of games) {
-    const snaps = snapshots(g.lines);
+    const snaps = snapshots(linesByGame.get(g.id) ?? []);
 
     // ---- steam ----
     for (let i = 1; i < snaps.length; i++) {

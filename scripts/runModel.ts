@@ -30,6 +30,7 @@ import {
   LEAGUE_AVG_POSSESSIONS_PER_TEAM,
 } from "../lib/modelConfig";
 import { consensusByGame } from "../lib/consensus";
+import { latestLineBatchByGame } from "../lib/lineWindows";
 import { totalsModel } from "../lib/totals";
 import {
   yahnLeagueContext,
@@ -141,17 +142,12 @@ async function main() {
     [...ratingByTeam.keys()].map((id) => yahnInputs(id))
   );
 
-  const lines = await prisma.line.findMany({
-    where: { game: { season, week } },
-    select: {
-      gameId: true,
-      market: true,
-      lineValue: true,
-      sportsbook: true,
-      snapshotType: true,
-      capturedAt: true,
-    },
-  });
+  // Only the latest snapshot batch per game — the full week's Line history is
+  // 40k+ rows by Saturday and consensusByGame reads just the newest batch.
+  const lines = await latestLineBatchByGame(
+    prisma,
+    games.map((g) => g.id)
+  );
   const consensus = consensusByGame(lines);
 
   // latest weather snapshot per game
