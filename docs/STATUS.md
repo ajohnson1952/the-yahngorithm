@@ -14,17 +14,45 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
 
 ## Needs you
 
-- [x] Scheduled-workflow investigation resolved: manual dispatch of Tue-weekly
-      now succeeds. Root cause was `pull-lines --type open` hard-failing
-      (`process.exit(1)`) when opens already existed for the week, killing the
-      whole `&&` chain — fixed to skip gracefully instead. Watch that the
-      *scheduled* (not manual) runs start appearing too.
-- [ ] Confirm `ADMIN_PASSWORD` and `ADMIN_SESSION_SECRET` are set in the Render
+- [ ] **Weekly, early season:** when Bill Connelly posts an updated SP+ sheet,
+      export it → `data/billc/latest.csv`, `npm run load-billc`, commit. That's
+      what releases the pick hold before CFBD's feed catches up (rhythm step 0
+      in OPERATIONS). Watch his X account.
+- [ ] `NEON_API_KEY` + `CF_BEACON_TOKEN` in the **Render service env** (for the
+      `/admin` Neon panel + Cloudflare analytics in prod). `.env` has them
+      locally. `CF_BEACON_TOKEN=5ee1b043463a4b58bd546d9eac3122c3`.
+- [ ] Confirm `ADMIN_PASSWORD` + `ADMIN_SESSION_SECRET` are set in the Render
       dashboard (else `/admin` + pinning fall back to the public default `2142`).
-- [ ] Run the **Preseason factor refresh** workflow once to confirm the annual
-      feeds work in prod.
+- [ ] Decide re: Neon Free — staying on Launch is fine; going back needs the
+      pipeline transfer fix (backlog). Not urgent.
+- [ ] Apply the line-movement-arrow fix + the post-kickoff live-lines fix to
+      **Cavepicks** (`docs/LINE_MOVEMENT_ARROWS.md`; the live-lines bug is the
+      same one described in the Sept 4 entry).
 
 ## Built this cycle
+
+### Sept 8 — budget check + ATS-trends fix + `/venues` cache
+
+- **Budget read (7 days into September, on the Neon Launch plan):**
+  - **Neon** — compute ~77 CU-h/mo proj, storage 0.09 GB, transfer ~29 GB/mo
+    proj. All comfortably inside Launch. **But transfer at ~29 GB/mo is 6× the
+    Free 5 GB cap** → can't move back to Free without the pipeline transfer fix
+    (backlog, below). `npm run neon-usage`.
+  - **CFBD** — 345 calls in ~7 days → straight-lines ~1,500/mo vs the 1,000
+    budget, but that's inflated by wk 1's long game window + manual runs; real
+    steady-state ~700–800.
+  - **Odds API** — 135 credits used, 365 left; designed to run ~85–90% with a
+    hard <15-credit backstop. Fine, watch the `/admin` bar mid-month.
+- **ATS team trends were broken.** `computeTeamTrends` filtered lines to
+  `snapshotType: "close"` — CFBD only backfills those for *finished* seasons
+  (8 of 99 wk-1 games had one), so ATS splits were computed off a near-empty
+  subset and disagreed with `grade-picks`. Extracted `closingConsensus()` to
+  `lib/consensus.ts` (explicit `close` → else median of all pre-kickoff
+  snapshots) and used it in both. After: all 186 teams have a closing line for
+  every game. (Outlier chips still need n ≥ 8 — won't appear until ~wk 8.)
+- **`/venues` cached.** `pull-games` re-fetched CFBD's ~850-row venue dump every
+  run (~hourly in game windows); now cached in `Meta` with a 7-day TTL —
+  ~200 CFBD calls/mo saved.
 
 ### Sept 8 — Bill C bridge (Option A) + anti-clobber
 
@@ -238,6 +266,19 @@ guide §11.
 - [x] **`/admin` gets a live API budget panel** — CFBD call count (best-effort,
       `ApiUsage` table) and The Odds API's real remaining credits (from its own
       response headers), both as progress bars. "Admin" added to the nav.
+- [ ] **Pipeline-side transfer fix (needed only to make Neon Free viable
+      again).** `run-model`, `generate-picks`, and `compute-market-flags` each
+      run `prisma.line.findMany({ where: { game: { season, week } } })` — the
+      *entire* current week's line history — every ~30-min tick. By Saturday a
+      week is 40k+ `Line` rows (wk 1 hit 41,399); three consumers × 48 ticks/day
+      re-reading all of it is the bulk of the ~29 GB/mo transfer. This is the
+      pipeline twin of the Sept 2 webapp fix. Apply the same pattern
+      (`lib/webData.ts` `buildWeekBoard`): per-game `groupBy` `_max(capturedAt)`,
+      then fetch only `capturedAt >= max − 95 min` for the current consensus
+      (`consensusByGame` already just wants the latest batch). `compute-market-
+      flags` also needs the opening / trailing-window rows for its move
+      calcs — mirror `buildWeekBoard`'s `firstWindows` there. ~25× fewer rows
+      per tick. Est. transfer after: well under 5 GB/mo → Free-tier viable.
 - [ ] Isolate the EPA signal as its own small flag (only Yahn component with a
       stable coefficient vs the market — but small).
 - [ ] Kalshi "fair-value gap" flag (static book-vs-market divergence).
