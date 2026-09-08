@@ -345,6 +345,14 @@ what makes the grading honest. The market line it's frozen at is a **real number
 a book was posting** at that moment (§2), so it stays gradeable against a real
 closing line later.
 
+**Early-season hold.** CFBD's SP+ stays frozen at the preseason projection
+until Bill Connelly publishes his first in-season revision (historically around
+week 2–3). While that's the case, no picks are logged for the week at all —
+grading a preseason model against a market that's already watched a week of
+football would just be logging the model being stale as an "edge." Picks resume
+automatically the tick after the updated SP+ is pulled in. (Week 1 is exempt:
+everyone, the market included, is working off preseason info then.)
+
 Expect **few picks** — often 0–4 a week, sometimes zero. Early in the season
 there are fewer still, because the SRS corroborator isn't available yet. That's
 the design working, not a bug. A week with no picks means the model and the

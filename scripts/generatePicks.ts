@@ -33,6 +33,7 @@ import {
   WIND_UNDER_CORROBORATION,
 } from "../lib/modelConfig";
 import { consensusByGame } from "../lib/consensus";
+import { spPlusFreshness } from "../lib/ratingsFreshness";
 
 const prisma = new PrismaClient();
 
@@ -72,6 +73,24 @@ async function main() {
       : await getCurrentSeasonWeek();
 
   console.log(`Pick generation — season ${season}, week ${week}\n`);
+
+  // Hold every pick for the week until CFBD's SP+ has an in-season number in
+  // it. Before Bill Connelly's first revision (~wk 2-3) it's the frozen
+  // preseason projection, and grading a preseason model against a market
+  // that's seen a week of games just logs the model being stale as an "edge".
+  const fresh = await spPlusFreshness(prisma, season, week);
+  if (!fresh.fresh) {
+    console.log(
+      `⏸  SP+ for week ${week} still matches the week ${fresh.baselineWeek ?? "?"} ` +
+        `(preseason) baseline — ${Math.round(fresh.movedPct * 100)}% of ` +
+        `${fresh.comparedTeams || "?"} teams have moved.\n` +
+        `   Bill Connelly hasn't published his in-season update yet, or ` +
+        `pull-ratings hasn't captured it. Holding all week ${week} picks until it lands.\n` +
+        `   (Run pull-ratings once his update is out; this clears itself.)\n`
+    );
+    await prisma.$disconnect();
+    return;
+  }
 
   const games = await prisma.game.findMany({
     where: {

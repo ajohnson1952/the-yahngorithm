@@ -23,6 +23,8 @@
 
 import { execFileSync } from "child_process";
 import { PrismaClient } from "@prisma/client";
+import { getCurrentSeasonWeek } from "../lib/cfbd";
+import { spPlusFreshness } from "../lib/ratingsFreshness";
 
 const prisma = new PrismaClient();
 
@@ -107,9 +109,26 @@ async function main() {
   // --only <groups>: run exactly those, ignore the gates entirely.
   if (onlyArg) for (const g of Object.keys(run) as Group[]) run[g] = forced(g);
 
+  // Early-season SP+ catch-up: CFBD's SP+ sits at the preseason projection
+  // until Bill Connelly's first in-season revision (~wk 2-3). We only pull
+  // ratings on Tuesdays, so a mid-week update would be missed and the model
+  // (and picks) would sit stale all weekend. Until it moves, pull ratings
+  // ~daily; once it's in-season this goes quiet again.
+  let ratingsCatchup = false;
+  if (!run.weekly && !onlyArg && minsAgo(lastRatings) >= 12 * 60) {
+    try {
+      const { season, week } = await getCurrentSeasonWeek();
+      if (week >= 2 && !(await spPlusFreshness(prisma, season, week)).fresh) {
+        ratingsCatchup = true;
+      }
+    } catch {
+      /* calendar/DB hiccup — skip the catch-up this tick */
+    }
+  }
+
   const w = run.weekly;
   const steps: { name: string; args: string[]; on: boolean }[] = [
-    { name: "pull-ratings", args: [], on: w },
+    { name: "pull-ratings", args: [], on: w || ratingsCatchup },
     { name: "pull-rankings", args: [], on: w },
     { name: "pull-advanced", args: [], on: w || run.sunday },
     { name: "pull-games", args: [], on: run.scores || w },

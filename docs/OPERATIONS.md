@@ -116,6 +116,13 @@ over the closing line.** Use it as decision support:
   unplayed game, holding the just-finished week for ~12h after its last kickoff
   (so Saturday's results stay up Sunday morning, then it advances). This is
   independent of CFBD's calendar. Knob: `WEEK_HOLD_MS` in `lib/currentWeek.ts`.
+- **No picks are being logged for the week** — check the `generate-picks` log
+  for a `⏸ SP+ … still matches the preseason baseline` line. CFBD's SP+ is the
+  frozen preseason projection until Bill Connelly's first in-season revision
+  (~wk 2–3); `generate-picks` holds all picks until it moves. The tick pulls
+  ratings ~daily (not just Tuesday) once week ≥ 2 until it lands, then picks
+  resume on their own. To force it: run `pull-ratings` then `generate-picks`
+  from `/admin` after his update is out. Logic: `lib/ratingsFreshness.ts`.
 
 ## The Grades page
 
