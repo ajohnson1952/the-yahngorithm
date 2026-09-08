@@ -147,15 +147,34 @@ async function main() {
   );
 
   // --- offsets, from teams in both ---
-  const dOverall: number[] = [];
-  const dOff: number[] = [];
-  const dDef: number[] = [];
-  for (const c of cfbd) {
-    const b = billcByTeamId.get(c.teamId);
-    if (!b || b.played) continue; // only unplayed teams — same reference point
-    if (c.spPlusOverall != null) dOverall.push(b.overall - c.spPlusOverall);
-    if (c.spPlusOffense != null) dOff.push(b.off - c.spPlusOffense);
-    if (c.spPlusDefense != null) dDef.push(b.def - c.spPlusDefense);
+  // Ideal anchor: teams Bill C still lists as unplayed, so both his number and
+  // our CFBD snapshot sit at the same (preseason) reference point. Once the
+  // season is under way that set collapses to ~nothing — fall back to every
+  // overlapping FBS team. Bill C's early-season updates are small and roughly
+  // symmetric, so the median of ~130 deltas still lands on the true constant;
+  // the p5–p95 band just widens (expected, not an alarm).
+  const collectDeltas = (onlyUnplayed: boolean) => {
+    const o: number[] = [];
+    const off: number[] = [];
+    const def: number[] = [];
+    for (const c of cfbd) {
+      const b = billcByTeamId.get(c.teamId);
+      if (!b) continue;
+      if (onlyUnplayed && b.played) continue;
+      if (c.spPlusOverall != null) o.push(b.overall - c.spPlusOverall);
+      if (c.spPlusOffense != null) off.push(b.off - c.spPlusOffense);
+      if (c.spPlusDefense != null) def.push(b.def - c.spPlusDefense);
+    }
+    return { o, off, def };
+  };
+
+  let { o: dOverall, off: dOff, def: dDef } = collectDeltas(true);
+  let anchor = `${dOverall.length} unplayed FBS teams`;
+  let usingFallback = false;
+  if (dOverall.length < 20) {
+    ({ o: dOverall, off: dOff, def: dDef } = collectDeltas(false));
+    usingFallback = true;
+    anchor = `${dOverall.length} FBS teams (too few unplayed this late — median absorbs the game-ahead noise)`;
   }
   if (dOverall.length < 20) {
     console.error(
@@ -168,8 +187,6 @@ async function main() {
   const offOff = median(dOff);
   const offDef = median(dDef);
   // robust spread: how far the middle 90% of teams sit from the median.
-  // A few teams drift after week-0 games (Bill C updates them, our CFBD
-  // snapshot hasn't) — that's expected. A big p5–p95 band is the real alarm.
   const band = (xs: number[], med: number) => {
     const s = [...xs].map((x) => x - med).sort((a, b) => a - b);
     const p = (q: number) => s[Math.min(s.length - 1, Math.floor(q * s.length))];
@@ -178,16 +195,19 @@ async function main() {
   const b = band(dOverall, offOverall);
 
   console.log("── offsets this upload (billc − cfbd, median) ──");
+  console.log(`  anchor   ${anchor}`);
   console.log(
     `  overall  ${offOverall.toFixed(2)}   (n=${dOverall.length}, middle-90%: ${b.lo.toFixed(1)}…+${b.hi.toFixed(1)} around it)`
   );
   console.log(`  offense  ${offOff.toFixed(2)}`);
   console.log(`  defense  ${offDef.toFixed(2)}`);
-  const wide = b.hi - b.lo > 4;
+  // on the all-teams fallback the band naturally widens; only shout if it's
+  // wide enough to distort the shifted numbers themselves
+  const wide = b.hi - b.lo > (usingFallback ? 8 : 4);
   console.log(
     wide
-      ? "  ⚠ middle-90% band > 4 pts — the two lists have genuinely drifted; sanity-check the FCS numbers.\n"
-      : "  ✓ the lists still agree (a couple of week-0 teams aside).\n"
+      ? "  ⚠ middle-90% band too wide — the two lists have genuinely drifted; sanity-check the FCS numbers.\n"
+      : "  ✓ the lists still agree.\n"
   );
 
   // --- write ---
