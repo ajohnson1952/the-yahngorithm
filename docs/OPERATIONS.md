@@ -60,6 +60,15 @@ nothing else. A `204` response = success. Rotate it yearly.
 
 ## Your weekly rhythm
 
+0. **When Bill Connelly posts an updated SP+ sheet** (early season, ~weekly) —
+   export it to `data/billc/latest.csv`, run `npm run load-billc`, commit the
+   CSV. It writes the FCS ratings, and while CFBD's SP+ feed is still on the
+   preseason projection it also **bridges** Bill C's in-season numbers over the
+   FBS teams (so picks don't wait on CFBD's ingest lag). `pull-ratings` leaves
+   those bridged rows alone until CFBD catches up, then takes back over. Run
+   `npm run run-model && npm run generate-picks` after, or just wait for the
+   next tick. (The mangled "Record" column in the export is ignored — no need
+   to fix it.)
 1. **Tuesday/Wednesday** — the board has opening lines + the model + any picks.
    Skim it. Check `/grades` + `/picks` for last week.
 2. **Through the week** — Kalshi + the model refresh every 3 hours; lines refresh
@@ -119,10 +128,11 @@ over the closing line.** Use it as decision support:
 - **No picks are being logged for the week** — check the `generate-picks` log
   for a `⏸ SP+ … still matches the preseason baseline` line. CFBD's SP+ is the
   frozen preseason projection until Bill Connelly's first in-season revision
-  (~wk 2–3); `generate-picks` holds all picks until it moves. The tick pulls
-  ratings ~daily (not just Tuesday) once week ≥ 2 until it lands, then picks
-  resume on their own. To force it: run `pull-ratings` then `generate-picks`
-  from `/admin` after his update is out. Logic: `lib/ratingsFreshness.ts`.
+  (~wk 2–3); `generate-picks` holds all picks until SP+ moves off that baseline
+  — whether via CFBD catching up (the tick pulls ratings ~daily once week ≥ 2
+  until it lands) or a `load-billc` bridge (step 0 of the weekly rhythm). Then
+  picks resume on their own. Force it with `pull-ratings` + `generate-picks`
+  from `/admin`. Logic: `lib/ratingsFreshness.ts`.
 
 ## The Grades page
 

@@ -24,6 +24,7 @@ import { cfbdGet, getCurrentSeasonWeek, getCfbdCallCount } from "../lib/cfbd";
 import { recordCfbdUsage } from "../lib/apiUsage";
 import { buildTeamResolver } from "../lib/teamResolver";
 import { paceByTeamName } from "../lib/pace";
+import { preseasonBaseline, movedFraction } from "../lib/ratingsFreshness";
 
 const prisma = new PrismaClient();
 
@@ -82,9 +83,33 @@ async function main() {
 
   const srsByName = new Map(srs.map((r) => [r.team, r.rating]));
 
+  // Anti-clobber: if `load-billc` bridged Bill C's own in-season SP+ over some
+  // FBS teams for this week (because CFBD's feed was still preseason), leave
+  // those rows alone here until CFBD itself has caught up. "Caught up" = this
+  // pull's numbers have moved off the season's preseason baseline.
+  const base = await preseasonBaseline(prisma, season);
+  const freshResolved = sp
+    .map((r) => ({ teamId: teams.resolve(r.team), overall: r.rating }))
+    .filter((r): r is { teamId: string; overall: number | null } => !!r.teamId);
+  const cfbdMoved =
+    base.week == null ||
+    base.week === week ||
+    movedFraction(base.overall, freshResolved).movedPct > 0.5;
+  const bridgedTeams = cfbdMoved
+    ? new Set<string>()
+    : new Set(
+        (
+          await prisma.teamRatingWeekly.findMany({
+            where: { season, week, spPlusSource: "billc" },
+            select: { teamId: true },
+          })
+        ).map((r) => r.teamId)
+      );
+
   const unmatched: string[] = [];
   let wrote = 0;
   let withSrs = 0;
+  let heldBridged = 0;
   const ratedTeamIds = new Set<string>();
 
   for (const row of sp) {
@@ -101,12 +126,24 @@ async function main() {
     if (srsRating != null) withSrs++;
     const possessions = pace.get(row.team) ?? null;
 
+    if (bridgedTeams.has(teamId)) {
+      // keep Bill C's bridged SP+ — only refresh the side data
+      await prisma.teamRatingWeekly.update({
+        where: { teamId_season_week: { teamId, season, week } },
+        data: { srs: srsRating, avgPossessionsPerGame: possessions, pulledAt: new Date() },
+      });
+      heldBridged++;
+      ratedTeamIds.add(teamId);
+      continue;
+    }
+
     await prisma.teamRatingWeekly.upsert({
       where: { teamId_season_week: { teamId, season, week } },
       update: {
         spPlusOverall: row.rating ?? null,
         spPlusOffense: row.offense?.rating ?? null,
         spPlusDefense: row.defense?.rating ?? null,
+        spPlusSource: null, // CFBD is authoritative (reclaims any bridged row)
         srs: srsRating,
         avgPossessionsPerGame: possessions,
         pulledAt: new Date(),
@@ -135,6 +172,11 @@ async function main() {
   console.log(`DONE. season ${season}, week ${week}`);
   console.log(`  Teams written to TeamRatingWeekly: ${wrote}`);
   console.log(`  ...of those with an SRS value:     ${withSrs}`);
+  if (heldBridged > 0) {
+    console.log(
+      `  Left on bridged Bill C SP+:         ${heldBridged} (CFBD still preseason)`
+    );
+  }
   console.log("============================================================\n");
 
   if (withSrs === 0) {

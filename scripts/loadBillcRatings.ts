@@ -27,6 +27,7 @@ import { readFileSync } from "fs";
 import { PrismaClient } from "@prisma/client";
 import { getCurrentSeasonWeek } from "../lib/cfbd";
 import { buildTeamResolver } from "../lib/teamResolver";
+import { preseasonBaseline, movedFraction } from "../lib/ratingsFreshness";
 
 const prisma = new PrismaClient();
 
@@ -55,6 +56,7 @@ const NAME_OVERRIDES: Record<string, string> = {
   "Saint Francis-PA": "Saint Francis",
   "Southern U.": "Southern",
   "Long Island": "Long Island University",
+  USF: "South Florida",
 };
 
 const median = (xs: number[]): number => {
@@ -131,9 +133,28 @@ async function main() {
     if (!billcByTeamId.has(id)) billcByTeamId.set(id, r);
   }
 
-  // current SP+ rows for this week; the CFBD-sourced ones are our scale anchor
+  // Scale anchor = CFBD's own SP+ rows. Normally this week's; but once a prior
+  // run has bridged Bill C's numbers over this week's FBS teams, this week has
+  // (almost) no CFBD rows left — fall back to the most recent week that still
+  // has a full CFBD slate (CFBD hasn't moved off preseason, so it's the same
+  // scale).
+  const cfbdWeekCounts = await prisma.teamRatingWeekly.groupBy({
+    by: ["week"],
+    where: {
+      season,
+      week: { lte: week },
+      spPlusSource: null,
+      spPlusOverall: { not: null },
+    },
+    _count: true,
+  });
+  const anchorWeek =
+    cfbdWeekCounts
+      .filter((w) => w._count >= 100)
+      .map((w) => w.week)
+      .sort((a, b) => b - a)[0] ?? week;
   const allRatings = await prisma.teamRatingWeekly.findMany({
-    where: { season, week, spPlusOverall: { not: null } },
+    where: { season, week: anchorWeek, spPlusOverall: { not: null } },
     select: {
       teamId: true,
       spPlusSource: true,
@@ -145,6 +166,20 @@ async function main() {
   const cfbd = allRatings.filter(
     (r) => r.spPlusSource !== "billc" && teams.fbsTeamIds.has(r.teamId)
   );
+
+  // Bridge Bill C's numbers over the FBS teams too? Yes on --overwrite-fbs, or
+  // automatically while CFBD's own SP+ feed is still stuck on the preseason
+  // projection — so picks don't wait on CFBD's ingest lag. pull-ratings leaves
+  // these rows alone until CFBD catches up. (Never in week 1: no lag then.)
+  const base = await preseasonBaseline(prisma, season);
+  const cfbdStillPreseason =
+    base.week != null &&
+    base.week !== week &&
+    movedFraction(
+      base.overall,
+      cfbd.map((c) => ({ teamId: c.teamId, overall: c.spPlusOverall }))
+    ).movedPct <= 0.5;
+  const bridgeFbs = overwriteFbs || cfbdStillPreseason;
 
   // --- offsets, from teams in both ---
   // The offset is `billc − cfbd`, taken over teams at the SAME reference point.
@@ -206,24 +241,32 @@ async function main() {
   );
   console.log(`  offense  ${offOff.toFixed(2)}`);
   console.log(`  defense  ${offDef.toFixed(2)}`);
-  // on the all-teams fallback the band naturally widens; only shout if it's
-  // wide enough to distort the shifted numbers themselves
-  const wide = b.hi - b.lo > (usingFallback ? 8 : 4);
+  // The band widens off the all-teams anchor, and widens a lot when we're
+  // bridging — CFBD is still preseason while Bill C has a week of results, so
+  // divergence is the whole point. Only shout if it's extreme.
+  const bandLimit = bridgeFbs ? 16 : usingFallback ? 8 : 4;
+  const wide = b.hi - b.lo > bandLimit;
   console.log(
     wide
-      ? "  ⚠ middle-90% band too wide — the two lists have genuinely drifted; sanity-check the FCS numbers.\n"
-      : "  ✓ the lists still agree.\n"
+      ? "  ⚠ middle-90% band unusually wide even for a bridge — sanity-check a few numbers.\n"
+      : bridgeFbs
+        ? "  ✓ divergence in the expected range for a preseason-CFBD bridge.\n"
+        : "  ✓ the lists still agree.\n"
   );
 
   // --- write ---
   const cfbdTeamIds = new Set(cfbd.map((c) => c.teamId));
   let wrote = 0;
+  let bridgedFbs = 0;
   let skippedFbs = 0;
   for (const [teamId, b] of billcByTeamId) {
     const isFbs = teams.fbsTeamIds.has(teamId);
-    if (isFbs && cfbdTeamIds.has(teamId) && !overwriteFbs) {
-      skippedFbs++;
-      continue;
+    if (isFbs && cfbdTeamIds.has(teamId)) {
+      if (!bridgeFbs) {
+        skippedFbs++;
+        continue;
+      }
+      bridgedFbs++;
     }
     await prisma.teamRatingWeekly.upsert({
       where: { teamId_season_week: { teamId, season, week } },
@@ -249,7 +292,19 @@ async function main() {
   console.log("============================================================");
   console.log(`Season ${season}, week ${week}`);
   console.log(`Rows written (billc-sourced):  ${wrote}`);
+  if (bridgedFbs > 0) {
+    console.log(
+      `  ↳ incl. ${bridgedFbs} FBS teams bridged` +
+        (overwriteFbs ? " (--overwrite-fbs)" : " (CFBD still on preseason SP+)") +
+        " — pull-ratings will hold these until CFBD catches up"
+    );
+  }
   console.log(`FBS rows left on CFBD:         ${skippedFbs}`);
+  if (bridgedFbs > 0) {
+    console.log(
+      `\nRun \`npm run run-model && npm run generate-picks\` (or wait for the next tick) to pick up the bridged FBS numbers.`
+    );
+  }
   const ourUnresolved = unresolved.filter(
     (n) => !/D3|NAIA|Ivy|NESCAC|MIAC|WIAC|CCIW|PAC$|OAC|NJAC|SCIAC/.test(n)
   );

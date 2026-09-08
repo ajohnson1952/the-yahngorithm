@@ -349,9 +349,12 @@ closing line later.
 until Bill Connelly publishes his first in-season revision (historically around
 week 2–3). While that's the case, no picks are logged for the week at all —
 grading a preseason model against a market that's already watched a week of
-football would just be logging the model being stale as an "edge." Picks resume
-automatically the tick after the updated SP+ is pulled in. (Week 1 is exempt:
-everyone, the market included, is working off preseason info then.)
+football would just be logging the model being stale as an "edge." The hold
+lifts as soon as SP+ has real games in it — either CFBD catching up on its own,
+or an operator loading Bill C's updated sheet directly (which bridges his
+in-season FBS numbers in ahead of CFBD's feed). Then picks resume automatically
+on the next model run. (Week 1 is exempt: everyone, the market included, is
+working off preseason info then.)
 
 Expect **few picks** — often 0–4 a week, sometimes zero. Early in the season
 there are fewer still, because the SRS corroborator isn't available yet. That's
