@@ -3,11 +3,14 @@
 Living snapshot. `README.md` = architecture, `docs/OPERATIONS.md` = how to run
 it during the season, `docs/CALIBRATION.md` = what the backtests found.
 
-## Where it stands (2026 season, week 1)
+## Where it stands (2026 season, week 2)
 
 Everything is built and deployed. The pipeline runs itself on GitHub Actions;
 the webapp is live on Render off `main`. Data through 2018 is loaded for the
 backtests. **We're in "watch football and grade live" mode.**
+
+Week 1 graded (picks 2–1). Week 2 picks are live — see the Sept 8 entries below
+for the SP+ preseason-hold and the Bill C bridge that gate/release them.
 
 ## Needs you
 
@@ -22,6 +25,81 @@ backtests. **We're in "watch football and grade live" mode.**
       feeds work in prod.
 
 ## Built this cycle
+
+### Sept 8 — Bill C bridge (Option A) + anti-clobber
+
+- The operator gets Bill Connelly's updated SP+ sheet weekly (`data/billc/
+  latest.csv` → `npm run load-billc`). From wk 2 on, while CFBD's `/ratings/sp`
+  feed is still on the preseason projection, `load-billc` now also **bridges**
+  his re-centered numbers over the **FBS** teams (not just FCS) — automatically,
+  or forced with `--overwrite-fbs`. This lifts the pick hold (below) without
+  waiting on CFBD's ingest lag. Spread picks are pure rating *differentials*, so
+  the re-centering offset cancels.
+- **Anti-clobber:** `pull-ratings` now skips any `spPlusSource:"billc"` row for
+  a week until CFBD itself has moved off the preseason baseline
+  (`movedFraction > 0.5`), then reclaims it (`spPlusSource` → null). SRS / pace
+  still refresh on the held rows.
+- Shared helpers `preseasonBaseline()` / `movedFraction()` in
+  `lib/ratingsFreshness.ts`. Offset now anchors on the latest *full* CFBD slate
+  (falls back to wk 1 once a week's FBS rows are all bridged); band-divergence
+  warning relaxed while bridging (CFBD-stale divergence is the point);
+  `USF` → `South Florida` added to `NAME_OVERRIDES`. The Sheets-mangled "Record"
+  column ("1-0" → serial date) is ignored from wk 2 on.
+- Applied to prod wk 2: 138 FBS + 110 FCS `billc` rows, `run-model` +
+  `generate-picks` re-run → 6 wk-2 picks off the updated numbers (Cal/Syracuse
+  flipped side vs the preseason version). Weekly rhythm step 0 in OPERATIONS.
+
+### Sept 8 — early-season SP+ hold on picks
+
+- CFBD's SP+ is the **frozen preseason projection** until Bill Connelly's first
+  in-season revision (~wk 2–3), and the feed strips the postgame fields
+  (`secondOrderWins` / `sos` are null even for a finished season) — no flag to
+  read. Generating picks in that window pits a preseason model against a market
+  that's already watched a week of football; the "edge" is mostly staleness.
+  (Also surfaced: the "nothing beats the close" backtest used `TeamRatingAsOf`,
+  **not** CFBD SP+ — the live pick driver has never actually been backtested.)
+- `lib/ratingsFreshness.ts` `spPlusFreshness()` detects the update structurally
+  (> 50 % of teams moved off the season's earliest snapshot). `generate-picks`
+  now **holds every pick** for a week until it's fresh (week 1 exempt — the
+  market's on preseason info too). `tick.ts` pulls ratings ~daily instead of
+  only Tuesday once week ≥ 2, until it lands.
+- Deleted the 6 wk-2 picks that had been logged off preseason SP+. Guide §6.
+
+### Sept 8 — default week + stranded-week sweep
+
+- `currentWeek()` rewritten: show the earliest week that still has an unplayed
+  game, holding the just-finished week only ~12 h past its last kickoff
+  (`WEEK_HOLD_MS`) instead of a flat 36 h — so a fully-final week advances by
+  Monday/Tuesday while Saturday's results still sit up Sunday morning.
+  Deliberately independent of CFBD's calendar (which rolls the instant a week
+  technically ends). Stale non-final rows (kickoff > 18 h ago, still not
+  "final") are ignored so one bad row can't wedge the site on an old week.
+- Root cause it exposed: **SMU @ FSU sat "scheduled" with no score for a day**
+  — CFBD's calendar advanced to wk 2 before its Monday-night result landed, and
+  a no-arg `pull-games` only ever asks for the current week. `pull-games` now
+  also sweeps any recent week with an overdue non-final game (multiple weeks →
+  one year-wide CFBD call). Ran `pull-games --week 1` once to capture the final
+  (SMU 27–24). OPERATIONS troubleshooting.
+
+### Sept 5 — `/watch` live scores + re-ranking
+
+- The watch guide pulls **live scores from ESPN's public scoreboard**
+  (`lib/liveScores.ts`) on every page load / refresh — never stored, never in
+  the pipeline, 15 s shared fetch cache, matched to our games by normalized
+  team-name pair, every failure falls back to the pregame numbers.
+- `scoreGame` gets a live delta (`lib/watchGuide.ts` `liveDelta()`): one-score
+  game **+12 → +36** as it goes late, blowout **−16 → −46**, overtime +36,
+  final −70 (benched with the result). 1st-quarter scores damped ×0.45. Live
+  status leads the card's reasons; a green **● LIVE** badge shows ESPN's clock.
+- `WatchAutoRefresh` (client) — `router.refresh()` every 60 s + manual button +
+  on/off toggle, shown only when a game is live or kickoff is within ~45 min.
+- `buildWatchWindows(games, now)` — the window that's on *now* trusts ESPN over
+  the ~3h40m estimate (an in-progress game holds its slot even if it runs long;
+  a finished one frees it); later windows still use the estimate. Once a later
+  window starts, the finished ones collapse into an "earlier windows today"
+  roll-up (today's date only).
+- `weeksWithGames` wrapped in `unstable_cache` (10 min, `groupBy`) — the
+  refresh loop hits it every render. Guide §10–11, README.
 
 ### Sept 2 — performance + line-honesty pass
 
@@ -171,6 +249,9 @@ guide §11.
 
 ## Known limitations
 
+- CFBD's SP+ is frozen at the preseason projection until Bill Connelly's first
+  in-season revision (~wk 2–3). Picks are **held** for the week until it moves
+  (via CFBD or a `load-billc` bridge) — see the Sept 8 entries.
 - SRS is empty in week 1, noisy through ~week 3 — early spread signal is SP+ only.
 - Rating edges on market spreads > ~20 are artifacts (books shade big favorites) — filtered.
 - The Odds API is current-week only; historical lines come from CFBD.

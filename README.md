@@ -15,7 +15,7 @@ where our numbers and the market disagree. Decision support — not a money-prin
 
 | Model | Source | Idea |
 |---|---|---|
-| **SP+** | CFBD `/ratings/sp`, extended to FCS with Bill Connelly's 772-team sheet | opponent-adjusted play-by-play efficiency — the predictive one, drives pick generation |
+| **SP+** | CFBD `/ratings/sp`, extended to FCS with Bill Connelly's 772-team sheet | opponent-adjusted play-by-play efficiency — the predictive one, drives pick generation. Frozen at the preseason projection until Bill C's first in-season revision (~wk 2–3); picks are held until it updates (`lib/ratingsFreshness.ts`) |
 | **SRS** | CFBD `/ratings/srs` | opponent-adjusted scoring margin — empty until ~week 3 |
 | **Yahn** | SP+ backbone + EPA + roster factors (talent / returning production / transfer portal) + per-team home-field | a stat composite shown as a third opinion — **backtested to no ATS edge, so it does not feed picks** (see `docs/CALIBRATION.md`) |
 
@@ -69,8 +69,8 @@ Standalone scripts in `scripts/`, each an npm script:
 
 | Command | What |
 |---|---|
-| `pull-ratings` | SP+ / SRS / pace → `TeamRatingWeekly` |
-| `load-billc` | Bill C's sheet (`data/billc/latest.csv`) → FCS SP+, re-centered |
+| `pull-ratings` | SP+ / SRS / pace → `TeamRatingWeekly`. Won't overwrite a `load-billc` FBS bridge until CFBD's own SP+ leaves the preseason baseline |
+| `load-billc` | Bill C's sheet (`data/billc/latest.csv`) → FCS SP+ re-centered to CFBD's scale; from wk 2 also bridges his in-season FBS numbers while CFBD's feed is still preseason (`--overwrite-fbs` forces it) |
 | `pull-rankings` | AP + Coaches polls |
 | `pull-games` | schedule + scores + venue + TV |
 | `pull-lines` | The Odds API line snapshots (`--type open\|daily\|close`) |
@@ -97,6 +97,8 @@ how stale each source is and runs exactly what's due:
   snapshots every ~30 min in the Sat 9a–8p core, every ~2–3 h otherwise
 - **Tue ~9am** — the heavy weekly pull: ratings, polls, schedule, advanced +
   EPA, opening lines, flags, model, picks, grade last week
+- **~daily, early season** — extra `pull-ratings` runs once week ≥ 2 until
+  CFBD's SP+ leaves the preseason baseline (so a mid-week update isn't missed)
 - **Sun ~10am** — advanced-stat checkpoint + team trends
 - **~6am & ~4pm** — weather + injuries
 
