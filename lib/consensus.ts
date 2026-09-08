@@ -10,6 +10,36 @@ export function median(values: number[]): number | null {
 }
 
 /**
+ * The closing number for a game, used for grading and for ATS trends so the two
+ * always agree. Prefers an explicit `close` snapshot (CFBD backfills these for
+ * completed seasons); in-season, where CFBD's `close` lags or never lands,
+ * falls back to the median across every snapshot taken before kickoff.
+ *
+ * NOTE: for `market: "spread"` this returns the closing **home margin** (the
+ * line negated), not the raw home spread — matches how grade-picks consumes it.
+ * Callers that want the raw spread should negate.
+ */
+export function closingConsensus(
+  lines: {
+    market: string;
+    lineValue: number;
+    snapshotType: string;
+    capturedAt: Date;
+  }[],
+  kickoff: Date,
+  market: "spread" | "total"
+): number | null {
+  const m = lines.filter((l) => l.market === market);
+  if (m.length === 0) return null;
+  const close = m.filter((l) => l.snapshotType === "close");
+  const pool = close.length > 0 ? close : m.filter((l) => l.capturedAt <= kickoff);
+  const use = pool.length > 0 ? pool : m;
+  const val = median(use.map((l) => l.lineValue));
+  if (val == null) return null;
+  return market === "spread" ? -val : val; // spread -> home margin
+}
+
+/**
  * The single line the most sportsbooks are actually posting — i.e. a number you
  * could really bet, unlike the median which can land between books (e.g. a
  * median total of 58.3). Ties break toward the value nearest `pull` (the

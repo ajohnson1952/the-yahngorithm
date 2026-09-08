@@ -21,7 +21,7 @@
 //       npm run pull-games -- --all            (whole regular season, 1 CFBD call)
 // ============================================================
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { cfbdGet, getCurrentSeasonWeek, getCfbdCallCount } from "../lib/cfbd";
 import { recordCfbdUsage } from "../lib/apiUsage";
 import { buildTeamResolver } from "../lib/teamResolver";
@@ -57,6 +57,31 @@ interface CfbdVenue {
   longitude: number | null;
   timezone: string | null;
   dome: boolean | null;
+}
+
+/** CFBD /venues is a ~13k-row dump that essentially never changes, but
+ *  pull-games runs ~hourly in game windows. Cache it in Meta (7-day TTL) so
+ *  those runs stop spending a CFBD call — and transfer — on it every time. */
+const VENUES_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+async function getVenues(prisma: PrismaClient): Promise<CfbdVenue[]> {
+  const row = await prisma.meta.findUnique({ where: { key: "venues" } });
+  if (row && Date.now() - row.updatedAt.getTime() < VENUES_TTL_MS) {
+    const v = row.value as unknown as CfbdVenue[];
+    if (Array.isArray(v) && v.length) {
+      console.log(`  venues: ${v.length} (cached)`);
+      return v;
+    }
+  }
+  const v = await cfbdGet<CfbdVenue[]>(`/venues`);
+  await prisma.meta
+    .upsert({
+      where: { key: "venues" },
+      update: { value: v as unknown as Prisma.InputJsonValue },
+      create: { key: "venues", value: v as unknown as Prisma.InputJsonValue },
+    })
+    .catch(() => {});
+  console.log(`  venues: ${v.length} (refreshed)`);
+  return v;
 }
 
 interface CfbdMedia {
@@ -151,7 +176,7 @@ async function main() {
       : `/games/media?year=${season}&week=${oneWeek}&seasonType=regular`;
   const [allGames, venues, media] = await Promise.all([
     cfbdGet<CfbdGame[]>(gamesPath),
-    cfbdGet<CfbdVenue[]>(`/venues`),
+    getVenues(prisma),
     cfbdGet<CfbdMedia[]>(mediaPath).catch(() => [] as CfbdMedia[]),
   ]);
   const broadcastById = broadcastMap(media);

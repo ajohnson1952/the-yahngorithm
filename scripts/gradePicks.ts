@@ -16,7 +16,7 @@
 
 import { PrismaClient, Prisma } from "@prisma/client";
 import { getCurrentSeasonWeek } from "../lib/cfbd";
-import { median } from "../lib/consensus";
+import { closingConsensus } from "../lib/consensus";
 
 const prisma = new PrismaClient();
 
@@ -45,23 +45,6 @@ function parseArgs(): { season?: number; week?: number } {
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const signed = (n: number) => (n > 0 ? "+" : "") + r1(n);
 const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
-
-/** closing home-margin (spread) or total, from the 'close' snapshot if we have
- *  one, else the latest snapshot before kickoff. */
-function closingConsensus(
-  lines: { market: string; lineValue: number; snapshotType: string; capturedAt: Date }[],
-  kickoff: Date,
-  market: "spread" | "total"
-): number | null {
-  const m = lines.filter((l) => l.market === market);
-  if (m.length === 0) return null;
-  const close = m.filter((l) => l.snapshotType === "close");
-  const pool = close.length > 0 ? close : m.filter((l) => l.capturedAt <= kickoff);
-  const use = pool.length > 0 ? pool : m;
-  const val = median(use.map((l) => l.lineValue));
-  if (val == null) return null;
-  return market === "spread" ? -val : val; // spread -> home margin
-}
 
 /** Grade the 3 spread models + every flag on this week's final games,
  *  then print a season-to-date scoreboard. Idempotent (upsert per game+key). */

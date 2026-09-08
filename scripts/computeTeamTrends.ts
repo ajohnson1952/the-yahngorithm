@@ -21,7 +21,7 @@
 
 import { PrismaClient, Prisma } from "@prisma/client";
 import { getCurrentSeasonWeek } from "../lib/cfbd";
-import { median } from "../lib/consensus";
+import { closingConsensus } from "../lib/consensus";
 
 const prisma = new PrismaClient();
 
@@ -66,25 +66,28 @@ async function main() {
       awayTeamId: true,
       homeScore: true,
       awayScore: true,
+      // CFBD only backfills `snapshotType: "close"` for finished seasons, so
+      // in-season we derive the close from the pre-kickoff history the same
+      // way grade-picks does (closingConsensus). Runs weekly, so the extra
+      // rows are a one-off cost, not a per-tick one.
       lines: {
-        where: { snapshotType: "close" },
-        select: { market: true, lineValue: true },
+        select: { market: true, lineValue: true, snapshotType: true, capturedAt: true },
       },
     },
     orderBy: [{ week: "asc" }, { kickoffTime: "asc" }],
   });
 
-  // closing consensus per game
+  // closing line per game — matches grade-picks so trends and grades agree.
+  // closingConsensus returns home MARGIN for "spread"; flip back to home spread.
   const closeByGame = new Map<
     string,
     { spread: number | null; total: number | null }
   >();
   for (const g of games) {
-    const spreads = g.lines.filter((l) => l.market === "spread").map((l) => l.lineValue);
-    const totals = g.lines.filter((l) => l.market === "total").map((l) => l.lineValue);
+    const homeMargin = closingConsensus(g.lines, g.kickoffTime, "spread");
     closeByGame.set(g.id, {
-      spread: spreads.length ? median(spreads) : null,
-      total: totals.length ? median(totals) : null,
+      spread: homeMargin == null ? null : -homeMargin,
+      total: closingConsensus(g.lines, g.kickoffTime, "total"),
     });
   }
 
