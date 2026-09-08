@@ -147,12 +147,14 @@ async function main() {
   );
 
   // --- offsets, from teams in both ---
-  // Ideal anchor: teams Bill C still lists as unplayed, so both his number and
-  // our CFBD snapshot sit at the same (preseason) reference point. Once the
-  // season is under way that set collapses to ~nothing — fall back to every
-  // overlapping FBS team. Bill C's early-season updates are small and roughly
-  // symmetric, so the median of ~130 deltas still lands on the true constant;
-  // the p5–p95 band just widens (expected, not an alarm).
+  // The offset is `billc − cfbd`, taken over teams at the SAME reference point.
+  // Preseason → week 1: that's teams Bill C still lists as unplayed (our CFBD
+  // snapshot is also still preseason). From week 2 on, everyone's played and
+  // there's no clean subset — use EVERY overlapping FBS team and let the median
+  // absorb the game-ahead noise (winners up, losers down, ~symmetric). This
+  // also sidesteps the record column, which Google Sheets loves to mangle into
+  // serial dates ("1-0" → 36526) — leaving `played` unreliable exactly when we
+  // stopped needing it.
   const collectDeltas = (onlyUnplayed: boolean) => {
     const o: number[] = [];
     const off: number[] = [];
@@ -168,13 +170,16 @@ async function main() {
     return { o, off, def };
   };
 
-  let { o: dOverall, off: dOff, def: dDef } = collectDeltas(true);
-  let anchor = `${dOverall.length} unplayed FBS teams`;
-  let usingFallback = false;
-  if (dOverall.length < 20) {
+  const preseasonPhase = week <= 1;
+  let { o: dOverall, off: dOff, def: dDef } = collectDeltas(preseasonPhase);
+  let usingFallback = !preseasonPhase;
+  let anchor = preseasonPhase
+    ? `${dOverall.length} unplayed FBS teams`
+    : `${dOverall.length} FBS teams (all overlap — past preseason)`;
+  if (preseasonPhase && dOverall.length < 20) {
     ({ o: dOverall, off: dOff, def: dDef } = collectDeltas(false));
     usingFallback = true;
-    anchor = `${dOverall.length} FBS teams (too few unplayed this late — median absorbs the game-ahead noise)`;
+    anchor = `${dOverall.length} FBS teams (too few unplayed — median absorbs the game-ahead noise)`;
   }
   if (dOverall.length < 20) {
     console.error(
