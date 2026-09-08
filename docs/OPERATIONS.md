@@ -107,6 +107,15 @@ over the closing line.** Use it as decision support:
   `npx tsx scripts/matchTeamAliases.ts` to refresh from the current board.
 - **`/admin` buttons fail in prod** — `CFBD_API_KEY` / `ODDS_API_KEY` also need
   to be in the Render service env.
+- **A finished game still shows "scheduled" / no score** — usually a week that
+  ended just as CFBD's calendar rolled to the next one. A plain `pull-games` now
+  sweeps any recent week with an overdue non-final game automatically, so it
+  should self-heal on the next `scores` tick; to force it, run
+  `pull-games -- --season <yr> --week <n>` (or `-- --all`, same 1-call cost).
+- **The default week looks off** — `/` shows the earliest week that still has an
+  unplayed game, holding the just-finished week for ~12h after its last kickoff
+  (so Saturday's results stay up Sunday morning, then it advances). This is
+  independent of CFBD's calendar. Knob: `WEEK_HOLD_MS` in `lib/currentWeek.ts`.
 
 ## The Grades page
 

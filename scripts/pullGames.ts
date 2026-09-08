@@ -103,23 +103,52 @@ async function main() {
   const override = parseArgs();
   const current = await getCurrentSeasonWeek();
   const season = override.season ?? current.season;
-  const week = override.all ? null : override.week ?? current.week;
+  const primaryWeek = override.all ? null : override.week ?? current.week;
+
+  // A just-finished week gets stranded once CFBD's calendar rolls to the next
+  // week: a no-arg pull then only asks for the new week and never captures the
+  // previous week's final scores (this is how SMU @ FSU sat "scheduled" for a
+  // day in wk 1 → 2). On a plain scheduled pull, also sweep any recent week
+  // that still has a game overdue to be marked final.
+  let extraWeeks: number[] = [];
+  if (primaryWeek != null && override.week == null) {
+    const stale = await prisma.game.groupBy({
+      by: ["week"],
+      where: {
+        season,
+        status: { not: "final" },
+        kickoffTime: { lt: new Date(Date.now() - 6 * 3600_000) },
+      },
+    });
+    extraWeeks = stale.map((s) => s.week).filter((w) => w !== primaryWeek);
+  }
+  const weeks =
+    primaryWeek == null ? null : [primaryWeek, ...extraWeeks].sort((a, b) => a - b);
 
   console.log(
     override.all
       ? `Schedule pull for the FULL ${season} regular season\n`
-      : `Schedule pull for season ${season}, week ${week}\n`
+      : `Schedule pull for season ${season}, week${weeks!.length > 1 ? "s" : ""} ${weeks!.join(", ")}` +
+          (extraWeeks.length
+            ? `  (+${extraWeeks.join(", ")}: overdue non-final games)`
+            : "") +
+          "\n"
   );
 
   const teams = await buildTeamResolver(prisma, "cfbd");
 
   console.log("Pulling games and venues from CFBD...");
+  // one target week -> ask CFBD for just that week; the whole season or several
+  // weeks -> one year-wide call (same cost) and filter locally.
+  const oneWeek = weeks != null && weeks.length === 1 ? weeks[0] : null;
   const gamesPath =
-    week == null ? `/games?year=${season}` : `/games?year=${season}&week=${week}`;
+    oneWeek == null
+      ? `/games?year=${season}`
+      : `/games?year=${season}&week=${oneWeek}`;
   const mediaPath =
-    week == null
+    oneWeek == null
       ? `/games/media?year=${season}&seasonType=regular`
-      : `/games/media?year=${season}&week=${week}&seasonType=regular`;
+      : `/games/media?year=${season}&week=${oneWeek}&seasonType=regular`;
   const [allGames, venues, media] = await Promise.all([
     cfbdGet<CfbdGame[]>(gamesPath),
     cfbdGet<CfbdVenue[]>(`/venues`),
@@ -127,11 +156,13 @@ async function main() {
   ]);
   const broadcastById = broadcastMap(media);
 
+  const wantWeeks = weeks == null ? null : new Set(weeks);
   const venueById = new Map(venues.map((v) => [v.id, v]));
   const games = allGames.filter(
     (g) =>
       g.seasonType === "regular" &&
-      (g.homeClassification === "fbs" || g.awayClassification === "fbs")
+      (g.homeClassification === "fbs" || g.awayClassification === "fbs") &&
+      (wantWeeks == null || wantWeeks.has(g.week))
   );
   const weeksCovered = [...new Set(games.map((g) => g.week))].sort((a, b) => a - b);
   console.log(
@@ -243,7 +274,7 @@ async function main() {
   console.log(
     override.all
       ? `DONE. ${season} regular season, weeks ${weeksCovered.join(", ")}`
-      : `DONE. season ${season}, week ${week}`
+      : `DONE. season ${season}, week${weeksCovered.length > 1 ? "s" : ""} ${weeksCovered.join(", ")}`
   );
   console.log(`  Games written:        ${wrote}`);
   console.log(`   - FBS vs FBS:         ${fbsVsFbs}`);
