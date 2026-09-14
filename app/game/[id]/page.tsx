@@ -643,7 +643,7 @@ export default async function GamePage({
               p.market === "spread"
                 ? backHome
                   ? `${homeShort} ${spreadStr(r1(-p.marketLine))}`
-                  : `${awayShort} +${trim(r1(p.marketLine))}`
+                  : `${awayShort} ${spreadStr(r1(p.marketLine))}`
                 : `${backHome ? "Over" : "Under"} ${trim(r1(p.marketLine))}`;
             const clv =
               p.closingLine == null

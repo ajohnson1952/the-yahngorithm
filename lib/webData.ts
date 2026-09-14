@@ -111,6 +111,11 @@ async function apRankMap(
   return new Map(ranks.map((r) => [r.teamId, r.rank]));
 }
 
+/** e.g. -6.5 -> "-6.5", 0 -> "PK", 3 -> "+3" — mirrors components/ui.tsx
+ *  spreadStr (can't import it here: that file imports types from this one). */
+const fmtSpread = (n: number): string =>
+  Math.abs(n) < 0.01 ? "PK" : n > 0 ? `+${n}` : `${n}`;
+
 function pickSide(
   market: string,
   edge: number,
@@ -119,9 +124,14 @@ function pickSide(
   awayName: string
 ): string {
   if (market === "spread") {
-    return edge > 0
-      ? `${homeName} ${r1(-marketLine)}`
-      : `${awayName} +${r1(marketLine)}`;
+    // marketLine is the home team's market margin (+ = home favored). The
+    // away spread is that number as-is (home spread negated twice) — it can
+    // be negative when the away side is actually favored, so this must not
+    // hardcode a "+" the way a naive `${awayName} +${marketLine}` would
+    // (that renders "+-3" when the away team is favored by 3).
+    const backHome = edge > 0;
+    const spread = r1(backHome ? -marketLine : marketLine);
+    return `${backHome ? homeName : awayName} ${fmtSpread(spread)}`;
   }
   return `${edge > 0 ? "Over" : "Under"} ${r1(marketLine)}`;
 }
