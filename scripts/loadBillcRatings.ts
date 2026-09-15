@@ -255,35 +255,49 @@ async function main() {
   );
 
   // --- write ---
+  // spPlusOverallBillc is written for EVERY resolved team, FBS included, no
+  // matter what happens to the primary spPlusOverall/spPlusSource below — it's
+  // the Yahn model's backbone input (lib/yahnModel.ts), kept separate so CFBD
+  // stays the sole source of record for the plain SP+ model and picks.
   const cfbdTeamIds = new Set(cfbd.map((c) => c.teamId));
   let wrote = 0;
   let bridgedFbs = 0;
   let skippedFbs = 0;
   for (const [teamId, b] of billcByTeamId) {
     const isFbs = teams.fbsTeamIds.has(teamId);
-    if (isFbs && cfbdTeamIds.has(teamId)) {
-      if (!bridgeFbs) {
-        skippedFbs++;
-        continue;
-      }
-      bridgedFbs++;
+    const recentered = b.overall - offOverall;
+
+    if (isFbs && cfbdTeamIds.has(teamId) && !bridgeFbs) {
+      // CFBD already owns the primary FBS number this week — leave
+      // spPlusOverall/spPlusSource alone, only record Yahn's backbone input.
+      skippedFbs++;
+      await prisma.teamRatingWeekly.upsert({
+        where: { teamId_season_week: { teamId, season, week } },
+        update: { spPlusOverallBillc: recentered },
+        create: { teamId, season, week, spPlusOverallBillc: recentered },
+      });
+      continue;
     }
+
+    if (isFbs && cfbdTeamIds.has(teamId)) bridgedFbs++;
     await prisma.teamRatingWeekly.upsert({
       where: { teamId_season_week: { teamId, season, week } },
       update: {
-        spPlusOverall: b.overall - offOverall,
+        spPlusOverall: recentered,
         spPlusOffense: b.off - offOff,
         spPlusDefense: b.def - offDef,
         spPlusSource: "billc",
+        spPlusOverallBillc: recentered,
       },
       create: {
         teamId,
         season,
         week,
-        spPlusOverall: b.overall - offOverall,
+        spPlusOverall: recentered,
         spPlusOffense: b.off - offOff,
         spPlusDefense: b.def - offDef,
         spPlusSource: "billc",
+        spPlusOverallBillc: recentered,
       },
     });
     wrote++;
@@ -300,6 +314,11 @@ async function main() {
     );
   }
   console.log(`FBS rows left on CFBD:         ${skippedFbs}`);
+  console.log(
+    `  ↳ all ${skippedFbs} still got their Bill C number recorded for the Yahn` +
+      ` model's backbone (spPlusOverallBillc) — only the plain SP+ model +` +
+      ` picks stay on CFBD's number for these.`
+  );
   if (bridgedFbs > 0) {
     console.log(
       `\nRun \`npm run run-model && npm run generate-picks\` (or wait for the next tick) to pick up the bridged FBS numbers.`
