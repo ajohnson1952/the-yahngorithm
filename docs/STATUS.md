@@ -44,17 +44,30 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
   teams' week-2 numbers — not a real week-3 read at all. CFBD didn't
   recompute either team until Tuesday's weekly pull, which flipped the
   model's view from "SDSU -5.9ish" to "JMU -2" — an ~8-pt swing on the same
-  two non-playing teams within a day. The already-logged pick was left as-is
-  (picks are captured-once by design); this only guards future ones.
-- **Fix:** `lib/ratingsFreshness.ts` `teamHasMoved()` — per-team version of
-  the same check (passes billc-sourced rows automatically; the preseason-hold
-  bridge already handles CFBD lag structurally for those). `generate-picks`
-  now checks both teams in a game individually before evaluating it, holding
-  ones where either team's SP+ still matches its own preseason baseline even
-  though the week-level gate is open. Logged separately from near-misses
-  (`Held — a team's SP+ hasn't individually refreshed yet`). Verified live:
-  the very next run caught two more in-progress cases (Old Dominion, Wake
-  Forest) still sitting on stale CFBD numbers. OPERATIONS troubleshooting.
+  two non-playing teams within a day. That pick was deleted (never an honest
+  week-3 read); re-running left the game a correct near-miss instead.
+- **Fix, v1 (wrong) then v2:** first pass compared each team's current week
+  to the week-1 preseason baseline — but SDSU/JMU had already moved off
+  preseason *during week 2*, so that check would not actually have caught
+  the original incident (verified before shipping v2). Corrected:
+  `teamHasMoved()` now compares to the immediately PRIOR week instead — a
+  national opponent-adjustment solve moves virtually every team some nonzero
+  amount each week, so an exact match to last week's number is the reliable
+  "stale duplicate" tell. Caveat caught along the way: comparing across a
+  source boundary is apples-to-oranges (a CFBD row vs. a billc-bridged prior
+  week can look "moved" when CFBD hasn't touched the team at all — confirmed
+  on Old Dominion/Wake Forest, whose wk3 CFBD number matches wk1 exactly but
+  wk2 was billc-bridged); only same-source weeks are compared, falling back
+  to the preseason baseline otherwise. `generate-picks` checks both teams in
+  a game before evaluating it (`Held — a team's SP+ hasn't individually
+  refreshed yet`, separate from near-misses). Verified live: still correctly
+  holds Old Dominion/Wake Forest after the v2 fix. **Known residual gap**
+  (documented in `teamHasMoved()`): this reliably catches a team CFBD hasn't
+  touched at all, but can't distinguish a genuine small nudge from a stale-
+  but-not-frozen intermediate pull — closer to what SDSU/JMU actually hit.
+  Closing that fully needs a timing rule (e.g. hold until the Tuesday full
+  pull), not a numeric threshold — not built, flagged as a future option.
+  OPERATIONS troubleshooting.
 - **Yahn model backbone swapped to Bill C's numbers.** Investigating why our
   `load-billc` recentered numbers diverge from CFBD's own SP+ (up to 7-8 pts
   for a few teams) turned up a real pattern: divergence concentrates almost
