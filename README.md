@@ -15,7 +15,7 @@ where our numbers and the market disagree. Decision support — not a money-prin
 
 | Model | Source | Idea |
 |---|---|---|
-| **SP+** | CFBD `/ratings/sp`, extended to FCS with Bill Connelly's 772-team sheet | opponent-adjusted play-by-play efficiency — the predictive one, drives pick generation. Frozen at the preseason projection until Bill C's first in-season revision (~wk 2–3); picks are held until it updates (`lib/ratingsFreshness.ts`) |
+| **SP+** | Bill Connelly's 772-team sheet — the source of record, FBS included (CFBD `/ratings/sp` is fallback-only, for a team his sheet doesn't cover that week) | opponent-adjusted play-by-play efficiency — the predictive one, drives pick generation. Held early season until a team's SP+ leaves the preseason projection (~wk 2–3); picks are held until it updates (`lib/ratingsFreshness.ts`) |
 | **SRS** | CFBD `/ratings/srs` | opponent-adjusted scoring margin — empty until ~week 3 |
 | **Yahn** | SP+ backbone + EPA + roster factors (talent / returning production / transfer portal) + per-team home-field | a stat composite shown as a third opinion — **backtested to no ATS edge, so it does not feed picks** (see `docs/CALIBRATION.md`) |
 

@@ -270,6 +270,10 @@ export default async function AdminPage() {
         → pull-games → pull-lines → pull-kalshi → compute-flags → run-model →
         generate-picks</span>; then Sunday <span className="mono">pull-games →
         grade-picks → compute-trends</span>.
+        <span className="dim"> pull-ratings alone won't refresh SP+ for a team
+        already on Bill C's sheet — that only happens on a local upload
+        (<span className="mono">load-billc</span>, not runnable from here);
+        pull-ratings just covers the fallback + pace/SRS underneath it.</span>
       </p>
     </>
   );

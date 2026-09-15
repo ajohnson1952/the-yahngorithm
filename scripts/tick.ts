@@ -109,11 +109,14 @@ async function main() {
   // --only <groups>: run exactly those, ignore the gates entirely.
   if (onlyArg) for (const g of Object.keys(run) as Group[]) run[g] = forced(g);
 
-  // Early-season SP+ catch-up: CFBD's SP+ sits at the preseason projection
-  // until Bill Connelly's first in-season revision (~wk 2-3). We only pull
-  // ratings on Tuesdays, so a mid-week update would be missed and the model
-  // (and picks) would sit stale all weekend. Until it moves, pull ratings
-  // ~daily; once it's in-season this goes quiet again.
+  // Early-season SP+ catch-up: only matters for a team still on CFBD's
+  // fallback (Bill C's sheet — the source of record, loaded via load-billc —
+  // hasn't covered it yet this week). CFBD's own number sits at the
+  // preseason projection until Bill Connelly's first in-season revision
+  // (~wk 2-3), and we only pull it on Tuesdays otherwise, so a mid-week
+  // fallback update would be missed. Until the week is broadly fresh, pull
+  // ratings ~daily; once it is, this goes quiet again. Cannot substitute for
+  // actually uploading his sheet — see loadBillcRatings.ts.
   let ratingsCatchup = false;
   if (!run.weekly && !onlyArg && minsAgo(lastRatings) >= 12 * 60) {
     try {

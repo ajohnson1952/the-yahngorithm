@@ -200,9 +200,24 @@ async function main() {
   // FBS included. pull-ratings (CFBD) never overwrites a spPlusSource='billc'
   // row's spPlus* fields once this has run for the week — it only refreshes
   // srs/avgPossessionsPerGame, and only fully owns a team's row when billc
-  // doesn't cover it that week. ---
+  // doesn't cover it that week.
+  //
+  // EXCEPTION: week 1 FBS teams always stay CFBD-sourced (spPlusSource stays
+  // null), never billc. Week 1's CFBD rows are the fixed anchor the offset
+  // above is computed from every single run, for every week — if this ever
+  // overwrote them with spPlusSource='billc', the NEXT run's anchor query
+  // (spPlusSource:null at week 1) would come back empty, and the offset
+  // would be unrecoverable for the rest of the season (pull-ratings refuses
+  // to touch a billc-owned row, so there's no way back short of a manual DB
+  // fix). FCS teams are unaffected — CFBD never rates them at week 1 either,
+  // so there's nothing there for the anchor to lose.
   let wrote = 0;
+  let skippedWeek1Fbs = 0;
   for (const [teamId, r] of billcByTeamId) {
+    if (week === 1 && teams.fbsTeamIds.has(teamId)) {
+      skippedWeek1Fbs++;
+      continue;
+    }
     await prisma.teamRatingWeekly.upsert({
       where: { teamId_season_week: { teamId, season, week } },
       update: {
@@ -227,6 +242,12 @@ async function main() {
   console.log("============================================================");
   console.log(`Season ${season}, week ${week}`);
   console.log(`Rows written (billc-sourced):  ${wrote}`);
+  if (skippedWeek1Fbs > 0) {
+    console.log(
+      `  ↳ ${skippedWeek1Fbs} FBS teams left on CFBD at week 1 — they're the ` +
+        `fixed anchor every future load-billc run centers against; never bridged.`
+    );
+  }
   console.log(
     `\nRun \`npm run run-model && npm run generate-picks\` (or wait for the next tick) to pick up these numbers.`
   );
