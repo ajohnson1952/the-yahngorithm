@@ -133,6 +133,16 @@ over the closing line.** Use it as decision support:
   until it lands) or a `load-billc` bridge (step 0 of the weekly rhythm). Then
   picks resume on their own. Force it with `pull-ratings` + `generate-picks`
   from `/admin`. Logic: `lib/ratingsFreshness.ts`.
+- **One specific game isn't getting a pick even though the week is fresh** —
+  check the log for a `Held — a team's SP+ hasn't individually refreshed yet`
+  line. `spPlusFreshness` is a whole-week aggregate (>50% of teams moved); a
+  lower-profile team can still be sitting on an unrefreshed CFBD number after
+  that gate opens because enough *other* teams moved first — caught 2026-09-14
+  on SDSU/JMU wk3, picked off a rating gap identical to their week-2 numbers a
+  day before CFBD actually recomputed either team. `generate-picks` now also
+  checks each game's two teams individually (`teamHasMoved`) before logging;
+  it clears itself once that team's own number moves (usually the next
+  `pull-ratings`, or the Tuesday weekly pull).
 
 ## The Grades page
 

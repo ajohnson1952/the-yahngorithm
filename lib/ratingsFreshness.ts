@@ -50,7 +50,9 @@ export async function preseasonBaseline(
   };
 }
 
-/** Fraction of `current` teams whose overall SP+ has moved ≥ 0.1 off the
+const MOVE_EPS = 0.1;
+
+/** Fraction of `current` teams whose overall SP+ has moved ≥ MOVE_EPS off the
  *  baseline (i.e. an in-season update has landed). */
 export function movedFraction(
   baseline: Map<string, number>,
@@ -62,9 +64,37 @@ export function movedFraction(
     const b = baseline.get(c.teamId);
     if (b == null || c.overall == null) continue;
     compared++;
-    if (Math.abs(c.overall - b) >= 0.1) moved++;
+    if (Math.abs(c.overall - b) >= MOVE_EPS) moved++;
   }
   return { movedPct: compared ? moved / compared : 0, compared };
+}
+
+/**
+ * Has ONE team's own SP+ actually moved off the preseason baseline?
+ *
+ * spPlusFreshness()/movedFraction() gate a whole WEEK on an aggregate
+ * (>50% of teams moved) — that's enough to detect Bill Connelly's in-season
+ * revision landing, but a lower-profile team can still sit on an unrefreshed
+ * CFBD number after the week-level gate has already opened because enough
+ * OTHER teams moved first. Caught in practice: SDSU/JMU wk3 (2026-09-14) — a
+ * pick logged off a rating gap that was byte-identical to their week-2
+ * numbers, a full day before CFBD actually recomputed either team.
+ *
+ * True (pass) by default for a billc-sourced row — the preseason-hold bridge
+ * (load-billc) already exists specifically to handle CFBD lag structurally
+ * for the whole week; this check targets the OTHER failure mode, a CFBD-
+ * sourced row that slipped through stale.
+ */
+export function teamHasMoved(
+  baseline: Map<string, number>,
+  teamId: string,
+  overall: number | null,
+  source: string | null
+): boolean {
+  if (source === "billc") return true;
+  const b = baseline.get(teamId);
+  if (b == null || overall == null) return true; // no baseline to compare — don't block
+  return Math.abs(overall - b) >= MOVE_EPS;
 }
 
 export async function spPlusFreshness(

@@ -33,6 +33,45 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
 
 ## Built this cycle
 
+### Sept 14–15 — per-team SP+ freshness gate + Yahn uses Bill C's backbone
+
+- **Bug found:** `spPlusFreshness` gates the whole WEEK on an aggregate
+  (>50% of all 138 FBS teams moved off the preseason baseline). Once enough
+  *other* teams move, the week is declared fresh and picks unlock for every
+  game — even one where a specific team's own CFBD number hasn't actually
+  refreshed yet. Caught on JMU @ SDSU (wk 3): a spread pick logged Monday
+  morning off a team-rating gap (3.4) that was byte-identical to those two
+  teams' week-2 numbers — not a real week-3 read at all. CFBD didn't
+  recompute either team until Tuesday's weekly pull, which flipped the
+  model's view from "SDSU -5.9ish" to "JMU -2" — an ~8-pt swing on the same
+  two non-playing teams within a day. The already-logged pick was left as-is
+  (picks are captured-once by design); this only guards future ones.
+- **Fix:** `lib/ratingsFreshness.ts` `teamHasMoved()` — per-team version of
+  the same check (passes billc-sourced rows automatically; the preseason-hold
+  bridge already handles CFBD lag structurally for those). `generate-picks`
+  now checks both teams in a game individually before evaluating it, holding
+  ones where either team's SP+ still matches its own preseason baseline even
+  though the week-level gate is open. Logged separately from near-misses
+  (`Held — a team's SP+ hasn't individually refreshed yet`). Verified live:
+  the very next run caught two more in-progress cases (Old Dominion, Wake
+  Forest) still sitting on stale CFBD numbers. OPERATIONS troubleshooting.
+- **Yahn model backbone swapped to Bill C's numbers.** Investigating why our
+  `load-billc` recentered numbers diverge from CFBD's own SP+ (up to 7-8 pts
+  for a few teams) turned up a real pattern: divergence concentrates almost
+  entirely in teams that have already played an FCS opponent — plausible
+  since CFBD's `/ratings/sp` is FBS-only and has no real FCS ratings to
+  opponent-adjust against, while Bill C's 772-team sheet does. New
+  `TeamRatingWeekly.spPlusOverallBillc`, written for every resolved team
+  (FBS included) on every `load-billc` run regardless of whether CFBD already
+  owns the primary `spPlusOverall` for that team/week. `run-model`'s Yahn
+  backbone now reads `spPlusOverallBillc ?? spPlusOverall`; the plain SP+
+  model and `generate-picks` are untouched — still pure CFBD, so that model
+  line's grading history doesn't change. Deliberately *not* a wholesale
+  switch to Bill C as the FBS source of record — see the reasoning in
+  chat/memory: a manual weekly sheet becoming the sole input for every FBS
+  team loses the pipeline's automation, and a single divergent example isn't
+  evidence either source is more accurate.
+
 ### Sept 8 — pipeline-side transfer fix (Neon egress)
 
 - `run-model`, `generate-picks` and `compute-market-flags` each ran

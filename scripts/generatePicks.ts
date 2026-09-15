@@ -34,7 +34,7 @@ import {
 } from "../lib/modelConfig";
 import { consensusByGame } from "../lib/consensus";
 import { latestLineBatchByGame } from "../lib/lineWindows";
-import { spPlusFreshness } from "../lib/ratingsFreshness";
+import { spPlusFreshness, preseasonBaseline, teamHasMoved } from "../lib/ratingsFreshness";
 
 const prisma = new PrismaClient();
 
@@ -116,6 +116,33 @@ async function main() {
   const predByGame = new Map<string, (typeof preds)[number]>();
   for (const p of preds) if (!predByGame.has(p.gameId)) predByGame.set(p.gameId, p);
 
+  // Per-team freshness, on top of the week-level gate above. spPlusFreshness
+  // only checks that >50% of ALL teams have moved off preseason — a lower-
+  // profile team can still be sitting on an unrefreshed CFBD number after
+  // that aggregate gate opens because enough OTHER teams moved first (caught
+  // 2026-09-14: SDSU/JMU wk3 picked off a rating gap byte-identical to their
+  // week-2 numbers, a day before CFBD actually recomputed either team). Skip
+  // for week 1 — preseasonBaseline() IS week 1, so comparing it to itself
+  // would incorrectly flag every team as unmoved.
+  const baseline =
+    week > 1 ? (await preseasonBaseline(prisma, season)).overall : new Map<string, number>();
+  const ratingByTeam = new Map<
+    string,
+    { spPlusOverall: number | null; spPlusSource: string | null }
+  >();
+  if (week > 1) {
+    const ratings = await prisma.teamRatingWeekly.findMany({
+      where: { season, week },
+      select: { teamId: true, spPlusOverall: true, spPlusSource: true },
+    });
+    for (const r of ratings) ratingByTeam.set(r.teamId, r);
+  }
+  const teamMoved = (teamId: string) => {
+    if (week <= 1) return true;
+    const r = ratingByTeam.get(teamId);
+    return teamHasMoved(baseline, teamId, r?.spPlusOverall ?? null, r?.spPlusSource ?? null);
+  };
+
   // Latest snapshot batch per game only — consensusByGame reads just the newest
   // batch, and the full week's Line history is 40k+ rows by Saturday.
   const lines = await latestLineBatchByGame(
@@ -134,6 +161,7 @@ async function main() {
   const toCreate: Prisma.PickCreateManyInput[] = [];
   const explain: string[] = [];
   const nearMiss: string[] = [];
+  const staleHold: string[] = [];
 
   const now = Date.now();
 
@@ -150,6 +178,16 @@ async function main() {
     const away = g.awayTeam.canonicalName;
     const home = g.homeTeam.canonicalName;
     const label = `${away} @ ${home}`;
+
+    const homeMoved = teamMoved(g.homeTeamId);
+    const awayMoved = teamMoved(g.awayTeamId);
+    if (!homeMoved || !awayMoved) {
+      staleHold.push(
+        `${label}: held — ${!homeMoved ? home : away}'s SP+ hasn't moved off ` +
+          `preseason yet (CFBD lag on this team specifically, even though the week is otherwise fresh)`
+      );
+      continue;
+    }
 
     // ---------- SPREAD ----------
     // Lock the pick against a line a book is actually posting, not the
@@ -267,6 +305,11 @@ async function main() {
   if (nearMiss.length > 0) {
     console.log(`Near misses (edge cleared, not logged) — ${nearMiss.length}:`);
     for (const n of nearMiss) console.log(`  - ${n}`);
+  }
+
+  if (staleHold.length > 0) {
+    console.log(`\nHeld — a team's SP+ hasn't individually refreshed yet — ${staleHold.length}:`);
+    for (const s of staleHold) console.log(`  - ${s}`);
   }
 
   const total = await prisma.pick.count({ where: { game: { season, week } } });
