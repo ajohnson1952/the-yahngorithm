@@ -69,32 +69,71 @@ export function movedFraction(
   return { movedPct: compared ? moved / compared : 0, compared };
 }
 
+/** Per-team overall SP+ + source for one specific week (not necessarily the
+ *  season's first) — the comparison point for {@link teamHasMoved}. */
+export async function ratingsAtWeek(
+  prisma: PrismaClient,
+  season: number,
+  week: number
+): Promise<Map<string, { overall: number | null; source: string | null }>> {
+  const rows = await prisma.teamRatingWeekly.findMany({
+    where: { season, week },
+    select: { teamId: true, spPlusOverall: true, spPlusSource: true },
+  });
+  return new Map(
+    rows.map((r) => [r.teamId, { overall: r.spPlusOverall, source: r.spPlusSource }])
+  );
+}
+
 /**
- * Has ONE team's own SP+ actually moved off the preseason baseline?
+ * Has ONE team's own SP+ actually been refreshed for THIS week — i.e. does
+ * it differ from the immediately PRIOR week's number, not just from the
+ * season's original preseason baseline?
  *
- * spPlusFreshness()/movedFraction() gate a whole WEEK on an aggregate
- * (>50% of teams moved) — that's enough to detect Bill Connelly's in-season
- * revision landing, but a lower-profile team can still sit on an unrefreshed
- * CFBD number after the week-level gate has already opened because enough
- * OTHER teams moved first. Caught in practice: SDSU/JMU wk3 (2026-09-14) — a
- * pick logged off a rating gap that was byte-identical to their week-2
- * numbers, a full day before CFBD actually recomputed either team.
+ * Comparing to preseason isn't enough: a national opponent-adjustment solve
+ * moves essentially every team by some nonzero amount each week (every other
+ * team's results that week ripple into it), so an exact match to *last*
+ * week's number is a strong, reliable signal this particular row is a stale
+ * duplicate, not a genuine new read. Comparing to preseason only catches a
+ * team frozen since day one; it misses a team that moved once, then had a
+ * later week's pull silently fail to refresh.
  *
- * True (pass) by default for a billc-sourced row — the preseason-hold bridge
- * (load-billc) already exists specifically to handle CFBD lag structurally
- * for the whole week; this check targets the OTHER failure mode, a CFBD-
- * sourced row that slipped through stale.
+ * The comparison only means anything when both weeks are CFBD-sourced —
+ * comparing a CFBD row to a billc-bridged prior week is apples-to-oranges
+ * (the bridge intentionally uses a different, re-centered read; a change
+ * between them says nothing about whether CFBD itself has moved). When the
+ * prior week isn't a valid same-source comparison, fall back to the
+ * preseason baseline instead — confirmed necessary on Old Dominion/Wake
+ * Forest wk3 (2026-09-15): wk3 (cfbd) looked "moved" vs wk2 (billc-bridged)
+ * even though wk3 == wk1 exactly, i.e. CFBD had NEVER touched either team.
+ *
+ * Caveat: this reliably catches a team CFBD hasn't touched AT ALL since its
+ * last comparable read (a bit-identical duplicate) — it can't distinguish a
+ * genuine small week-to-week nudge from a stale-but-not-frozen intermediate
+ * pull, which is closer to what happened on SDSU/JMU wk3 (2026-09-14): both
+ * had already moved off preseason during week 2, so even this improved
+ * check may not have caught that specific case. No numeric threshold can
+ * fully close that gap — it would need a timing rule instead (e.g. only
+ * trust a week's SP+ once its Tuesday full pull has landed).
+ *
+ * True (pass) by default: no prior week to compare against (week 1, or a
+ * team new to our ratings), or the row is billc-sourced (the preseason-hold
+ * bridge already handles CFBD lag structurally for those).
  */
 export function teamHasMoved(
-  baseline: Map<string, number>,
+  prior: Map<string, { overall: number | null; source: string | null }>,
+  preseason: Map<string, number>,
   teamId: string,
   overall: number | null,
-  source: string | null
+  source: string | null,
+  week: number
 ): boolean {
-  if (source === "billc") return true;
-  const b = baseline.get(teamId);
-  if (b == null || overall == null) return true; // no baseline to compare — don't block
-  return Math.abs(overall - b) >= MOVE_EPS;
+  if (source === "billc" || week <= 1 || overall == null) return true;
+  const p = prior.get(teamId);
+  const comparePoint =
+    p?.overall != null && p.source !== "billc" ? p.overall : preseason.get(teamId);
+  if (comparePoint == null) return true; // nothing valid to compare against — don't block
+  return Math.abs(overall - comparePoint) >= MOVE_EPS;
 }
 
 export async function spPlusFreshness(

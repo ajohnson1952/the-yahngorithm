@@ -34,7 +34,12 @@ import {
 } from "../lib/modelConfig";
 import { consensusByGame } from "../lib/consensus";
 import { latestLineBatchByGame } from "../lib/lineWindows";
-import { spPlusFreshness, preseasonBaseline, teamHasMoved } from "../lib/ratingsFreshness";
+import {
+  spPlusFreshness,
+  ratingsAtWeek,
+  preseasonBaseline,
+  teamHasMoved,
+} from "../lib/ratingsFreshness";
 
 const prisma = new PrismaClient();
 
@@ -118,14 +123,18 @@ async function main() {
 
   // Per-team freshness, on top of the week-level gate above. spPlusFreshness
   // only checks that >50% of ALL teams have moved off preseason — a lower-
-  // profile team can still be sitting on an unrefreshed CFBD number after
-  // that aggregate gate opens because enough OTHER teams moved first (caught
-  // 2026-09-14: SDSU/JMU wk3 picked off a rating gap byte-identical to their
-  // week-2 numbers, a day before CFBD actually recomputed either team). Skip
-  // for week 1 — preseasonBaseline() IS week 1, so comparing it to itself
-  // would incorrectly flag every team as unmoved.
-  const baseline =
-    week > 1 ? (await preseasonBaseline(prisma, season)).overall : new Map<string, number>();
+  // profile team's specific week can still be an unrefreshed duplicate of
+  // last week's pull even after that aggregate gate opens, because enough
+  // OTHER teams moved first. Compare against the PRIOR week (falling back to
+  // the preseason baseline when the prior week isn't a valid same-source
+  // comparison) — see teamHasMoved() for the full reasoning and caveats.
+  const [priorWeekRatings, base] =
+    week > 1
+      ? await Promise.all([
+          ratingsAtWeek(prisma, season, week - 1),
+          preseasonBaseline(prisma, season),
+        ])
+      : [new Map(), { overall: new Map<string, number>() }];
   const ratingByTeam = new Map<
     string,
     { spPlusOverall: number | null; spPlusSource: string | null }
@@ -140,7 +149,14 @@ async function main() {
   const teamMoved = (teamId: string) => {
     if (week <= 1) return true;
     const r = ratingByTeam.get(teamId);
-    return teamHasMoved(baseline, teamId, r?.spPlusOverall ?? null, r?.spPlusSource ?? null);
+    return teamHasMoved(
+      priorWeekRatings,
+      base.overall,
+      teamId,
+      r?.spPlusOverall ?? null,
+      r?.spPlusSource ?? null,
+      week
+    );
   };
 
   // Latest snapshot batch per game only — consensusByGame reads just the newest
