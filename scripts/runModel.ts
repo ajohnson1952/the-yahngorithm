@@ -94,7 +94,6 @@ async function main() {
       spPlusOverall: true,
       spPlusOffense: true,
       spPlusDefense: true,
-      spPlusOverallBillc: true,
       srs: true,
       avgPossessionsPerGame: true,
     },
@@ -132,12 +131,7 @@ async function main() {
     const a = advByTeam.get(teamId);
     const r = ratingByTeam.get(teamId);
     return {
-      // Yahn's backbone: Bill Connelly's own re-centered number (real FCS
-      // opponent ratings baked into his opponent-adjustment, unlike CFBD's
-      // FBS-only feed), falling back to CFBD's spPlusOverall when a team
-      // isn't in that week's sheet yet. The plain SP+ model below (mSp) is
-      // untouched — it stays on CFBD's number as the source of record.
-      spPlusOverall: r?.spPlusOverallBillc ?? r?.spPlusOverall ?? null,
+      spPlusOverall: r?.spPlusOverall ?? null,
       offPPA: a?.offPPA ?? null,
       defPPA: a?.defPPA ?? null,
       talent: talentByTeam.get(teamId) ?? null,

@@ -19,7 +19,7 @@ three (`predictedSpreadSpPlus`, `predictedSpreadSrs`, `predictedSpreadYahn`).
 
 | | SP+ | SRS | Yahn |
 |---|---|---|---|
-| Source | CFBD `/ratings/sp` (+ Bill C sheet for FCS) | CFBD `/ratings/srs` | SP+ backbone + EPA + roster + per-team HFA |
+| Source | Bill Connelly's sheet (CFBD `/ratings/sp` as fallback) | CFBD `/ratings/srs` | SP+ backbone + EPA + roster + per-team HFA |
 | What it measures | Opponent-adjusted **play-by-play efficiency** | Opponent-adjusted **scoring margin** | SP+ **adjusted** by raw efficiency and roster construction |
 | Built to | Predict future performance | Describe what happened | Catch what a single-number preseason rating misses early |
 | Coverage | FBS + FCS | FBS + most FCS (once games are played) | FBS (falls back to plain SP+ where a factor is missing) |
@@ -345,16 +345,18 @@ what makes the grading honest. The market line it's frozen at is a **real number
 a book was posting** at that moment (§2), so it stays gradeable against a real
 closing line later.
 
-**Early-season hold.** CFBD's SP+ stays frozen at the preseason projection
-until Bill Connelly publishes his first in-season revision (historically around
-week 2–3). While that's the case, no picks are logged for the week at all —
-grading a preseason model against a market that's already watched a week of
-football would just be logging the model being stale as an "edge." The hold
-lifts as soon as SP+ has real games in it — either CFBD catching up on its own,
-or an operator loading Bill C's updated sheet directly (which bridges his
-in-season FBS numbers in ahead of CFBD's feed). Then picks resume automatically
-on the next model run. (Week 1 is exempt: everyone, the market included, is
-working off preseason info then.)
+**Early-season hold.** SP+ is Bill Connelly's own sheet now — it only updates
+when the operator sees his Google Sheet change and uploads it, so a "still
+preseason" gap mostly only affects a team CFBD is filling in as a fallback
+(Bill C hasn't covered it that week yet). Picks are held for a game until
+both teams' SP+ has moved off the season's preseason baseline — a
+per-team check, not just a whole-week one, precisely because a single
+week-level check let a stale fallback number through once (a pick logged off
+one team's number that hadn't actually refreshed that week). The hold lifts
+automatically once that team's number moves — usually the next Bill C upload,
+or CFBD's fallback catching up on its own for a team his sheet hasn't reached
+yet. (Week 1 is exempt: everyone, the market included, is working off
+preseason info then.)
 
 Expect **few picks** — often 0–4 a week, sometimes zero. Early in the season
 there are fewer still, because the SRS corroborator isn't available yet. That's

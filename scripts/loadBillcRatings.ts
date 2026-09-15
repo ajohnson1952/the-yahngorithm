@@ -1,33 +1,42 @@
 // ============================================================
 // Load Bill Connelly's full-universe SP+ sheet
 // ============================================================
-// CFBD's SP+ feed is FBS only. Bill C publishes the same model for
-// ~772 teams (FBS + FCS + lower). Verified: his "SP+" is CFBD's number
-// plus a constant (~+52.1 overall, +26.0 off, -26.1 def), a pure shift
-// with no scale change (see git history for the 32-team check).
+// Bill C's sheet is the SOURCE OF RECORD for SP+ (overall/offense/defense),
+// FBS included, not just a bridge for the teams CFBD doesn't rate. Why: CFBD's
+// /ratings/sp is a live, unversioned endpoint (no working `week` param) — two
+// pulls of it in the same week can legitimately return different numbers,
+// which is exactly what caused a bad pick on JMU @ SDSU wk3 (2026-09-14, see
+// docs/STATUS.md). Bill C's sheet updates exactly once when you see his
+// Google Sheet change and choose to export + upload it — a real, discrete,
+// human-controlled snapshot. CFBD stays the pace/possessions + SRS source
+// (his sheet doesn't have those) and the automatic fallback for any team not
+// in a given week's sheet (unresolved name, or no upload yet that week) — see
+// pullRatings.ts, which now never overwrites a row this script has claimed.
 //
 // This loader:
 //   1. parses data/billc/latest.csv (Team, Conf, Record, SP+, Rk, Off, Rk, Def, Rk)
-//   2. re-derives the three offsets FRESH from the FBS teams that appear
-//      in both the sheet and our current CFBD ratings (median, so a team
-//      Bill C has updated a game ahead of us doesn't skew it)
-//   3. writes re-centered SP+ into TeamRatingWeekly for teams CFBD does
-//      NOT rate (FCS and below), spPlusSource='billc'
+//   2. re-centers his numbers onto CFBD's scale (verified: a pure additive
+//      shift, no scale change — see git history for the 32-team check),
+//      anchored to the season's WEEK-1 CFBD baseline — not the current
+//      week's live CFBD read, which is exactly the moving target this
+//      whole design avoids depending on. Same CSV in -> same numbers out,
+//      always, no matter when or how many times you run this.
+//   3. writes the re-centered numbers as the PRIMARY spPlusOverall/Offense/
+//      Defense (spPlusSource='billc') for every team the sheet resolves,
+//      FBS and FCS alike.
 //
-// The offset report it prints each run is the canary: a tight cluster
-// means the two lists still agree; a wide spread means they've diverged
-// and the FCS numbers that week need a second look.
+// The offset report it prints each run is the canary: a tight cluster means
+// the two lists still agree; a wide spread means they've diverged from the
+// week-1 baseline and the numbers that week need a second look.
 //
 // Run:  npm run load-billc                       (auto season/week, data/billc/latest.csv)
 //       npm run load-billc -- --week 1 --file data/billc/2026-wk1.csv
-//       npm run load-billc -- --overwrite-fbs    (also rewrite FBS from the sheet — not default)
 // ============================================================
 
 import { readFileSync } from "fs";
 import { PrismaClient } from "@prisma/client";
 import { getCurrentSeasonWeek } from "../lib/cfbd";
 import { buildTeamResolver } from "../lib/teamResolver";
-import { preseasonBaseline, movedFraction } from "../lib/ratingsFreshness";
 
 const prisma = new PrismaClient();
 
@@ -74,7 +83,6 @@ function parseArgs() {
   return {
     week: val("--week") ? Number(val("--week")) : undefined,
     file: val("--file") ?? "data/billc/latest.csv",
-    overwriteFbs: args.includes("--overwrite-fbs"),
   };
 }
 
@@ -83,7 +91,6 @@ interface Row {
   overall: number;
   off: number;
   def: number;
-  played: boolean; // has this team played a game (record not 0-0)?
 }
 
 function parseCsv(path: string): Row[] {
@@ -91,7 +98,7 @@ function parseCsv(path: string): Row[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
   const out: Row[] = [];
   for (const line of lines.slice(1)) {
-    // columns: Team,Conf,Record,SP+,Rk,Off,Rk,Def,Rk  — team names here have no commas
+    // columns: Team,Conf,Record,SP+,Rk,Off,Rk,Def,Rk — team names here have no commas
     const c = line.split(",");
     if (c.length < 9) continue;
     const overall = Number(c[3]);
@@ -99,17 +106,13 @@ function parseCsv(path: string): Row[] {
     const def = Number(c[7]);
     if (!Number.isFinite(overall) || !Number.isFinite(off) || !Number.isFinite(def))
       continue;
-    // Record col (c[2]): "0-0" or Excel-mangled "Jan-00" = unplayed;
-    // "1-0" / "0-1" etc. = has played, so its number may be a game ahead of ours
-    const rec = c[2].trim();
-    const played = /^[1-9]\d*-\d+$|^\d+-[1-9]\d*$/.test(rec);
-    out.push({ team: c[0].trim(), overall, off, def, played });
+    out.push({ team: c[0].trim(), overall, off, def });
   }
   return out;
 }
 
 async function main() {
-  const { week: weekArg, file, overwriteFbs } = parseArgs();
+  const { week: weekArg, file } = parseArgs();
   const auto = await getCurrentSeasonWeek();
   const season = auto.season;
   const week = weekArg ?? auto.week;
@@ -133,93 +136,34 @@ async function main() {
     if (!billcByTeamId.has(id)) billcByTeamId.set(id, r);
   }
 
-  // Scale anchor = CFBD's own SP+ rows. Normally this week's; but once a prior
-  // run has bridged Bill C's numbers over this week's FBS teams, this week has
-  // (almost) no CFBD rows left — fall back to the most recent week that still
-  // has a full CFBD slate (CFBD hasn't moved off preseason, so it's the same
-  // scale).
-  const cfbdWeekCounts = await prisma.teamRatingWeekly.groupBy({
-    by: ["week"],
-    where: {
-      season,
-      week: { lte: week },
-      spPlusSource: null,
-      spPlusOverall: { not: null },
-    },
-    _count: true,
+  // Scale anchor = the season's WEEK-1 CFBD preseason rows — fixed, immutable
+  // once week 1 ends (pull-ratings never touches an old week's row again), so
+  // the offset is a pure function of (this CSV, week-1 CFBD data) and never
+  // drifts between runs the way anchoring to "whatever CFBD currently says"
+  // would. Week 1 itself anchors to its own (necessarily preseason) rows.
+  const week1Cfbd = await prisma.teamRatingWeekly.findMany({
+    where: { season, week: 1, spPlusSource: null, spPlusOverall: { not: null } },
+    select: { teamId: true, spPlusOverall: true, spPlusOffense: true, spPlusDefense: true },
   });
-  const anchorWeek =
-    cfbdWeekCounts
-      .filter((w) => w._count >= 100)
-      .map((w) => w.week)
-      .sort((a, b) => b - a)[0] ?? week;
-  const allRatings = await prisma.teamRatingWeekly.findMany({
-    where: { season, week: anchorWeek, spPlusOverall: { not: null } },
-    select: {
-      teamId: true,
-      spPlusSource: true,
-      spPlusOverall: true,
-      spPlusOffense: true,
-      spPlusDefense: true,
-    },
-  });
-  const cfbd = allRatings.filter(
-    (r) => r.spPlusSource !== "billc" && teams.fbsTeamIds.has(r.teamId)
-  );
+  const cfbdByTeam = new Map(week1Cfbd.map((r) => [r.teamId, r]));
 
-  // Bridge Bill C's numbers over the FBS teams too? Yes on --overwrite-fbs, or
-  // automatically while CFBD's own SP+ feed is still stuck on the preseason
-  // projection — so picks don't wait on CFBD's ingest lag. pull-ratings leaves
-  // these rows alone until CFBD catches up. (Never in week 1: no lag then.)
-  const base = await preseasonBaseline(prisma, season);
-  const cfbdStillPreseason =
-    base.week != null &&
-    base.week !== week &&
-    movedFraction(
-      base.overall,
-      cfbd.map((c) => ({ teamId: c.teamId, overall: c.spPlusOverall }))
-    ).movedPct <= 0.5;
-  const bridgeFbs = overwriteFbs || cfbdStillPreseason;
-
-  // --- offsets, from teams in both ---
-  // The offset is `billc − cfbd`, taken over teams at the SAME reference point.
-  // Preseason → week 1: that's teams Bill C still lists as unplayed (our CFBD
-  // snapshot is also still preseason). From week 2 on, everyone's played and
-  // there's no clean subset — use EVERY overlapping FBS team and let the median
-  // absorb the game-ahead noise (winners up, losers down, ~symmetric). This
-  // also sidesteps the record column, which Google Sheets loves to mangle into
-  // serial dates ("1-0" → 36526) — leaving `played` unreliable exactly when we
-  // stopped needing it.
-  const collectDeltas = (onlyUnplayed: boolean) => {
-    const o: number[] = [];
-    const off: number[] = [];
-    const def: number[] = [];
-    for (const c of cfbd) {
-      const b = billcByTeamId.get(c.teamId);
-      if (!b) continue;
-      if (onlyUnplayed && b.played) continue;
-      if (c.spPlusOverall != null) o.push(b.overall - c.spPlusOverall);
-      if (c.spPlusOffense != null) off.push(b.off - c.spPlusOffense);
-      if (c.spPlusDefense != null) def.push(b.def - c.spPlusDefense);
-    }
-    return { o, off, def };
-  };
-
-  const preseasonPhase = week <= 1;
-  let { o: dOverall, off: dOff, def: dDef } = collectDeltas(preseasonPhase);
-  let usingFallback = !preseasonPhase;
-  let anchor = preseasonPhase
-    ? `${dOverall.length} unplayed FBS teams`
-    : `${dOverall.length} FBS teams (all overlap — past preseason)`;
-  if (preseasonPhase && dOverall.length < 20) {
-    ({ o: dOverall, off: dOff, def: dDef } = collectDeltas(false));
-    usingFallback = true;
-    anchor = `${dOverall.length} FBS teams (too few unplayed — median absorbs the game-ahead noise)`;
+  // --- offsets: billc − cfbd, over every FBS team in both, at week 1 ---
+  const dOverall: number[] = [];
+  const dOff: number[] = [];
+  const dDef: number[] = [];
+  for (const [teamId, c] of cfbdByTeam) {
+    if (!teams.fbsTeamIds.has(teamId)) continue;
+    const b = billcByTeamId.get(teamId);
+    if (!b) continue;
+    if (c.spPlusOverall != null) dOverall.push(b.overall - c.spPlusOverall);
+    if (c.spPlusOffense != null) dOff.push(b.off - c.spPlusOffense);
+    if (c.spPlusDefense != null) dDef.push(b.def - c.spPlusDefense);
   }
   if (dOverall.length < 20) {
     console.error(
-      `Only ${dOverall.length} FBS teams overlap CFBD ratings for ${season} wk ${week}.\n` +
-        `Run \`npm run pull-ratings\` first so there's a scale to anchor to. Stopping.`
+      `Only ${dOverall.length} FBS teams overlap week-1 CFBD ratings for ${season}.\n` +
+        `Run \`npm run pull-ratings -- --season ${season} --week 1\` first so there's a scale ` +
+        `to anchor to. Stopping.`
     );
     process.exit(1);
   }
@@ -234,70 +178,47 @@ async function main() {
   };
   const b = band(dOverall, offOverall);
 
-  console.log("── offsets this upload (billc − cfbd, median) ──");
-  console.log(`  anchor   ${anchor}`);
+  console.log("── offsets this upload (billc − cfbd wk1, median) ──");
+  console.log(`  anchor   ${dOverall.length} FBS teams, week 1`);
   console.log(
     `  overall  ${offOverall.toFixed(2)}   (n=${dOverall.length}, middle-90%: ${b.lo.toFixed(1)}…+${b.hi.toFixed(1)} around it)`
   );
   console.log(`  offense  ${offOff.toFixed(2)}`);
   console.log(`  defense  ${offDef.toFixed(2)}`);
-  // The band widens off the all-teams anchor, and widens a lot when we're
-  // bridging — CFBD is still preseason while Bill C has a week of results, so
-  // divergence is the whole point. Only shout if it's extreme.
-  const bandLimit = bridgeFbs ? 16 : usingFallback ? 8 : 4;
+  // The band naturally widens the further the season gets from week 1 (both
+  // lists have now watched different amounts of football independently) —
+  // only shout if it's extreme.
+  const bandLimit = 4 + week; // slack grows ~1pt/week off the week-1 anchor
   const wide = b.hi - b.lo > bandLimit;
   console.log(
     wide
-      ? "  ⚠ middle-90% band unusually wide even for a bridge — sanity-check a few numbers.\n"
-      : bridgeFbs
-        ? "  ✓ divergence in the expected range for a preseason-CFBD bridge.\n"
-        : "  ✓ the lists still agree.\n"
+      ? "  ⚠ middle-90% band unusually wide — sanity-check a few numbers.\n"
+      : "  ✓ still tracking the week-1 anchor closely.\n"
   );
 
-  // --- write ---
-  // spPlusOverallBillc is written for EVERY resolved team, FBS included, no
-  // matter what happens to the primary spPlusOverall/spPlusSource below — it's
-  // the Yahn model's backbone input (lib/yahnModel.ts), kept separate so CFBD
-  // stays the sole source of record for the plain SP+ model and picks.
-  const cfbdTeamIds = new Set(cfbd.map((c) => c.teamId));
+  // --- write: billc is the PRIMARY source for every team it resolves,
+  // FBS included. pull-ratings (CFBD) never overwrites a spPlusSource='billc'
+  // row's spPlus* fields once this has run for the week — it only refreshes
+  // srs/avgPossessionsPerGame, and only fully owns a team's row when billc
+  // doesn't cover it that week. ---
   let wrote = 0;
-  let bridgedFbs = 0;
-  let skippedFbs = 0;
-  for (const [teamId, b] of billcByTeamId) {
-    const isFbs = teams.fbsTeamIds.has(teamId);
-    const recentered = b.overall - offOverall;
-
-    if (isFbs && cfbdTeamIds.has(teamId) && !bridgeFbs) {
-      // CFBD already owns the primary FBS number this week — leave
-      // spPlusOverall/spPlusSource alone, only record Yahn's backbone input.
-      skippedFbs++;
-      await prisma.teamRatingWeekly.upsert({
-        where: { teamId_season_week: { teamId, season, week } },
-        update: { spPlusOverallBillc: recentered },
-        create: { teamId, season, week, spPlusOverallBillc: recentered },
-      });
-      continue;
-    }
-
-    if (isFbs && cfbdTeamIds.has(teamId)) bridgedFbs++;
+  for (const [teamId, r] of billcByTeamId) {
     await prisma.teamRatingWeekly.upsert({
       where: { teamId_season_week: { teamId, season, week } },
       update: {
-        spPlusOverall: recentered,
-        spPlusOffense: b.off - offOff,
-        spPlusDefense: b.def - offDef,
+        spPlusOverall: r.overall - offOverall,
+        spPlusOffense: r.off - offOff,
+        spPlusDefense: r.def - offDef,
         spPlusSource: "billc",
-        spPlusOverallBillc: recentered,
       },
       create: {
         teamId,
         season,
         week,
-        spPlusOverall: recentered,
-        spPlusOffense: b.off - offOff,
-        spPlusDefense: b.def - offDef,
+        spPlusOverall: r.overall - offOverall,
+        spPlusOffense: r.off - offOff,
+        spPlusDefense: r.def - offDef,
         spPlusSource: "billc",
-        spPlusOverallBillc: recentered,
       },
     });
     wrote++;
@@ -306,24 +227,9 @@ async function main() {
   console.log("============================================================");
   console.log(`Season ${season}, week ${week}`);
   console.log(`Rows written (billc-sourced):  ${wrote}`);
-  if (bridgedFbs > 0) {
-    console.log(
-      `  ↳ incl. ${bridgedFbs} FBS teams bridged` +
-        (overwriteFbs ? " (--overwrite-fbs)" : " (CFBD still on preseason SP+)") +
-        " — pull-ratings will hold these until CFBD catches up"
-    );
-  }
-  console.log(`FBS rows left on CFBD:         ${skippedFbs}`);
   console.log(
-    `  ↳ all ${skippedFbs} still got their Bill C number recorded for the Yahn` +
-      ` model's backbone (spPlusOverallBillc) — only the plain SP+ model +` +
-      ` picks stay on CFBD's number for these.`
+    `\nRun \`npm run run-model && npm run generate-picks\` (or wait for the next tick) to pick up these numbers.`
   );
-  if (bridgedFbs > 0) {
-    console.log(
-      `\nRun \`npm run run-model && npm run generate-picks\` (or wait for the next tick) to pick up the bridged FBS numbers.`
-    );
-  }
   const ourUnresolved = unresolved.filter(
     (n) => !/D3|NAIA|Ivy|NESCAC|MIAC|WIAC|CCIW|PAC$|OAC|NJAC|SCIAC/.test(n)
   );
@@ -336,17 +242,18 @@ async function main() {
       ourUnresolved.slice(0, 30).join(", ") || "(none)"
     );
   }
-  // any FCS team in our table with NO rating now?
-  const fcsMissing = await prisma.team.count({
+  // any team in our table (FBS or FCS) with NO rating now, from EITHER source?
+  const anyMissing = await prisma.team.count({
     where: {
-      classification: "fcs",
+      classification: { in: ["fbs", "fcs"] },
       ratingsWeekly: { none: { season, week } },
     },
   });
   console.log(
-    fcsMissing === 0
-      ? "\nEvery FCS team in our table now has an SP+ rating for this week."
-      : `\n>> ${fcsMissing} FCS team(s) still have no rating — check the unresolved list.`
+    anyMissing === 0
+      ? "\nEvery FBS/FCS team in our table now has an SP+ rating for this week."
+      : `\n>> ${anyMissing} team(s) still have no rating — check the unresolved list, or ` +
+          `run pull-ratings if you haven't yet this week.`
   );
   console.log("============================================================");
 

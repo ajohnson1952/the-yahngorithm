@@ -60,15 +60,21 @@ nothing else. A `204` response = success. Rotate it yearly.
 
 ## Your weekly rhythm
 
-0. **When Bill Connelly posts an updated SP+ sheet** (early season, ~weekly) —
-   export it to `data/billc/latest.csv`, run `npm run load-billc`, commit the
-   CSV. It writes the FCS ratings, and while CFBD's SP+ feed is still on the
-   preseason projection it also **bridges** Bill C's in-season numbers over the
-   FBS teams (so picks don't wait on CFBD's ingest lag). `pull-ratings` leaves
-   those bridged rows alone until CFBD catches up, then takes back over. Run
-   `npm run run-model && npm run generate-picks` after, or just wait for the
-   next tick. (The mangled "Record" column in the export is ignored — no need
-   to fix it.)
+0. **When Bill Connelly posts an updated SP+ sheet** — export it to
+   `data/billc/latest.csv`, run `npm run load-billc`, commit the CSV. His
+   sheet is the **source of record** for SP+ (overall/offense/defense),
+   FBS included, not a temporary bridge: CFBD's own `/ratings/sp` is a live,
+   unversioned endpoint (no working `week` param), so two pulls of it in the
+   same week can return different numbers for the same team — that caused a
+   real bad pick once (JMU @ SDSU wk3, see STATUS.md). Bill C's sheet only
+   changes when you deliberately upload it, so it's the one thing in this
+   pipeline whose "did this actually update" question has a clean answer.
+   `pull-ratings` never overwrites a team `load-billc` has already claimed
+   for the week — it only refreshes SRS + pace/possessions (which his sheet
+   doesn't have), and it's the automatic fallback for any team not in that
+   week's sheet. Run `npm run run-model && npm run generate-picks` after
+   uploading, or just wait for the next tick. (The mangled "Record" column
+   in the export is ignored — no need to fix it.)
 1. **Tuesday/Wednesday** — the board has opening lines + the model + any picks.
    Skim it. Check `/grades` + `/picks` for last week.
 2. **Through the week** — Kalshi + the model refresh every 3 hours; lines refresh
@@ -126,23 +132,27 @@ over the closing line.** Use it as decision support:
   (so Saturday's results stay up Sunday morning, then it advances). This is
   independent of CFBD's calendar. Knob: `WEEK_HOLD_MS` in `lib/currentWeek.ts`.
 - **No picks are being logged for the week** — check the `generate-picks` log
-  for a `⏸ SP+ … still matches the preseason baseline` line. CFBD's SP+ is the
-  frozen preseason projection until Bill Connelly's first in-season revision
-  (~wk 2–3); `generate-picks` holds all picks until SP+ moves off that baseline
-  — whether via CFBD catching up (the tick pulls ratings ~daily once week ≥ 2
-  until it lands) or a `load-billc` bridge (step 0 of the weekly rhythm). Then
-  picks resume on their own. Force it with `pull-ratings` + `generate-picks`
-  from `/admin`. Logic: `lib/ratingsFreshness.ts`.
+  for a `⏸ SP+ … still matches the preseason baseline` line. This only bites a
+  team CFBD is still supplying as a fallback (Bill C's sheet hasn't covered it
+  yet, or you haven't uploaded this week's sheet at all) — his sheet is the
+  source of record for SP+ now, so uploading it is the fastest way to clear
+  this for every team it covers. `generate-picks` holds all picks until the
+  week is broadly fresh — whether via a `load-billc` upload (step 0 of the
+  weekly rhythm) or CFBD's own fallback numbers catching up on their own.
+  Force it with `pull-ratings` + `generate-picks` from `/admin`. Logic:
+  `lib/ratingsFreshness.ts`.
 - **One specific game isn't getting a pick even though the week is fresh** —
   check the log for a `Held — a team's SP+ hasn't individually refreshed yet`
-  line. `spPlusFreshness` is a whole-week aggregate (>50% of teams moved); a
-  lower-profile team can still be sitting on an unrefreshed CFBD number after
-  that gate opens because enough *other* teams moved first — caught 2026-09-14
-  on SDSU/JMU wk3, picked off a rating gap identical to their week-2 numbers a
-  day before CFBD actually recomputed either team. `generate-picks` now also
-  checks each game's two teams individually (`teamHasMoved`) before logging;
-  it clears itself once that team's own number moves (usually the next
-  `pull-ratings`, or the Tuesday weekly pull).
+  line. Only fires for a team still on CFBD's fallback (billc-sourced rows
+  auto-pass — his sheet has a clean, discrete update you control, nothing to
+  gate). `spPlusFreshness` is a whole-week aggregate (>50% of teams moved); a
+  CFBD-fallback team can still be sitting on an unrefreshed number after that
+  gate opens because enough *other* teams moved first — this is exactly the
+  failure mode `load-billc` becoming the SP+ source of record was built to
+  route around (see step 0 above and STATUS.md, 2026-09-14/15). `generate-
+  picks` also checks each game's two teams individually (`teamHasMoved`)
+  before logging; it clears itself once that team's own number moves (usually
+  the next `pull-ratings`, or the Tuesday weekly pull).
 
 ## The Grades page
 

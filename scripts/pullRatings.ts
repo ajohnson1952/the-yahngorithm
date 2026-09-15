@@ -5,11 +5,26 @@
 // TeamRatingWeekly, one row per (team, season, week).
 //
 //   SP+  (/ratings/sp)  — opponent-adjusted play-by-play efficiency,
-//                         FBS only, has offense/defense split.
+//                         FBS only, has offense/defense split. Bill C's
+//                         sheet (scripts/loadBillcRatings.ts) is the
+//                         source of record for spPlusOverall/Offense/
+//                         Defense once it's covered a team for the week —
+//                         CFBD's own read is a live, unversioned endpoint
+//                         that can (and did — see docs/STATUS.md, JMU @
+//                         SDSU wk3) return a different number pull to
+//                         pull within the same week. This script never
+//                         overwrites a row load-billc has already claimed
+//                         (spPlusSource==='billc') for THIS (season, week)
+//                         — it only refreshes that row's srs/pace. It's
+//                         the automatic fallback (spPlusSource=null) for
+//                         any team billc doesn't cover that week — a new
+//                         name, an unresolved alias, or before that
+//                         week's upload has happened yet.
 //   SRS  (/ratings/srs) — opponent-adjusted scoring margin, same
 //                         points scale, single number. Computed from
 //                         games played, so it's EMPTY until a few
 //                         weeks into the season — that's expected.
+//                         CFBD-only; Bill C's sheet doesn't have it.
 //
 // Every run is a snapshot (pulledAt), never destructive. Re-running
 // for the same (season, week) overwrites that week's numbers with
@@ -24,7 +39,6 @@ import { cfbdGet, getCurrentSeasonWeek, getCfbdCallCount } from "../lib/cfbd";
 import { recordCfbdUsage } from "../lib/apiUsage";
 import { buildTeamResolver } from "../lib/teamResolver";
 import { paceByTeamName } from "../lib/pace";
-import { preseasonBaseline, movedFraction } from "../lib/ratingsFreshness";
 
 const prisma = new PrismaClient();
 
@@ -83,33 +97,22 @@ async function main() {
 
   const srsByName = new Map(srs.map((r) => [r.team, r.rating]));
 
-  // Anti-clobber: if `load-billc` bridged Bill C's own in-season SP+ over some
-  // FBS teams for this week (because CFBD's feed was still preseason), leave
-  // those rows alone here until CFBD itself has caught up. "Caught up" = this
-  // pull's numbers have moved off the season's preseason baseline.
-  const base = await preseasonBaseline(prisma, season);
-  const freshResolved = sp
-    .map((r) => ({ teamId: teams.resolve(r.team), overall: r.rating }))
-    .filter((r): r is { teamId: string; overall: number | null } => !!r.teamId);
-  const cfbdMoved =
-    base.week == null ||
-    base.week === week ||
-    movedFraction(base.overall, freshResolved).movedPct > 0.5;
-  const bridgedTeams = cfbdMoved
-    ? new Set<string>()
-    : new Set(
-        (
-          await prisma.teamRatingWeekly.findMany({
-            where: { season, week, spPlusSource: "billc" },
-            select: { teamId: true },
-          })
-        ).map((r) => r.teamId)
-      );
+  // Anti-clobber: never overwrite a row load-billc has already claimed for
+  // THIS (season, week) — his sheet is the source of record for spPlusOverall/
+  // Offense/Defense once it covers a team. Just refresh srs/pace for those.
+  const billcOwned = new Set(
+    (
+      await prisma.teamRatingWeekly.findMany({
+        where: { season, week, spPlusSource: "billc" },
+        select: { teamId: true },
+      })
+    ).map((r) => r.teamId)
+  );
 
   const unmatched: string[] = [];
   let wrote = 0;
   let withSrs = 0;
-  let heldBridged = 0;
+  let heldBillc = 0;
   const ratedTeamIds = new Set<string>();
 
   for (const row of sp) {
@@ -126,13 +129,14 @@ async function main() {
     if (srsRating != null) withSrs++;
     const possessions = pace.get(row.team) ?? null;
 
-    if (bridgedTeams.has(teamId)) {
-      // keep Bill C's bridged SP+ — only refresh the side data
+    if (billcOwned.has(teamId)) {
+      // Bill C's sheet already covers this team for this week — only refresh
+      // the side data CFBD is still the sole source for.
       await prisma.teamRatingWeekly.update({
         where: { teamId_season_week: { teamId, season, week } },
         data: { srs: srsRating, avgPossessionsPerGame: possessions, pulledAt: new Date() },
       });
-      heldBridged++;
+      heldBillc++;
       ratedTeamIds.add(teamId);
       continue;
     }
@@ -143,7 +147,7 @@ async function main() {
         spPlusOverall: row.rating ?? null,
         spPlusOffense: row.offense?.rating ?? null,
         spPlusDefense: row.defense?.rating ?? null,
-        spPlusSource: null, // CFBD is authoritative (reclaims any bridged row)
+        spPlusSource: null, // CFBD fallback — no billc row for this team/week yet
         srs: srsRating,
         avgPossessionsPerGame: possessions,
         pulledAt: new Date(),
@@ -172,9 +176,9 @@ async function main() {
   console.log(`DONE. season ${season}, week ${week}`);
   console.log(`  Teams written to TeamRatingWeekly: ${wrote}`);
   console.log(`  ...of those with an SRS value:     ${withSrs}`);
-  if (heldBridged > 0) {
+  if (heldBillc > 0) {
     console.log(
-      `  Left on bridged Bill C SP+:         ${heldBridged} (CFBD still preseason)`
+      `  Left on Bill C's SP+ (source of record): ${heldBillc}`
     );
   }
   console.log("============================================================\n");

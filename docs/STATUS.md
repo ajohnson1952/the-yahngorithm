@@ -14,10 +14,12 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
 
 ## Needs you
 
-- [ ] **Weekly, early season:** when Bill Connelly posts an updated SP+ sheet,
-      export it → `data/billc/latest.csv`, `npm run load-billc`, commit. That's
-      what releases the pick hold before CFBD's feed catches up (rhythm step 0
-      in OPERATIONS). Watch his X account.
+- [ ] **Weekly, every week now (not just early season):** when Bill Connelly
+      posts an updated SP+ sheet, export it → `data/billc/latest.csv`,
+      `npm run load-billc`, commit. His sheet is now the SP+ source of record
+      (Sept 15) — CFBD is just the fallback for teams it doesn't cover that
+      week, so this upload matters every week, not only while CFBD's own feed
+      is stuck on preseason. Rhythm step 0 in OPERATIONS. Watch his X account.
 - [ ] `NEON_API_KEY` + `CF_BEACON_TOKEN` in the **Render service env** (for the
       `/admin` Neon panel + Cloudflare analytics in prod). `.env` has them
       locally. `CF_BEACON_TOKEN=5ee1b043463a4b58bd546d9eac3122c3`.
@@ -32,6 +34,56 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
       same one described in the Sept 4 entry).
 
 ## Built this cycle
+
+### Sept 15 — Bill C's sheet becomes the SP+ source of record
+
+- **The reversal:** earlier the same day, the recommendation was explicitly
+  *against* making Bill C primary (see chat/memory — unproven accuracy edge,
+  automation cost, recentering noise). What changed it: CFBD's `/ratings/sp`
+  turns out to be a **live, unversioned endpoint** — no working `week` param —
+  so two pulls in the same week can genuinely return different numbers for
+  the same team. That's the actual root cause behind the JMU @ SDSU incident
+  above, and no per-team numeric threshold can fully close a gap like that
+  (documented limit on `teamHasMoved`). Bill C's sheet doesn't have that
+  problem *by construction*: it only changes when you see his Google Sheet
+  update and deliberately export + upload it — a real, discrete,
+  human-controlled snapshot. That's a difference in *kind*, not just
+  accuracy, and it's what tipped the decision.
+- **The wrinkle that would have undermined it:** `load-billc`'s re-centering
+  offset was being recomputed fresh from CFBD's *live* numbers every run —
+  so even the same CSV, run twice in one week, could produce different
+  stored numbers purely from CFBD moving underneath the offset. Fixed by
+  anchoring the offset to the season's **week-1 CFBD baseline** instead —
+  frozen and immutable once week 1 ends (pull-ratings never touches an old
+  week's row again), so the offset is now a pure function of (this CSV,
+  week-1 data) and reproduces identically no matter when or how many times
+  `load-billc` runs.
+- **Pace/possessions preserved** — Bill C's sheet doesn't carry
+  `avgPossessionsPerGame` (or SRS), so `pull-ratings` keeps its normal
+  weekly CFBD pull for those, merged into the same row `load-billc` owns for
+  SP+. No missing data.
+- **Rewired:** `loadBillcRatings.ts` — always writes primary
+  `spPlusOverall/Offense/Defense` + `spPlusSource:'billc'` for every resolved
+  team, FBS included (dropped the old bridge/anti-clobber-until-CFBD-catches-
+  up machinery entirely — no more waiting on CFBD). `pullRatings.ts` — never
+  overwrites a `spPlusSource:'billc'` row's SP+ fields for that (season,
+  week); only refreshes srs/pace for those, and remains the full owner
+  (fallback) for any team billc doesn't cover yet that week. `runModel.ts` —
+  the Yahn-specific `spPlusOverallBillc` column added earlier the same day
+  is now redundant (the primary field itself is billc-sourced) and was
+  dropped via migration; Yahn and the plain SP+ model now read the exact
+  same backbone.
+- **Verified live:** LSU @ Ole Miss wk3 now `spPlusSource:'billc'` for both
+  teams, `avgPossessionsPerGame` intact from CFBD, SP+ and Yahn converged to
+  the same -6.4 home margin (previously split -7.5 / -6.3 across two
+  sources). `generate-picks`' per-team freshness gate (`teamHasMoved`)
+  already auto-passed billc-sourced rows before this change — no further
+  edit needed there; it now simply has almost nothing left to hold, since
+  Wake Forest (held two runs ago as a live example of the bug) cleared the
+  moment this week's billc upload covered it.
+- **Offset now anchors to week 1 always**, not "current week's CFBD overlap"
+  — simpler code, and the band-width canary printed each run is a genuine
+  divergence signal now (not conflated with "are we mid-bridge").
 
 ### Sept 14–15 — per-team SP+ freshness gate + Yahn uses Bill C's backbone
 

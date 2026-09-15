@@ -69,8 +69,8 @@ Standalone scripts in `scripts/`, each an npm script:
 
 | Command | What |
 |---|---|
-| `pull-ratings` | SP+ / SRS / pace → `TeamRatingWeekly`. Won't overwrite a `load-billc` FBS bridge until CFBD's own SP+ leaves the preseason baseline |
-| `load-billc` | Bill C's sheet (`data/billc/latest.csv`) → FCS SP+ re-centered to CFBD's scale; from wk 2 also bridges his in-season FBS numbers while CFBD's feed is still preseason (`--overwrite-fbs` forces it) |
+| `pull-ratings` | SRS / pace (+ SP+ *fallback* for any team `load-billc` doesn't cover that week) → `TeamRatingWeekly`. Never overwrites a `spPlusSource:'billc'` row's SP+ |
+| `load-billc` | Bill C's sheet (`data/billc/latest.csv`) — the **source of record** for SP+ overall/offense/defense, FBS included, re-centered onto CFBD's scale via an offset anchored to the season's fixed week-1 baseline (deterministic — same CSV always gives the same numbers, regardless of what CFBD currently says) |
 | `pull-rankings` | AP + Coaches polls |
 | `pull-games` | schedule + scores + venue + TV |
 | `pull-lines` | The Odds API line snapshots (`--type open\|daily\|close`) |

@@ -2,11 +2,11 @@
 // Yahn model v2 — multi-factor team rating
 // ============================================================
 // SP+ is the opponent-adjusted-efficiency backbone (don't rebuild it) — the
-// caller (runModel.ts) feeds spPlusOverall as Bill Connelly's own re-centered
-// number (TeamRatingWeekly.spPlusOverallBillc) rather than CFBD's, since his
-// full 772-team sheet has real FCS opponent ratings to adjust against where
-// CFBD's FBS-only feed doesn't. The plain SP+ model + picks stay on CFBD's
-// number; this backbone swap only affects Yahn.
+// caller (runModel.ts) feeds spPlusOverall, which is Bill Connelly's own
+// re-centered number (scripts/loadBillcRatings.ts) whenever his sheet covers
+// the team, falling back to CFBD otherwise. Same backbone the plain SP+
+// model uses — see loadBillcRatings.ts for why his sheet is the source of
+// record.
 // Yahn = SP+ + two bounded, time-decaying adjustments:
 //
 //   epaAdj    — nudge toward the raw EPA-per-play view of the team.
