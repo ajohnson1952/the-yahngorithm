@@ -28,11 +28,13 @@ function UsageBar({
   used,
   budget,
   detail,
+  updatedAt,
 }: {
   label: string;
   used: number;
   budget: number;
   detail: string;
+  updatedAt: Date | null;
 }) {
   const pct = Math.min(100, Math.round((used / budget) * 100));
   const hot = pct >= 90 ? "hot" : pct >= 70 ? "warm" : "";
@@ -48,6 +50,11 @@ function UsageBar({
         <div className={`usage-fill ${hot}`} style={{ width: `${pct}%` }} />
       </div>
       <div className="usage-detail">{detail}</div>
+      <div className="usage-detail dim">
+        {updatedAt
+          ? `Last call ${updatedAt.toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} CT.`
+          : "No calls recorded yet this month."}
+      </div>
     </div>
   );
 }
@@ -251,6 +258,7 @@ export default async function AdminPage() {
           used={usage.cfbdCalls}
           budget={usage.cfbdBudget}
           detail="Best-effort count of successful calls this calendar month (CFBD has no quota endpoint, so a failed run may undercount slightly). Ratings ~3, games ~3, polls ~1, grading a few."
+          updatedAt={usage.cfbdUpdatedAt}
         />
         <UsageBar
           label="The Odds API"
@@ -261,12 +269,12 @@ export default async function AdminPage() {
               ? `Exact — from the API's own header. ${usage.oddsRemaining} credits remaining. Each line pull costs 2.`
               : "No pull yet this month — will populate after the next pull-lines run."
           }
+          updatedAt={usage.oddsUpdatedAt}
         />
         <p className="admin-usage-note">
-          {usage.updatedAt
-            ? `Last updated ${usage.updatedAt.toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} CT.`
-            : "No usage recorded yet this month."}{" "}
-          Resets naturally at the start of each calendar month (a fresh row).
+          Resets naturally at the start of each calendar month (a fresh row). Each bar's "last
+          call" is that API only — CFBD and Odds run on separate schedules (see the freshness
+          panel above for Betting lines specifically), so one can move while the other sits idle.
           <span className="dim"> Open-Meteo / ESPN / Kalshi are free, no key — not tracked here.</span>
         </p>
       </div>

@@ -45,6 +45,26 @@ when picks unlock each week.
 
 ## Built this cycle
 
+### Sept 16 — admin budget panel: split the misleading shared "last updated" timestamp
+
+Reported as: budget panel said the Odds API "ran at 12:38p today," but the
+data-freshness tab said Betting lines hadn't pulled since Tuesday 8:01a. Two
+separate things, both real:
+
+- **No pipeline bug.** `tick.ts` deliberately skips the `lines` (and `scores`)
+  group all day Tuesday and before ~5pm CT Wednesday (`midweekQuiet` — the
+  only mid-week games are Tue/Wed MACtion, which doesn't exist most weeks).
+  The Odds API genuinely hadn't been called since Tuesday's `open` snapshot;
+  freshness was reporting correctly.
+- **Real UI bug**, now fixed: `getApiUsage()` (`lib/webData.ts`) collapsed
+  the CFBD and Odds `ApiUsage` rows' timestamps into one `updatedAt` (`Math.max`
+  of both), rendered as a single "Last updated" caption under *both* budget
+  bars. Today that max was a CFBD call (the `ratingsCatchup` step in
+  `tick.ts`, which can fire on any day the week's SP+ isn't broadly fresh
+  yet) — so the caption showed 12:38p even though the Odds row itself hadn't
+  moved. Split `ApiUsageView.updatedAt` into `cfbdUpdatedAt` / `oddsUpdatedAt`,
+  each `UsageBar` now shows its own "Last call" line. `npx tsc --noEmit` clean.
+
 ### Sept 16 — migrated hosting from Render to Vercel
 
 - **Why:** wanted better uptime + shorter cold starts, staying free/cheap, no

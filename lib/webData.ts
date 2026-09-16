@@ -705,10 +705,11 @@ const ODDS_MONTHLY_BUDGET = 500;
 export interface ApiUsageView {
   cfbdCalls: number;
   cfbdBudget: number;
+  cfbdUpdatedAt: Date | null;
   oddsUsed: number; // budget - remaining, when we know remaining
   oddsRemaining: number | null;
   oddsBudget: number;
-  updatedAt: Date | null;
+  oddsUpdatedAt: Date | null;
 }
 
 export interface FreshnessRow {
@@ -777,13 +778,13 @@ export async function getApiUsage(): Promise<ApiUsageView> {
   const rows = await db.apiUsage.findMany({ where: { yearMonth: ym } });
   const cfbd = rows.find((r) => r.api === "cfbd");
   const odds = rows.find((r) => r.api === "odds");
-  const updates = [cfbd?.updatedAt, odds?.updatedAt].filter((x): x is Date => x != null);
   return {
     cfbdCalls: cfbd?.calls ?? 0,
     cfbdBudget: CFBD_MONTHLY_BUDGET,
+    cfbdUpdatedAt: cfbd?.updatedAt ?? null,
     oddsUsed: odds?.lastRemaining != null ? ODDS_MONTHLY_BUDGET - odds.lastRemaining : odds?.calls ?? 0,
     oddsRemaining: odds?.lastRemaining ?? null,
     oddsBudget: ODDS_MONTHLY_BUDGET,
-    updatedAt: updates.length ? new Date(Math.max(...updates.map((d) => d.getTime()))) : null,
+    oddsUpdatedAt: odds?.updatedAt ?? null,
   };
 }
