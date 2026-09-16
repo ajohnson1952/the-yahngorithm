@@ -1,0 +1,14 @@
+[Unit]
+Description=Run yahngorithm-tick.service every 30 minutes
+
+[Timer]
+OnCalendar=*:0/30
+# Persistent=true catches up a missed tick after the Pi was off/asleep/
+# rebooting — the closest equivalent to cron-job.org retrying.
+Persistent=true
+# Spread slightly so it doesn't always land on :00/:30 exactly if that
+# ever matters for upstream rate limits — harmless to leave at 0.
+RandomizedDelaySec=0
+
+[Install]
+WantedBy=timers.target

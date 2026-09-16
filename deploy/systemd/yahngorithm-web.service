@@ -1,0 +1,20 @@
+[Unit]
+Description=the yahngorithm — web app (next start)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adjust to wherever you cloned the repo on the Pi.
+WorkingDirectory=/home/pi/the-yahngorithm
+# next start reads .env in WorkingDirectory automatically — no --env-file needed.
+ExecStart=/usr/bin/npm run start
+Restart=on-failure
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=3000
+# Uncomment and tune if the Pi is memory-constrained (e.g. 2GB models):
+# Environment=NODE_OPTIONS=--max-old-space-size=768
+
+[Install]
+WantedBy=multi-user.target

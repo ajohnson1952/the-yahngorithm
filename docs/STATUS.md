@@ -20,11 +20,10 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
       (Sept 15) — CFBD is just the fallback for teams it doesn't cover that
       week, so this upload matters every week, not only while CFBD's own feed
       is stuck on preseason. Rhythm step 0 in OPERATIONS. Watch his X account.
-- [ ] `NEON_API_KEY` + `CF_BEACON_TOKEN` in the **Render service env** (for the
-      `/admin` Neon panel + Cloudflare analytics in prod). `.env` has them
-      locally. `CF_BEACON_TOKEN=5ee1b043463a4b58bd546d9eac3122c3`.
-- [ ] Confirm `ADMIN_PASSWORD` + `ADMIN_SESSION_SECRET` are set in the Render
-      dashboard (else `/admin` + pinning fall back to the public default `2142`).
+- [x] `NEON_API_KEY` + `CF_BEACON_TOKEN` confirmed in the Render service env
+      (Sept 15).
+- [x] `ADMIN_PASSWORD` — staying on the public default `2142` for now, by
+      choice (Sept 15). Revisit if that ever needs to change.
 - [ ] Decide re: Neon Free — the pipeline transfer fix landed (Sept 8), so the
       egress blocker is gone. Let a full week run, re-check `npm run neon-usage`
       / the `/admin` panel, then move both projects back to Free if transfer

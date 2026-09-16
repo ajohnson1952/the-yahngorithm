@@ -1,0 +1,15 @@
+[Unit]
+Description=the yahngorithm — one scheduler tick (scripts/tick.ts)
+# Don't let a slow tick's next timer fire pile another one on top of it —
+# tick.ts already no-ops fast when nothing's due, but this is the real guard.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/pi/the-yahngorithm
+ExecStart=/usr/bin/npm run tick
+# journalctl -u yahngorithm-tick.service is the equivalent of the GitHub
+# Actions run log.
+StandardOutput=journal
+StandardError=journal
