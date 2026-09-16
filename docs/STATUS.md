@@ -6,8 +6,9 @@ it during the season, `docs/CALIBRATION.md` = what the backtests found.
 ## Where it stands (2026 season, week 2)
 
 Everything is built and deployed. The pipeline runs itself on GitHub Actions;
-the webapp is live on Render off `main`. Data through 2018 is loaded for the
-backtests. **We're in "watch football and grade live" mode.**
+the webapp is live on **Vercel** (the-yahngorithm.com) off `main`, migrated
+from Render Sept 16 — see the Sept 16 entry below. Data through 2018 is
+loaded for the backtests. **We're in "watch football and grade live" mode.**
 
 Week 1 graded (picks 2–1). Week 2 picks are live — see the Sept 8 entries below
 for the SP+ preseason-hold and the Bill C bridge that gate/release them.
@@ -20,10 +21,18 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
       (Sept 15) — CFBD is just the fallback for teams it doesn't cover that
       week, so this upload matters every week, not only while CFBD's own feed
       is stuck on preseason. Rhythm step 0 in OPERATIONS. Watch his X account.
-- [x] `NEON_API_KEY` + `CF_BEACON_TOKEN` confirmed in the Render service env
-      (Sept 15).
+- [x] `NEON_API_KEY` + `CF_BEACON_TOKEN` confirmed in the **Render** service
+      env (Sept 15) — since superseded by the Sept 16 Vercel migration; double
+      check both actually carried over into the Vercel project env too
+      (`docs/DEPLOY_VERCEL.md` has the full var list).
 - [x] `ADMIN_PASSWORD` — staying on the public default `2142` for now, by
       choice (Sept 15). Revisit if that ever needs to change.
+- [ ] **`ADMIN_SESSION_SECRET`** — still unset as of the Vercel migration
+      (Sept 16). Without it the admin cookie is a computable hash of just
+      `ADMIN_PASSWORD`, forgeable by anyone who knows/guesses it without
+      even hitting the rate-limited login form. Matters more now that the
+      site's on a real domain (the-yahngorithm.com) instead of an obscure
+      `*.onrender.com` URL. One env var: `openssl rand -hex 32`.
 - [ ] Decide re: Neon Free — the pipeline transfer fix landed (Sept 8), so the
       egress blocker is gone. Let a full week run, re-check `npm run neon-usage`
       / the `/admin` panel, then move both projects back to Free if transfer
@@ -33,6 +42,46 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
       same one described in the Sept 4 entry).
 
 ## Built this cycle
+
+### Sept 16 — migrated hosting from Render to Vercel
+
+- **Why:** wanted better uptime + shorter cold starts, staying free/cheap, no
+  interest in owning the hardware — Render free-tier specifically sleeps
+  after 15 min idle with a ~**50s** cold start, and its 750 free instance-
+  hours/mo is shared across the whole account (this app + Cavepicks
+  together). Evaluated self-hosting (Pi, Windows desktop — see
+  `docs/SELF_HOSTING.md` / `SELF_HOSTING_WINDOWS.md`, kept for reference)
+  and GCP Cloud Run before landing on Vercel: purpose-built for Next.js
+  (typically ~1-2s cold starts vs. Cloud Run's without manual tuning), a
+  first-party Neon integration, and zero-config git-push deploys — same
+  simplicity Render gave, less ongoing ops than Cloud Run's Dockerfile/IAM
+  setup. **The pipeline never moved** — it's run on GitHub Actions since
+  before this change and was already fully decoupled from wherever the web
+  app lives (confirmed: nothing in `.github/workflows/` ever referenced
+  Render).
+- **Live at the-yahngorithm.com** (custom domain, bought for this). Neon is
+  unchanged — zero data migration.
+- `vercel.json` replaces `render.yaml`: build command runs
+  `prisma migrate deploy` before `next build`, same auto-migration-on-deploy
+  behavior as before.
+- `@vercel/analytics` added alongside the existing Cloudflare Web Analytics
+  beacon (kept both — different tools, no conflict). New `app/icon.png`
+  favicon too, resized down from the existing 692KB `joe.png` mascot to a
+  128×128/36KB PNG via Next's App Router icon convention (drop a file in
+  `app/`, zero code needed).
+- **Real gotcha worth remembering:** Vercel's project setup prompts an
+  "add Prisma Postgres" integration — a *different product* from Neon
+  (Prisma's own managed Postgres), unrelated despite the name overlap with
+  the Prisma ORM this app already uses. Adding it would provision a new,
+  empty database. Skipped; `DATABASE_URL` was set manually to the existing
+  Neon connection string instead, per `docs/DEPLOY_VERCEL.md`.
+- Also flagged along the way (not yet acted on): the admin session cookie is
+  a fixed hash of `ADMIN_PASSWORD` + `ADMIN_SESSION_SECRET` — with the
+  latter unset (still true as of this writing), the cookie is a computable
+  hash of a possibly-default password, forgeable by anyone who knows/guesses
+  it, without even touching the rate-limited login form. Cheap fix
+  (`openssl rand -hex 32`, one env var) that matters more now that the site
+  is on a real, findable domain instead of an obscure `*.onrender.com` URL.
 
 ### Sept 15 — Bill C's sheet becomes the SP+ source of record
 

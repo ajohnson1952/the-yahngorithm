@@ -121,7 +121,7 @@ over the closing line.** Use it as decision support:
   (`team_source_aliases`, source `odds_api`) or re-run
   `npx tsx scripts/matchTeamAliases.ts` to refresh from the current board.
 - **`/admin` buttons fail in prod** — `CFBD_API_KEY` / `ODDS_API_KEY` also need
-  to be in the Render service env.
+  to be in the Vercel project env.
 - **A finished game still shows "scheduled" / no score** — usually a week that
   ended just as CFBD's calendar rolled to the next one. A plain `pull-games` now
   sweeps any recent week with an overdue non-final game automatically, so it

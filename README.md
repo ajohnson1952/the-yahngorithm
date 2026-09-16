@@ -5,7 +5,7 @@ sportsbook lines, layers on situational and market signals, and surfaces the gam
 where our numbers and the market disagree. Decision support — not a money-printer.
 (Separate project from Cavepicks.)
 
-**Live:** https://the-yahngorithm.onrender.com
+**Live:** https://the-yahngorithm.com
 
 ---
 
@@ -127,9 +127,11 @@ burst of visitors from each re-running the same queries (a `force-dynamic`
 homepage doing exactly that once ran Neon past its free-tier transfer cap).
 Per-visitor pins are a separate uncached lookup; `/admin` is never cached.
 
-**Analytics:** Cloudflare Web Analytics (cookieless page views, zero backend).
-`app/layout.tsx` injects the beacon only when `CF_BEACON_TOKEN` is set — put it
-in the Render env, leave it unset locally.
+**Analytics:** two, side by side. Cloudflare Web Analytics (cookieless page
+views, zero backend) — `app/layout.tsx` injects the beacon only when
+`CF_BEACON_TOKEN` is set, put it in the Vercel env, leave it unset locally.
+Plus Vercel Web Analytics (`@vercel/analytics`, the `<Analytics />` component
+in the same file) — free on the Hobby plan, no env var needed.
 
 ---
 
@@ -147,9 +149,13 @@ Migrations use the diff + `migrate deploy` flow (not `migrate dev`) because
 
 ## Deployment
 
-Render web service (`render.yaml`), auto-deploys `main`. Build runs
-`prisma migrate deploy` so schema changes ship with the code. Render env needs
-`DATABASE_URL`, `CFBD_API_KEY`, `ODDS_API_KEY`.
+Vercel (`vercel.json`), auto-deploys `main`. Build runs `prisma migrate deploy`
+so schema changes ship with the code. Vercel env needs `DATABASE_URL`,
+`CFBD_API_KEY`, `ODDS_API_KEY`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`
+(`NEON_API_KEY` / `CF_BEACON_TOKEN` optional). Custom domain:
+the-yahngorithm.com. Migrated from Render Sept 2026 — see
+`docs/DEPLOY_VERCEL.md` for the how/why; the pipeline (GitHub Actions) was
+never on Render to begin with and didn't move.
 
 ## Layout
 
