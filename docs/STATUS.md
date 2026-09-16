@@ -98,6 +98,24 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
   not reused from Next's own bundle). **Confirmed fixed** — "Pull polls"
   (CFBD call + a Prisma write) succeeded on the live Vercel deploy after
   this shipped.
+- **Follow-up sweep found two more, fixed proactively before either broke
+  anything:** no `maxDuration` set (`/admin` was running on Vercel's
+  implicit default, which can be as short as 10s on Hobby — unrelated to
+  `runScript`'s own 175s timeout); and `DATABASE_URL` was Neon's direct
+  (non-pooled) endpoint doing double duty for both migrations and runtime
+  queries — the classic Vercel+Postgres gotcha, since concurrent serverless
+  instances each open their own connection against a small (0.25 CU)
+  compute's fairly low direct-connection ceiling. Fixed: `maxDuration = 60`
+  on `/admin` + internal timeout trimmed to 55s so the app's own clean
+  error fires first; `prisma/schema.prisma` got a `directUrl` (Prisma's
+  documented pattern) — `DATABASE_URL` is now the pooled endpoint,
+  `DIRECT_URL` (new) the direct one for migrations only. Confirmed the
+  GitHub Actions pipeline needs no changes (`directUrl` is migration-only,
+  never touched by the runtime client — verified by actually running
+  `prisma generate` + a real query with `DIRECT_URL` absent before
+  shipping). **Confirmed live**: after the two new env vars were added in
+  Vercel, "Pull polls" succeeded in 1.7s — fast, no connection-setup
+  overhead, pooling working cleanly.
 
 ### Sept 15 — Bill C's sheet becomes the SP+ source of record
 
