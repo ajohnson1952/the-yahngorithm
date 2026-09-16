@@ -95,10 +95,9 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
   `next.config.mjs`, scoped to `/admin` — force-includes `tsx` + its
   `esbuild` dependency, the Prisma client/engine, and `scripts/`/`lib/`
   (the scripts' own source, re-parsed fresh by `tsx` in the child process,
-  not reused from Next's own bundle). **Confirm this actually fixed it**
-  by clicking a Run button again after the next deploy — local builds don't
-  reproduce Vercel's real bundling, so this was verified by reasoning +
-  a clean local build, not an actual green test on Vercel yet.
+  not reused from Next's own bundle). **Confirmed fixed** — "Pull polls"
+  (CFBD call + a Prisma write) succeeded on the live Vercel deploy after
+  this shipped.
 
 ### Sept 15 — Bill C's sheet becomes the SP+ source of record
 
