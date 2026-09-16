@@ -12,6 +12,16 @@ import { RunPanel } from "./RunPanel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · the yahngorithm" };
+// Without this, the /admin route (and the runScript server action it hosts —
+// see actions.ts) runs on Vercel's implicit default function duration, which
+// can be as short as 10s on Hobby. That's unrelated to runScript's own
+// 175s execFile timeout, so Vercel could kill a still-running pipeline
+// script well before the app's own timeout ever fires, surfacing an ugly
+// platform-level error instead of a clean handled result. 60s is a
+// conservative floor — bump it if Vercel's current plan ceiling allows more
+// and a slower script (pull-advanced, run-model, a Tuesday weekly step)
+// still doesn't finish in time.
+export const maxDuration = 60;
 
 function UsageBar({
   label,

@@ -10,8 +10,18 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // DATABASE_URL: Neon's POOLED (-pooler) connection string — what the app
+  // uses at runtime. On Vercel, concurrent serverless function instances
+  // each open their own connection; pooling (PgBouncer) is what keeps that
+  // from exhausting Postgres's direct connection limit under real traffic.
+  url       = env("DATABASE_URL")
+  // directUrl: Neon's DIRECT (non-pooled) connection string — migrations
+  // only (`prisma migrate deploy`/`dev`). Migration tooling's advisory
+  // locks and DDL don't play well through a transaction-mode pooler.
+  // Locally, both can point at the same direct URL — no pooling need with
+  // a single dev process.
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------- TEAM IDENTITY (build this first, get it right) ----------

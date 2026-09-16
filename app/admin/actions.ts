@@ -30,7 +30,11 @@ export async function runScript(
       {
         cwd: process.cwd(),
         env: process.env,
-        timeout: 175_000,
+        // Stay under page.tsx's maxDuration (60s) so a genuine timeout gets
+        // this function's own clean {ok:false, output} instead of Vercel
+        // abruptly killing the whole invocation first. Was 175_000 (fine on
+        // Render's persistent process — no platform-level duration cap).
+        timeout: 55_000,
         maxBuffer: 8 * 1024 * 1024,
       }
     );
