@@ -82,6 +82,23 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
   it, without even touching the rate-limited login form. Cheap fix
   (`openssl rand -hex 32`, one env var) that matters more now that the site
   is on a real, findable domain instead of an obscure `*.onrender.com` URL.
+- **Real bug, found after Render was shut off:** `/admin`'s "Run" buttons
+  were completely broken on Vercel — `spawn /var/task/node_modules/.bin/tsx
+  ENOENT`. `app/admin/actions.ts` spawns each pipeline script as a child
+  process (`execFile(tsx, [scriptPath])`), referencing files by a
+  runtime-built path string rather than a static import. That's invisible
+  to Vercel's build-time file tracer, which prunes anything it can't see a
+  reference to out of the serverless function bundle — so `tsx` itself
+  never made it into `/admin`'s deployed bundle at all. Never an issue on
+  Render (a persistent VM just has the whole repo on disk regardless of
+  what's statically imported). Fixed with `outputFileTracingIncludes` in
+  `next.config.mjs`, scoped to `/admin` — force-includes `tsx` + its
+  `esbuild` dependency, the Prisma client/engine, and `scripts/`/`lib/`
+  (the scripts' own source, re-parsed fresh by `tsx` in the child process,
+  not reused from Next's own bundle). **Confirm this actually fixed it**
+  by clicking a Run button again after the next deploy — local builds don't
+  reproduce Vercel's real bundling, so this was verified by reasoning +
+  a clean local build, not an actual green test on Vercel yet.
 
 ### Sept 15 — Bill C's sheet becomes the SP+ source of record
 
