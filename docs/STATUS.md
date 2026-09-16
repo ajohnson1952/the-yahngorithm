@@ -3,15 +3,17 @@
 Living snapshot. `README.md` = architecture, `docs/OPERATIONS.md` = how to run
 it during the season, `docs/CALIBRATION.md` = what the backtests found.
 
-## Where it stands (2026 season, week 2)
+## Where it stands (2026 season, week 3)
 
 Everything is built and deployed. The pipeline runs itself on GitHub Actions;
 the webapp is live on **Vercel** (the-yahngorithm.com) off `main`, migrated
 from Render Sept 16 — see the Sept 16 entry below. Data through 2018 is
 loaded for the backtests. **We're in "watch football and grade live" mode.**
 
-Week 1 graded (picks 2–1). Week 2 picks are live — see the Sept 8 entries below
-for the SP+ preseason-hold and the Bill C bridge that gate/release them.
+Week 1 graded (picks 2–1). Week 2 graded (picks 6–3). Week 3 picks are live
+(8 logged so far, games play Sept 19–20) — see the Sept 14–15 entries below
+for the SP+ source-of-record switch (Bill C's sheet, not CFBD) that governs
+when picks unlock each week.
 
 ## Needs you
 
@@ -166,6 +168,36 @@ for the SP+ preseason-hold and the Bill C bridge that gate/release them.
 - **Offset now anchors to week 1 always**, not "current week's CFBD overlap"
   — simpler code, and the band-width canary printed each run is a genuine
   divergence signal now (not conflated with "are we mid-bridge").
+- **Same-day audit caught two real bugs before they could bite:**
+  (1) `loadBillcRatings.ts`'s week-1 anchor had no guard against being
+  overwritten — running `load-billc --week 1` against an FBS-inclusive
+  sheet would've silently and *permanently* broken the offset for the rest
+  of the season (no recovery path once `pull-ratings` refuses to reclaim a
+  billc-owned row). Fixed: FBS teams are now always skipped when writing
+  week 1, full stop. (2) `generatePicks.ts`'s stale-SP+ hold message told
+  the operator to "run pull-ratings" to clear it — a dead end now, since
+  pull-ratings can't refresh a billc-owned team's SP+ at all; fixed to
+  point at `load-billc`. Also cleaned up leftover "bridge"/"until CFBD
+  catches up" doc-comment framing in `lib/ratingsFreshness.ts`, `tick.ts`,
+  and a README table that contradicted the (correct) description two
+  sections below it.
+
+### Sept 14 — spread pick sign display bug ("+-3")
+
+- **Bug (user-reported):** spread picks where the away side was actually
+  favored displayed as e.g. `AWAY +-3.5` on the picks page, board, and game
+  pages — a literal double sign. `pickSide()` in `lib/webData.ts` (and a
+  duplicate inline version in `app/game/[id]/page.tsx`) hardcoded a `+`
+  onto the away team's spread, assuming the away side is always the
+  underdog. True when `marketLine` (the home team's market margin) is
+  positive, wrong when it's negative — i.e. exactly the case where the away
+  team is favored, which literally happens most weeks.
+- **Fix:** derive the sign properly from `marketLine`'s own sign instead of
+  assuming a direction (mirrors `components/ui.tsx`'s `spreadStr`, which
+  the game page already used correctly for the *home* side — only the away
+  branch had the bug). Verified against 4 live picks in the DB with
+  negative `marketLine`: all four went from `AWAY +-3.5`-style garbage to
+  correct `AWAY -3.5`-style output.
 
 ### Sept 14–15 — per-team SP+ freshness gate + Yahn uses Bill C's backbone
 
