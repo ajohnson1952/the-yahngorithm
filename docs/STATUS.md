@@ -29,12 +29,11 @@ when picks unlock each week.
       (`docs/DEPLOY_VERCEL.md` has the full var list).
 - [x] `ADMIN_PASSWORD` — staying on the public default `2142` for now, by
       choice (Sept 15). Revisit if that ever needs to change.
-- [ ] **`ADMIN_SESSION_SECRET`** — still unset as of the Vercel migration
-      (Sept 16). Without it the admin cookie is a computable hash of just
-      `ADMIN_PASSWORD`, forgeable by anyone who knows/guesses it without
-      even hitting the rate-limited login form. Matters more now that the
-      site's on a real domain (the-yahngorithm.com) instead of an obscure
-      `*.onrender.com` URL. One env var: `openssl rand -hex 32`.
+- [x] **`ADMIN_SESSION_SECRET`** — set in Vercel prod env (Sept 16). Closes the
+      gap where the admin cookie was a computable hash of just `ADMIN_PASSWORD`,
+      forgeable without hitting the rate-limited login form. Existing admin
+      sessions were invalidated by the change (expected — cookie hash shifted),
+      re-login required once.
 - [ ] Decide re: Neon Free — the pipeline transfer fix landed (Sept 8), so the
       egress blocker is gone. Let a full week run, re-check `npm run neon-usage`
       / the `/admin` panel, then move both projects back to Free if transfer
