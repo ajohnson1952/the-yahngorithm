@@ -325,9 +325,12 @@ table only when **all** of these hold:
 2. The market spread is **within 20 points** — no blowout favorites (§2).
 3. A **second, independent signal agrees**:
    - SRS shows the same side, also ≥ 2.5 points (once SRS exists, ~week 3+), **or**
-   - a situational flag points the same way — a "hurts" flag (`short_week`,
-     `travel`, `lookahead`, `letdown`) on the team we're fading, or a "helps"
-     flag (`off_bye`, `revenge`) on the team we're backing.
+   - a situational flag points the same way — a "hurts" flag (`travel`,
+     `lookahead`, `letdown`) on the team we're fading, or the "helps" flag
+     (`revenge`) on the team we're backing. `short_week` and `off_bye` are
+     still shown on the board but no longer corroborate a pick — they graded
+     below break-even in backtesting (`short_week` corroboration ~39% ATS,
+     `off_bye` ~50%) and were dropped from this list.
 
 **Total pick**
 1. `|edge| ≥ 3.5` points (totals are noisier — higher bar).
