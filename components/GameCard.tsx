@@ -120,8 +120,8 @@ export function GameCard({ g, compact = false }: { g: GameView; compact?: boolea
                   <EdgeTag
                     edge={g.spreadEdge}
                     threshold={SPREAD_EDGE_THRESHOLD}
-                    overLabel="home"
-                    underLabel="away"
+                    overLabel="h"
+                    underLabel="a"
                   />
                 )}
               </span>
@@ -175,8 +175,8 @@ export function GameCard({ g, compact = false }: { g: GameView; compact?: boolea
                   <EdgeTag
                     edge={g.totalEdge}
                     threshold={TOTAL_EDGE_THRESHOLD}
-                    overLabel="over"
-                    underLabel="under"
+                    overLabel="o"
+                    underLabel="u"
                   />
                 )}
               </span>

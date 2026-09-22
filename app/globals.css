@@ -357,12 +357,20 @@ h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 26px 0 
 h2 { font-size: 15px; font-weight: 650; margin: 28px 0 12px; letter-spacing: -0.01em; }
 .subhead { color: var(--text-dim); font-size: 13px; margin-bottom: 22px; }
 
-/* ---------- section label ---------- */
+/* ---------- section label ----------
+   sticky right below the topbar (~57px: 56px min-height + 1px border) as
+   you scroll down a day/edge-grouped board — stays oriented on a long
+   slate the same way the sticky hour axis does on /watch-timeline. No
+   bounded-height scroll pane needed here (unlike that page) since the
+   board scrolls with the page itself, so sticky binds directly to the
+   real viewport — nothing forces this into its own scroll container. */
 .section-label {
   display: flex; align-items: center; gap: 10px;
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--text-faint);
-  margin: 26px 0 10px;
+  margin: 26px 0 10px; padding: 10px 0 8px;
+  position: sticky; top: 57px; z-index: 5;
+  background: var(--bg);
 }
 .section-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
