@@ -240,8 +240,8 @@ export function toWatchGame(
 
 // ---------- windowing ----------
 
-const GAME_DURATION_MS = 3.67 * 3_600_000; // ~3h40m — CFB's average broadcast length
-const CLUSTER_GAP_MS = 45 * 60_000; // kickoffs this close together share a window
+export const GAME_DURATION_MS = 3.67 * 3_600_000; // ~3h40m — CFB's average broadcast length
+export const CLUSTER_GAP_MS = 45 * 60_000; // kickoffs this close together share a window
 export const QUADBOX_SIZE = 4;
 
 export interface WatchWindow {

@@ -168,7 +168,10 @@ export default async function WatchPage({
         every point, ranked by projected competitiveness, pace, ranked-team
         stakes, and rivalries. Once games kick off it re-ranks on the live
         score (ESPN): a one-score game late jumps the board, a blowout drops
-        to the bench.
+        to the bench.{" "}
+        <a href="/watch-timeline" className="inline-link" style={{ color: "var(--blue)" }}>
+          Try the timeline view (prototype) →
+        </a>
       </p>
 
       {refreshActive && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { GameView } from "../lib/webData";
 import { GameCard } from "./GameCard";
 import { FLAG_LABEL } from "./ui";
@@ -41,10 +41,35 @@ function haystack(g: GameView): string {
     .toLowerCase();
 }
 
+const COMPACT_KEY = "yahn_compact";
+
 export function BoardView({ sections }: { sections: Section[] }) {
   const [q, setQ] = useState("");
   const [flag, setFlag] = useState<string | null>(null);
+  const [compact, setCompact] = useState(false);
   const query = q.trim().toLowerCase();
+
+  // per-viewer display preference — read once on mount (SSR always starts
+  // false, so there's a one-frame flash to the stored value; harmless).
+  useEffect(() => {
+    try {
+      setCompact(localStorage.getItem(COMPACT_KEY) === "1");
+    } catch {
+      /* private browsing / storage blocked — just stay non-compact */
+    }
+  }, []);
+
+  const toggleCompact = () => {
+    setCompact((c) => {
+      const next = !c;
+      try {
+        localStorage.setItem(COMPACT_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore — nothing to persist to */
+      }
+      return next;
+    });
+  };
 
   // flat, de-duped, kickoff-sorted list — used for search and the flag filter
   const allGames = useMemo(() => {
@@ -106,6 +131,14 @@ export function BoardView({ sections }: { sections: Section[] }) {
             <button type="button" onClick={() => setQ("")}>clear</button>
           </span>
         )}
+        <button
+          type="button"
+          className={`density-toggle${compact ? " on" : ""}`}
+          aria-pressed={compact}
+          onClick={toggleCompact}
+        >
+          Compact
+        </button>
       </div>
 
       {flagChips.length > 0 && (
@@ -138,7 +171,7 @@ export function BoardView({ sections }: { sections: Section[] }) {
         results.length > 0 ? (
           <section>
             {results.map((g) => (
-              <GameCard key={g.id} g={g} />
+              <GameCard key={g.id} g={g} compact={compact} />
             ))}
           </section>
         ) : (
@@ -152,7 +185,7 @@ export function BoardView({ sections }: { sections: Section[] }) {
           <section key={s.label}>
             <div className="section-label">{s.label}</div>
             {s.games.map((g) => (
-              <GameCard key={g.id} g={g} />
+              <GameCard key={g.id} g={g} compact={compact} />
             ))}
           </section>
         ))

@@ -48,7 +48,7 @@ function EdgeTag({
   );
 }
 
-export function GameCard({ g }: { g: GameView }) {
+export function GameCard({ g, compact = false }: { g: GameView; compact?: boolean }) {
   const homeWon =
     g.homeScore != null && g.awayScore != null && g.homeScore > g.awayScore;
   const awayWon =
@@ -80,6 +80,7 @@ export function GameCard({ g }: { g: GameView }) {
     g.picks.length && "pick",
     modelOnly && "model-only",
     g.pinned && "pinned",
+    compact && "compact",
   ]
     .filter(Boolean)
     .join(" ");
@@ -93,8 +94,9 @@ export function GameCard({ g }: { g: GameView }) {
           <TeamRow team={g.away} score={g.awayScore} won={awayWon} />
           <TeamRow team={g.home} score={g.homeScore} won={homeWon} />
           <div className="kick">
-            {meta.join(" · ")}
-            {modelOnly && <span className="kick-model"> · model only</span>}
+            {/* compact: just kickoff/Final, drop broadcast/venue/wind noise */}
+            {compact ? meta[0] : meta.join(" · ")}
+            {!compact && modelOnly && <span className="kick-model"> · model only</span>}
           </div>
         </div>
 
@@ -114,19 +116,31 @@ export function GameCard({ g }: { g: GameView }) {
                       : null
                   }
                 />
+                {compact && (
+                  <EdgeTag
+                    edge={g.spreadEdge}
+                    threshold={SPREAD_EDGE_THRESHOLD}
+                    overLabel="home"
+                    underLabel="away"
+                  />
+                )}
               </span>
-              <span className="mm-line">
-                <span className="mdl mono">
-                  model{" "}
-                  {g.modelSpreadSp != null ? signed(-g.modelSpreadSp) : "–"}
-                </span>
-              </span>
-              <EdgeTag
-                edge={g.spreadEdge}
-                threshold={SPREAD_EDGE_THRESHOLD}
-                overLabel="home"
-                underLabel="away"
-              />
+              {!compact && (
+                <>
+                  <span className="mm-line">
+                    <span className="mdl mono">
+                      model{" "}
+                      {g.modelSpreadSp != null ? signed(-g.modelSpreadSp) : "–"}
+                    </span>
+                  </span>
+                  <EdgeTag
+                    edge={g.spreadEdge}
+                    threshold={SPREAD_EDGE_THRESHOLD}
+                    overLabel="home"
+                    underLabel="away"
+                  />
+                </>
+              )}
             </>
           ) : g.modelSpreadSp != null ? (
             <>
@@ -157,18 +171,30 @@ export function GameCard({ g }: { g: GameView }) {
                   move={g.totalMove}
                   opened={g.totalOpen != null ? trim(g.totalOpen) : null}
                 />
+                {compact && (
+                  <EdgeTag
+                    edge={g.totalEdge}
+                    threshold={TOTAL_EDGE_THRESHOLD}
+                    overLabel="over"
+                    underLabel="under"
+                  />
+                )}
               </span>
-              <span className="mm-line">
-                <span className="mdl mono">
-                  model {g.modelTotal != null ? trim(g.modelTotal) : "–"}
-                </span>
-              </span>
-              <EdgeTag
-                edge={g.totalEdge}
-                threshold={TOTAL_EDGE_THRESHOLD}
-                overLabel="over"
-                underLabel="under"
-              />
+              {!compact && (
+                <>
+                  <span className="mm-line">
+                    <span className="mdl mono">
+                      model {g.modelTotal != null ? trim(g.modelTotal) : "–"}
+                    </span>
+                  </span>
+                  <EdgeTag
+                    edge={g.totalEdge}
+                    threshold={TOTAL_EDGE_THRESHOLD}
+                    overLabel="over"
+                    underLabel="under"
+                  />
+                </>
+              )}
             </>
           ) : g.modelTotal != null ? (
             <>
@@ -206,7 +232,7 @@ export function GameCard({ g }: { g: GameView }) {
               )}
             </span>
           ))}
-          {(g.flags.length > 0 || paceFlags.length > 0) && (
+          {!compact && (g.flags.length > 0 || paceFlags.length > 0) && (
             <span className="chips">
               {g.flags.map((f, i) => (
                 <FlagChip key={`f${i}`} flag={f} showTeam />

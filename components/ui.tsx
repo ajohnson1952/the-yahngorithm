@@ -181,30 +181,44 @@ export function signed(n: number): string {
   return n > 0 ? `+${trim(n)}` : trim(n);
 }
 
-/** all game times shown in US Central. */
+/** all game times shown in US Central.
+ *  Date and time are formatted SEPARATELY and joined with a fixed ", " —
+ *  combining both in one toLocaleString(..) call lets the ICU implementation
+ *  choose the joining grammar itself ("Sep 24, 6:30 PM" vs "Sep 24 at 6:30
+ *  PM"), which differs between Node's bundled ICU and a browser's, and
+ *  caused a real SSR/hydration mismatch on GameCard's kickoff line (Sept
+ *  2026). Formatting date-only and time-only sidesteps that entirely. */
 export function kickoffStr(iso: string): string {
   const d = new Date(iso);
-  return (
-    d.toLocaleString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: "America/Chicago",
-    }) + " CT"
-  );
-}
-
-/** short timestamp (for line/weather history), US Central. */
-export function stampCT(d: string | Date): string {
-  return new Date(d).toLocaleString("en-US", {
+  const date = d.toLocaleDateString("en-US", {
+    weekday: "short",
     month: "short",
     day: "numeric",
+    timeZone: "America/Chicago",
+  });
+  const time = d.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     timeZone: "America/Chicago",
   });
+  return `${date}, ${time} CT`;
+}
+
+/** short timestamp (for line/weather history), US Central. Same
+ *  date/time-separated approach as kickoffStr() — see its comment. */
+export function stampCT(d: string | Date): string {
+  const dt = new Date(d);
+  const date = dt.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "America/Chicago",
+  });
+  const time = dt.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Chicago",
+  });
+  return `${date}, ${time}`;
 }
 
 /** betting-style short name for tight spots: the stored abbreviation, else a

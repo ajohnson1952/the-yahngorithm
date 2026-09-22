@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Nav } from "../components/Nav";
+import { BottomNav } from "../components/BottomNav";
 
 export const metadata: Metadata = {
   title: "the yahngorithm",
@@ -31,6 +32,7 @@ export default function RootLayout({
           </div>
         </header>
         <main className="wrap">{children}</main>
+        <BottomNav />
         <Analytics />
         {cfBeacon && (
           <script
