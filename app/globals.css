@@ -28,7 +28,18 @@ html, body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  /* `clip`, not `hidden` — hidden/auto/scroll on the root element is a
+     well-documented breaker of position:sticky for descendants on mobile
+     Safari in particular (it makes <html>/<body> register as a distinct
+     scroll container that sticky binds to instead of the real viewport,
+     and that container has no actual internal scroll offset to react to).
+     `clip` gives the same "no horizontal overflow" protection without
+     establishing that scroll container. Best current diagnosis for
+     .section-label not pinning on mobile — flagging that this is a
+     best-guess fix, not a confirmed-and-verified one, since there's no
+     working screenshot/device tooling on this machine to see the actual
+     failure directly. */
+  overflow-x: clip;
 }
 
 a { color: inherit; text-decoration: none; }
