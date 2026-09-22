@@ -42,22 +42,62 @@ a CFBD/Odds monthly-quota exhaustion that hit the same day.
 - [ ] Apply the line-movement-arrow fix + the post-kickoff live-lines fix to
       **Cavepicks** (`docs/LINE_MOVEMENT_ARROWS.md`; the live-lines bug is the
       same one described in the Sept 4 entry).
-- [ ] **Check CFBD's real monthly plan limit** on your account page — the
-      Tuesday Sept 22 weekly pull hit `429 {"message":"Monthly call quota
-      exceeded"}` from CFBD itself at only 728 recorded calls, well under the
-      `CFBD_MONTHLY_BUDGET = 1000` constant `/admin`'s dashboard uses
-      (`lib/webData.ts`). That constant is evidently wrong (too high) for
-      your actual key/plan, which means the budget bar will keep looking
-      healthy right up until the real wall. Once you know the real number,
-      update the constant so the dashboard warns before this happens again.
-      See the Sept 22 entry below.
-- [ ] Odds API credits ran down to 13 (below the 15-credit floor) on Sept 22
-      — `pull-lines`'s own backstop will auto-skip real pulls for the rest of
-      the month, so line-shopping data on the board will go stale until the
-      Oct 1 reset. No action needed (the safety net is working as designed),
-      just a heads-up that live line data will lag for ~8 days.
+- [x] **CFBD + Odds hit real limits Sept 22** (CFBD monthly quota exhausted,
+      Odds down to 13 credits) — fixed same day: rotated both keys, and
+      `/admin`'s CFBD bar now tracks the exact `x-calllimit-remaining`
+      response header instead of a hardcoded (and wrong) 1000 constant, same
+      pattern the Odds side already used. See the Sept 22 entries below.
+- [ ] Confirm the new `CFBD_API_KEY` / `ODDS_API_KEY` are updated in **all
+      three** places, not just local `.env` (confirmed working locally,
+      both keys tested live Sept 22): GitHub repo Settings → Secrets and
+      variables → Actions, and Vercel Project Settings → Environment
+      Variables (Production). Local `.env` alone doesn't fix the GitHub
+      Actions tick or `/admin`'s "Run" buttons in prod.
 
 ## Built this cycle
+
+### Sept 22 (later) — corrected week 4 SP+, rotated both API keys, exact CFBD quota tracking
+
+Follow-up to the entry directly below, same day:
+
+- **The first week-4 `load-billc` was a false alarm** — Bill C's Google Sheet
+  hadn't actually re-published yet; the "fresh" export was byte-identical to
+  week 3 (confirmed against git history). The real week-4 sheet arrived
+  later: 767/769 common teams show genuine movement (Ohio State overtook
+  Georgia for #1, 81.8 vs 80.3). Also arrived as a raw spreadsheet paste
+  missing its header row this time — `loadBillcRatings.ts`'s parser assumes
+  row 1 is a header and would have silently dropped the new #1 team. Caught
+  and fixed before loading.
+- **5 of the 6 week-4 picks had been generated off the bad (week-3-repeat)
+  data** before the correction landed. All 5 games were still in the future
+  (earliest kickoff Sept 26) — deleted them and re-ran `generate-picks`
+  against the corrected numbers. 4 re-qualified (same sides, refined edges);
+  1 didn't re-qualify. This is exactly the failure mode the Sept 15
+  Bill-C-primary switch was built to prevent, just from the upload side
+  instead of the CFBD-freshness side — worth remembering that "the sheet
+  changed" still needs a sanity check (diff against the last load) before
+  trusting it blind.
+- **Rotated both `CFBD_API_KEY` and `ODDS_API_KEY`** to fresh keys to ride
+  out the rest of the month. Both tested live (direct `curl` against each
+  API, outside the app) and confirmed working.
+- **CFBD budget tracking now exact, not estimated.** Found CFBD returns the
+  real remaining quota via an `x-calllimit-remaining` response header on
+  *every* response, success or 429 — mirrored the Odds API's existing exact-
+  tracking pattern (`lib/apiUsage.ts`, `lib/cfbd.ts`): `/admin`'s CFBD bar
+  now shows the real remaining count, with the bar's total inferred as
+  calls-so-far + remaining instead of the hardcoded (and wrong)
+  `CFBD_MONTHLY_BUDGET = 1000`. Also stopped `cfbdGet()` from burning 4
+  retries with backoff on a quota-exhausted 429 (`remaining === 0`) — it's
+  never transient, so it now fails fast. Verified end-to-end: ran
+  `pull-rankings` against the new key, confirmed `ApiUsage.lastRemaining`
+  landed correctly in the DB.
+  - **Known caveat, self-resolving:** the `calls` counter is a plain monthly
+    increment that doesn't know a key rotation happened, so it still
+    includes calls made against the *old* key. Until the row resets next
+    month, the bar's inferred *total* will look inflated (counts pre-
+    rotation calls that don't apply to the new key's quota) — but
+    `cfbdRemaining` itself is exact regardless, and that's the number that
+    actually prevents hitting the wall again.
 
 ### Sept 22 — load-billc week 4 + CFBD monthly quota exhausted + Odds credits low
 
