@@ -53,6 +53,29 @@ a CFBD/Odds monthly-quota exhaustion that hit the same day.
 
 ## Built this cycle
 
+### Sept 22 (even later) — rotating a budget-tracked key needs a manual reset too
+
+Right after rotating `ODDS_API_KEY`, the `/admin` panel still showed Odds as
+critical. Root cause: `pullLines.ts`'s own safety floor (`ODDS_FLOOR = 15`,
+line ~179) reads the *stored* `ApiUsage.lastRemaining` — still `13`, from the
+now-dead old key — and skips the call **before ever hitting the API**, so it
+can never get a fresh reading from the new key to prove the old warning is
+stale. A self-inflicted deadlock: the only way to learn the new key is fine
+is to make a real call, and the guard exists specifically to prevent making
+that call. Fixed by manually clearing `ApiUsage.lastRemaining` to `null` for
+`odds` this month, then ran `pull-lines -- --type daily` to confirm — 498
+credits remaining on the new key.
+**Operational note for next time:** rotating either budget-tracked key
+(`CFBD_API_KEY` or `ODDS_API_KEY`) should also clear that api's
+`ApiUsage.lastRemaining` for the current month, or the next real pull will
+either wrongly self-skip (Odds' floor guard) or just display a misleadingly
+low number until a fresh reading lands. CFBD has no equivalent floor guard
+(`cfbdGet()` just tries and fails), so only Odds can actually deadlock this
+way — CFBD's only symptom is the inflated-total cosmetic issue noted below,
+which resolves itself without intervention. Not automated (would need a
+schema change to fingerprint which key produced a given reading) since key
+rotation is rare enough that a one-line manual fix is fine.
+
 ### Sept 22 (later) — corrected week 4 SP+, rotated both API keys, exact CFBD quota tracking
 
 Follow-up to the entry directly below, same day:
