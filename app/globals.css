@@ -554,6 +554,12 @@ a.card:hover .team-name { color: var(--blue); }
 .edge {
   font-family: var(--mono); font-weight: 700; font-size: 13px;
   padding: 1px 7px; border-radius: 6px; align-self: flex-start; margin-top: 6px;
+  /* .mm sets overflow-wrap:anywhere for long team names elsewhere in the
+     card, but that's inherited by this short "+2.9 home" label too — once
+     squeezed for room (compact mode folds it onto the market-line instead
+     of its own row), the browser was breaking it mid-word instead of just
+     letting it sit on one line. nowrap overrides that for this element. */
+  white-space: nowrap;
 }
 .edge.big-over { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); }
 .edge.big-under { background: color-mix(in srgb, var(--red) 18%, transparent); color: var(--red); }
