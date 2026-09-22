@@ -47,12 +47,9 @@ a CFBD/Odds monthly-quota exhaustion that hit the same day.
       `/admin`'s CFBD bar now tracks the exact `x-calllimit-remaining`
       response header instead of a hardcoded (and wrong) 1000 constant, same
       pattern the Odds side already used. See the Sept 22 entries below.
-- [ ] Confirm the new `CFBD_API_KEY` / `ODDS_API_KEY` are updated in **all
-      three** places, not just local `.env` (confirmed working locally,
-      both keys tested live Sept 22): GitHub repo Settings → Secrets and
-      variables → Actions, and Vercel Project Settings → Environment
-      Variables (Production). Local `.env` alone doesn't fix the GitHub
-      Actions tick or `/admin`'s "Run" buttons in prod.
+- [x] New `CFBD_API_KEY` / `ODDS_API_KEY` confirmed in all three places
+      (Sept 22): local `.env`, GitHub repo secrets, and Vercel Production
+      env vars.
 
 ## Built this cycle
 
