@@ -3,17 +3,18 @@
 Living snapshot. `README.md` = architecture, `docs/OPERATIONS.md` = how to run
 it during the season, `docs/CALIBRATION.md` = what the backtests found.
 
-## Where it stands (2026 season, week 3)
+## Where it stands (2026 season, week 4)
 
 Everything is built and deployed. The pipeline runs itself on GitHub Actions;
 the webapp is live on **Vercel** (the-yahngorithm.com) off `main`, migrated
 from Render Sept 16 — see the Sept 16 entry below. Data through 2018 is
 loaded for the backtests. **We're in "watch football and grade live" mode.**
 
-Week 1 graded (picks 2–1). Week 2 graded (picks 6–3). Week 3 picks are live
-(8 logged so far, games play Sept 19–20) — see the Sept 14–15 entries below
-for the SP+ source-of-record switch (Bill C's sheet, not CFBD) that governs
-when picks unlock each week.
+Week 1 graded (2–1). Week 2 graded (6–3). Week 3 mostly graded (1–2, 5 picks
+still pending as of Sept 22). Week 4 picks are live (5 logged) — see the
+Sept 14–15 entries below for the SP+ source-of-record switch (Bill C's sheet,
+not CFBD) that governs when picks unlock each week, and the Sept 22 entry for
+a CFBD/Odds monthly-quota exhaustion that hit the same day.
 
 ## Needs you
 
@@ -41,8 +42,62 @@ when picks unlock each week.
 - [ ] Apply the line-movement-arrow fix + the post-kickoff live-lines fix to
       **Cavepicks** (`docs/LINE_MOVEMENT_ARROWS.md`; the live-lines bug is the
       same one described in the Sept 4 entry).
+- [ ] **Check CFBD's real monthly plan limit** on your account page — the
+      Tuesday Sept 22 weekly pull hit `429 {"message":"Monthly call quota
+      exceeded"}` from CFBD itself at only 728 recorded calls, well under the
+      `CFBD_MONTHLY_BUDGET = 1000` constant `/admin`'s dashboard uses
+      (`lib/webData.ts`). That constant is evidently wrong (too high) for
+      your actual key/plan, which means the budget bar will keep looking
+      healthy right up until the real wall. Once you know the real number,
+      update the constant so the dashboard warns before this happens again.
+      See the Sept 22 entry below.
+- [ ] Odds API credits ran down to 13 (below the 15-credit floor) on Sept 22
+      — `pull-lines`'s own backstop will auto-skip real pulls for the rest of
+      the month, so line-shopping data on the board will go stale until the
+      Oct 1 reset. No action needed (the safety net is working as designed),
+      just a heads-up that live line data will lag for ~8 days.
 
 ## Built this cycle
+
+### Sept 22 — load-billc week 4 + CFBD monthly quota exhausted + Odds credits low
+
+Two unrelated things surfaced the same morning:
+
+- **`load-billc` week 4.** Bill C's data arrived pasted from a spreadsheet
+  (row numbers, tab-separated, some cells wrapping across lines) rather than
+  as `data/billc/latest.csv`'s plain-CSV format — reconstructed it (only
+  Team/SP+/Off/Def matter to the loader; Conference/Record are unused, so the
+  reconstruction didn't need to be exact on those). Verified against the
+  prior committed file: all 769 common teams matched, only `Record` differed
+  (559 teams — expected, more games played); **SP+/Off/Def were numerically
+  identical to the Sept 14 load for every team** — worth confirming with the
+  source that his sheet's ratings actually moved, since only the record
+  column changing is a little suspicious. Loaded anyway since `spPlusSource:
+  'billc'` unconditionally satisfies both the week-level and per-team
+  freshness gates regardless of whether the number itself moved (see
+  `teamHasMoved()`) — 248 rows written, week 4's freshness hold lifted, 5
+  picks logged on the next `run-model && generate-picks`.
+- **The Tuesday 8am CT weekly tick (run #969) failed.** Root cause: CFBD
+  returned `429 {"message":"Monthly call quota exceeded"}` on `/ratings/srs`,
+  `/stats/season/advanced`, and `/games` — confirmed directly against the API
+  (not a transient rate limit; retrying didn't clear it). `tick.ts`'s
+  `hardFail` logic treats *any* failure during the `weekly` group as a hard
+  fail by design (unlike every other group, which tolerates a transient
+  data-pull outage and retries next tick) — one CFBD-quota 429 was enough to
+  take the whole scheduled run red. The rest of the chain (Kalshi, flags,
+  model, picks, grading) completed fine; only schedule/ratings/advanced-stats
+  refresh was blocked. Re-ran `pull-ratings`/`pull-advanced`/`pull-games`
+  standalone afterward — same 429, confirming it's a real monthly cap, not a
+  transient blip. **The `/admin` CFBD budget bar never would have warned
+  about this** — it showed 728/1000 (a comfortable 73%) because
+  `CFBD_MONTHLY_BUDGET = 1000` in `lib/webData.ts` doesn't match CFBD's
+  actual enforced limit on this key. Needs a real number from the CFBD
+  account page — see "Needs you".
+- **Odds API down to 13 credits**, below `pullLines.ts`'s own 15-credit
+  floor — its existing backstop will now auto-skip real pulls (not opens,
+  which were already 0-cost via the once-only guard) for the rest of
+  September. Working as designed; just means line-shopping data goes stale
+  until the Oct 1 reset.
 
 ### Sept 16 — admin budget panel: split the misleading shared "last updated" timestamp
 
