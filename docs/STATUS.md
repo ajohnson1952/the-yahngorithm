@@ -53,6 +53,25 @@ a CFBD/Odds monthly-quota exhaustion that hit the same day.
 
 ## Built this cycle
 
+### Sept 22/23 — nav/board refresh: bottom tab bar, compact view, watch timeline, and a long-standing mobile sticky-nav bug
+
+A round of UI work (bottom tab bar, pin-button touch target, loading
+skeletons, compact board density toggle, a `/watch-timeline` Gantt-chart
+prototype — see individual commits for detail) surfaced a real, previously
+undiscovered bug along the way: **the top bar's `position: sticky` had never
+actually worked on mobile**, full stop — it scrolled away with the page like
+any normal element, not just the newly-added sticky `.section-label` day/edge
+headers that prompted the investigation. Root cause: `html, body` had
+`overflow-x: hidden` set globally. That's a well-documented breaker of
+`position: sticky` for descendants on mobile Safari specifically — setting
+non-`visible` overflow on the root elements can make them register as their
+own scroll container that sticky elements bind to instead of the real page
+viewport, one with no actual scroll offset to react to, so sticky silently
+never engages. Switched to `overflow-x: clip` (blocks horizontal overflow the
+same way, without that side effect). Confirmed fixed live on mobile — the top
+bar now pins correctly for the first time, alongside the new section-label
+headers it was found while debugging.
+
 ### Sept 22 (even later) — rotating a budget-tracked key needs a manual reset too
 
 Right after rotating `ODDS_API_KEY`, the `/admin` panel still showed Odds as
