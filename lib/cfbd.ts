@@ -27,15 +27,25 @@ export function requireCfbdKey(): string {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Best-effort call counter for the /admin budget panel. CFBD has no quota
-// endpoint, so this is the only signal we have — process-scoped (each
-// script run is one process), read via getCfbdCallCount() and persisted
-// by the caller (see lib/apiUsage.ts) right before it disconnects.
+// Best-effort call counter for the /admin budget panel — a lower bound
+// (undercounts on a failed run), process-scoped (each script run is one
+// process), read via getCfbdCallCount() and persisted by the caller (see
+// lib/apiUsage.ts) right before it disconnects.
 let cfbdCallCount = 0;
 export const getCfbdCallCount = () => cfbdCallCount;
 
+// CFBD sends back its own real quota via an `x-calllimit-remaining` response
+// header (seen on both success and a quota-exceeded 429) — captured from the
+// most recent response of the most recent cfbdGet() call in this process,
+// same idea as the Odds API's `x-requests-remaining`. Exact, unlike the call
+// counter above.
+let cfbdLastRemaining: number | null = null;
+export const getCfbdLastRemaining = () => cfbdLastRemaining;
+
 /** GET a CFBD endpoint. `path` is like "/ratings/sp?year=2026".
- *  Retries transient errors (429, 5xx) a few times with backoff. */
+ *  Retries transient errors (429, 5xx) a few times with backoff — except a
+ *  monthly-quota 429 (remaining=0), which is never transient and would just
+ *  waste ~4 attempts of backoff before failing anyway. */
 export async function cfbdGet<T = unknown>(path: string, attempts = 4): Promise<T> {
   const key = requireCfbdKey();
   const url = path.startsWith("http") ? path : `${CFBD_BASE}${path}`;
@@ -52,11 +62,19 @@ export async function cfbdGet<T = unknown>(path: string, attempts = 4): Promise<
       await sleep(500 * 2 ** i);
       continue;
     }
+    const remainingHeader = res.headers.get("x-calllimit-remaining");
+    if (remainingHeader != null && Number.isFinite(Number(remainingHeader))) {
+      cfbdLastRemaining = Number(remainingHeader);
+    }
     if (res.ok) {
       cfbdCallCount++;
       return (await res.json()) as T;
     }
     lastErr = `${res.status} ${res.statusText}`;
+    if (res.status === 429 && cfbdLastRemaining === 0) {
+      lastErr = "429 Monthly call quota exceeded";
+      break; // a real monthly cap, not transient — don't burn retries on it
+    }
     if (res.status !== 429 && res.status < 500) break; // client error — don't retry
     await sleep(500 * 2 ** i);
   }

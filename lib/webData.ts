@@ -699,12 +699,21 @@ async function buildGradeBoard(season: number) {
   return { rows, gamesGraded: byGame.size, closeMaeAll };
 }
 
+// Fallback only — used before CFBD has ever told us a real remaining count
+// this month (e.g. the first call after a monthly reset). Once
+// cfbdRemaining is known, the displayed budget is inferred from real data
+// instead (see getApiUsage): calls-so-far + remaining. That inferred number
+// replaced this constant as the source of truth after Sept 22, 2026, when
+// this hardcoded 1000 turned out to be well above CFBD's actual enforced
+// cap — the dashboard looked healthy (728/1000) the same day CFBD started
+// returning "Monthly call quota exceeded".
 const CFBD_MONTHLY_BUDGET = 1000;
 const ODDS_MONTHLY_BUDGET = 500;
 
 export interface ApiUsageView {
   cfbdCalls: number;
-  cfbdBudget: number;
+  cfbdBudget: number; // inferred from real data once cfbdRemaining is known
+  cfbdRemaining: number | null;
   cfbdUpdatedAt: Date | null;
   oddsUsed: number; // budget - remaining, when we know remaining
   oddsRemaining: number | null;
@@ -780,7 +789,12 @@ export async function getApiUsage(): Promise<ApiUsageView> {
   const odds = rows.find((r) => r.api === "odds");
   return {
     cfbdCalls: cfbd?.calls ?? 0,
-    cfbdBudget: CFBD_MONTHLY_BUDGET,
+    // Real cap is unknown (CFBD has no "your plan limit is N" endpoint), but
+    // remaining IS exact once we've seen it — so infer the total from the
+    // one data point we trust: calls made this month + what's left right now.
+    cfbdBudget:
+      cfbd?.lastRemaining != null ? cfbd.calls + cfbd.lastRemaining : CFBD_MONTHLY_BUDGET,
+    cfbdRemaining: cfbd?.lastRemaining ?? null,
     cfbdUpdatedAt: cfbd?.updatedAt ?? null,
     oddsUsed: odds?.lastRemaining != null ? ODDS_MONTHLY_BUDGET - odds.lastRemaining : odds?.calls ?? 0,
     oddsRemaining: odds?.lastRemaining ?? null,

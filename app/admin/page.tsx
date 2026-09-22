@@ -257,7 +257,11 @@ export default async function AdminPage() {
           label="CFBD"
           used={usage.cfbdCalls}
           budget={usage.cfbdBudget}
-          detail="Best-effort count of successful calls this calendar month (CFBD has no quota endpoint, so a failed run may undercount slightly). Ratings ~3, games ~3, polls ~1, grading a few."
+          detail={
+            usage.cfbdRemaining != null
+              ? `${usage.cfbdRemaining} calls remaining this month, from CFBD's own \`x-calllimit-remaining\` header — exact. The bar's total (${usage.cfbdBudget.toLocaleString()}) is inferred as calls-so-far + that remaining count, not a fixed plan number CFBD publishes anywhere.`
+              : "No remaining-count reading yet this month (CFBD only sends it in response headers) — showing a best-effort call count against a rough guessed budget until the next successful call reports it."
+          }
           updatedAt={usage.cfbdUpdatedAt}
         />
         <UsageBar
