@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { haptic } from "../lib/haptics";
 
 // Pull-to-refresh for the iOS home-screen (standalone) app, which has no
 // browser chrome and no native pull-to-refresh. Safari tabs already have
@@ -13,7 +14,7 @@ import { useRouter } from "next/navigation";
 // per-frame JS positioning (an earlier fixed-position badge jittered against
 // the bounce). JS only watches how far past the top you've pulled (iOS
 // reports a negative scrollY while rubber-banding), flips the arrow once
-// it's far enough, and on release runs router.refresh(). While that's in
+// it's far enough (with a haptic tick), and on release runs router.refresh(). While that's in
 // flight an iOS-style activity spinner shows in the top bar's empty right
 // side (and replaces the arrow in the well as the bounce settles).
 
@@ -55,7 +56,14 @@ export function PullToRefresh() {
 
   useEffect(() => {
     if (!enabled) return;
-    const setArmed = (on: boolean) => well.current?.classList.toggle("armed", on);
+    // one haptic tick each time the pull crosses into "release to refresh" —
+    // the same moment native iOS pull-to-refresh ticks
+    let armed = false;
+    const setArmed = (on: boolean) => {
+      if (on && !armed) haptic();
+      armed = on;
+      well.current?.classList.toggle("armed", on);
+    };
     const onStart = (e: TouchEvent) => {
       tracking.current = window.scrollY <= 0 && e.touches.length === 1;
       maxPull.current = 0;
