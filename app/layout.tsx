@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Nav } from "../components/Nav";
 import { BottomNav } from "../components/BottomNav";
+import { PullToRefresh } from "../components/PullToRefresh";
 
 export const metadata: Metadata = {
   title: "the yahngorithm",
@@ -46,6 +47,7 @@ export default function RootLayout({
         </header>
         <main className="wrap">{children}</main>
         <BottomNav />
+        <PullToRefresh />
         <Analytics />
         {cfBeacon && (
           <script

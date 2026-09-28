@@ -19,6 +19,7 @@
 //   weekly     the full Tuesday heavy pull                   Tue ~9am CT, once
 //   sunday     pull-advanced + compute-trends                Sun ~10am CT, once
 //   weather    weather forecast + weather flags              ~6am / ~4pm CT
+//   (polls)    pull-rankings, until the new AP poll lands    Sun 3/6/9pm, Mon 6/10am CT
 // ============================================================
 
 import { execFileSync } from "child_process";
@@ -129,10 +130,36 @@ async function main() {
     }
   }
 
+  // Polls: AP + Coaches release Sunday ~1pm CT, but the weekly pull that used
+  // to be their only pickup is Tuesday — a day and a half with last week's
+  // ranks on the board. Try a few fixed slots Sun afternoon → Mon morning
+  // (≤ 5 CFBD calls in a week the poll is late, usually 1) and stop once this
+  // week's AP poll is stored. CFBD's calendar rolls to the new week Monday
+  // ~2am CT, and the Sunday poll is labeled with that NEW week — so on Sunday
+  // the target is current week + 1. An empty response (not out yet) writes
+  // nothing, so a too-early try is harmless.
+  let rankingsArgs: string[] | null = null;
+  const pollSlot =
+    ((dow === 0 && [15, 18, 21].includes(hour)) || (dow === 1 && [6, 10].includes(hour))) &&
+    minute < 30;
+  if (!run.weekly && !onlyArg && pollSlot) {
+    try {
+      const { season, week } = await getCurrentSeasonWeek();
+      const target = dow === 0 ? week + 1 : week;
+      const have = await prisma.ranking.findFirst({
+        where: { season, poll: "ap", week: target },
+        select: { week: true },
+      });
+      if (!have) rankingsArgs = ["--season", String(season), "--week", String(target)];
+    } catch {
+      /* calendar/DB hiccup — the Tuesday weekly pull still covers it */
+    }
+  }
+
   const w = run.weekly;
   const steps: { name: string; args: string[]; on: boolean }[] = [
     { name: "pull-ratings", args: [], on: w || ratingsCatchup },
-    { name: "pull-rankings", args: [], on: w },
+    { name: "pull-rankings", args: w ? [] : rankingsArgs ?? [], on: w || rankingsArgs != null },
     { name: "pull-advanced", args: [], on: w || run.sunday },
     { name: "pull-games", args: [], on: run.scores || w },
     { name: "pull-lines", args: ["--type", run.lines ? "daily" : "open"], on: run.lines || w },

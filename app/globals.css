@@ -1146,3 +1146,22 @@ tr:hover td { background: var(--panel); }
 @media (prefers-reduced-motion: reduce) {
   .page-fade { animation: none; }
 }
+
+/* ---------- pull-to-refresh (home-screen app only, components/PullToRefresh) ----------
+   a small round badge that slides down from under the top bar as you pull. */
+.ptr {
+  position: fixed; left: 50%; z-index: 40;
+  top: calc(env(safe-area-inset-top, 0px) + 60px);
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--panel-2); border: 1px solid var(--border-bright);
+  color: var(--text); font-size: 16px; line-height: 1;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+.ptr-icon { display: inline-block; transition: transform 0.12s ease-out; }
+.ptr.spinning .ptr-icon { animation: ptr-spin 0.8s linear infinite; }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .ptr.spinning .ptr-icon { animation: none; }
+}
