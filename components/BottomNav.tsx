@@ -60,6 +60,8 @@ const TABS = [
 const MORE_LINKS = [
   { href: "/guide", label: "Guide" },
   { href: "/admin", label: "Admin" },
+  // TEMP — remove with app/haptics-test once haptics are settled
+  { href: "/haptics-test", label: "Haptics test" },
 ];
 
 const isActive = (path: string, href: string) =>
