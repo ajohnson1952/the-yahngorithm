@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { togglePin } from "../app/actions";
-import { haptic } from "../lib/haptics";
+import { HapticToggle } from "./HapticToggle";
 
 export function PinButton({
   gameId,
@@ -18,11 +18,8 @@ export function PinButton({
   const [busy, start] = useTransition();
   const router = useRouter();
 
-  const toggle = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const toggle = () => {
     const next = !on;
-    haptic();
     setOn(next); // optimistic
     start(async () => {
       const res = await togglePin(gameId);
@@ -32,15 +29,16 @@ export function PinButton({
   };
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
+    // a switch under the finger so iPhones tick — see HapticToggle
+    <HapticToggle
+      checked={on}
+      onChange={toggle}
       disabled={busy}
-      aria-pressed={on}
+      label={on ? "Unpin this game" : "Pin this game"}
       title={on ? "Unpin" : "Pin this game"}
       className={`pin-btn${on ? " on" : ""}${large ? " lg" : ""}`}
     >
       {on ? "★" : "☆"}
-    </button>
+    </HapticToggle>
   );
 }

@@ -1,27 +1,18 @@
 // ============================================================
-// Haptic tick — client-only, best-effort, silent where unsupported.
+// Haptic tick — Android only (the Vibration API). Silent elsewhere.
 // ============================================================
-// Android/Chrome: the Vibration API. iOS Safari has no Vibration API, but
-// since iOS 18 toggling an <input type="checkbox" switch> plays the system
-// "switch" haptic — so we click a throwaway hidden switch (the same trick the
-// small `ios-haptics` libraries use). It only fires in response to a user
-// touch; from a timer it's just a no-op.
+// iOS web has no Vibration API, and it ignores programmatic tricks: clicking
+// a hidden <input switch> from script plays nothing (tested on iOS 18.7,
+// standalone, five variants). Only a real finger on a switch ticks — which
+// is what components/HapticToggle.tsx builds its controls around. Use that
+// for anything tappable; this is just the Android half.
 // ============================================================
 
 export function haptic(): void {
-  if (typeof window === "undefined") return;
   try {
-    if (typeof navigator.vibrate === "function" && navigator.vibrate(10)) return;
-    const label = document.createElement("label");
-    label.ariaHidden = "true";
-    label.style.display = "none";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.setAttribute("switch", "");
-    label.appendChild(input);
-    document.head.appendChild(label);
-    label.click();
-    label.remove();
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(10);
+    }
   } catch {
     /* no haptics here — fine */
   }

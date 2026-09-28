@@ -14,7 +14,9 @@ import { haptic } from "../lib/haptics";
 // per-frame JS positioning (an earlier fixed-position badge jittered against
 // the bounce). JS only watches how far past the top you've pulled (iOS
 // reports a negative scrollY while rubber-banding), flips the arrow once
-// it's far enough (with a haptic tick), and on release runs router.refresh(). While that's in
+// it's far enough, and on release runs router.refresh(). (Android vibrates at
+// that moment; iOS web can't tick on a drag — only a finger on a real switch,
+// see HapticToggle.) While that's in
 // flight an iOS-style activity spinner shows in the top bar's empty right
 // side (and replaces the arrow in the well as the bounce settles).
 
@@ -56,8 +58,8 @@ export function PullToRefresh() {
 
   useEffect(() => {
     if (!enabled) return;
-    // one haptic tick each time the pull crosses into "release to refresh" —
-    // the same moment native iOS pull-to-refresh ticks
+    // one tick each time the pull crosses into "release to refresh" (where
+    // native iOS ticks) — lands on Android only, see lib/haptics.ts
     let armed = false;
     const setArmed = (on: boolean) => {
       if (on && !armed) haptic();

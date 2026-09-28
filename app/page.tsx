@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
 import { getWeekBoard, getPinnedGameIds } from "../lib/webData";
 import { BoardView } from "../components/BoardView";
-import { HapticSegmented } from "../components/HapticSegmented";
+import { SortSegments } from "../components/SortSegments";
 
 // The page itself still renders per request (it reads ?week=/?sort= and the
 // yahn_uid cookie), but the expensive part — getWeekBoard's queries — is cached
@@ -157,27 +157,40 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             ↩ this week ({thisWeek})
           </Link>
         )}
-        <HapticSegmented className="sort-toggle" aria-label="Sort">
-          <Link
-            href={qs({ week: sp.week ? week : undefined })}
-            className={!byEdge && !pinnedOnly ? "on" : ""}
-          >
-            <span className="wide-only">By </span>kickoff
-          </Link>
-          <Link
-            href={qs({ week: sp.week ? week : undefined, sort: "edge" })}
-            className={byEdge ? "on" : ""}
-          >
-            <span className="wide-only">By </span>edge
-          </Link>
-          <Link
-            href={qs({ week: sp.week ? week : undefined, sort: "pinned" })}
-            className={pinnedOnly ? "on" : ""}
-            aria-label="Pinned games"
-          >
-            ★<span className="wide-only"> Pinned</span>
-          </Link>
-        </HapticSegmented>
+        <SortSegments
+          items={[
+            {
+              href: qs({ week: sp.week ? week : undefined }),
+              on: !byEdge && !pinnedOnly,
+              label: "Sort by kickoff",
+              children: (
+                <>
+                  <span className="wide-only">By </span>kickoff
+                </>
+              ),
+            },
+            {
+              href: qs({ week: sp.week ? week : undefined, sort: "edge" }),
+              on: byEdge,
+              label: "Sort by edge",
+              children: (
+                <>
+                  <span className="wide-only">By </span>edge
+                </>
+              ),
+            },
+            {
+              href: qs({ week: sp.week ? week : undefined, sort: "pinned" }),
+              on: pinnedOnly,
+              label: "Pinned games",
+              children: (
+                <>
+                  ★<span className="wide-only"> Pinned</span>
+                </>
+              ),
+            },
+          ]}
+        />
       </div>
 
       {pinnedOnly && sections.length === 0 && (

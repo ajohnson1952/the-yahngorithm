@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { GameView } from "../lib/webData";
 import { GameCard } from "./GameCard";
 import { FLAG_LABEL } from "./ui";
-import { haptic } from "../lib/haptics";
+import { HapticToggle } from "./HapticToggle";
 
 type Section = { label: string; games: GameView[] };
 
@@ -65,7 +65,6 @@ export function BoardView({ sections }: { sections: Section[] }) {
   }, []);
 
   const toggleCompact = () => {
-    haptic(); // it's a switch — iOS switches tick
     setCompact((c) => {
       const next = !c;
       try {
@@ -150,32 +149,29 @@ export function BoardView({ sections }: { sections: Section[] }) {
             <button type="button" onClick={() => setQ("")}>clear</button>
           </span>
         )}
-        <button
-          type="button"
+        <HapticToggle
+          checked={compact}
+          onChange={toggleCompact}
+          label="Compact view"
           className={`density-toggle${compact ? " on" : ""}`}
-          aria-pressed={compact}
-          onClick={toggleCompact}
         >
           Compact
-        </button>
+        </HapticToggle>
       </div>
 
       {flagChips.length > 0 && (
         <div className="flag-filter">
           <span className="flag-filter-label">flag</span>
           {flagChips.map((c) => (
-            <button
+            <HapticToggle
               key={c.flag}
-              type="button"
-              className={flag === c.flag ? "on" : ""}
-              aria-pressed={flag === c.flag}
-              onClick={() => {
-                haptic();
-                setFlag(flag === c.flag ? null : c.flag);
-              }}
+              checked={flag === c.flag}
+              onChange={() => setFlag(flag === c.flag ? null : c.flag)}
+              label={`Only ${c.label} games`}
+              className={`flag-chip${flag === c.flag ? " on" : ""}`}
             >
               {c.label} <span className="n">{c.count}</span>
-            </button>
+            </HapticToggle>
           ))}
           {flag && (
             <button
