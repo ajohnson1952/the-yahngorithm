@@ -14,14 +14,34 @@ import { useRouter } from "next/navigation";
 // the bounce). JS only watches how far past the top you've pulled (iOS
 // reports a negative scrollY while rubber-banding), flips the arrow once
 // it's far enough, and on release runs router.refresh(). While that's in
-// flight a thin progress bar runs along the bottom of the top bar.
+// flight an iOS-style activity spinner shows in the top bar's empty right
+// side (and replaces the arrow in the well as the bounce settles).
 
 const TRIGGER = 80; // px of overscroll needed to refresh
+const MIN_SPIN_MS = 700; // a cache-hit refresh lands in ~200ms — don't just flash
+
+/** iOS-style activity indicator: 8 spokes, fading tail, stepped rotation. */
+function Spinner({ className }: { className: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={`ios-spinner ${className}`} aria-hidden>
+      {Array.from({ length: 8 }, (_, i) => (
+        <line
+          key={i}
+          x1="12" y1="2.5" x2="12" y2="7"
+          transform={`rotate(${i * 45} 12 12)`}
+          opacity={(i + 1) / 8}
+        />
+      ))}
+    </svg>
+  );
+}
 
 export function PullToRefresh() {
   const router = useRouter();
   const [enabled, setEnabled] = useState(false);
   const [refreshing, start] = useTransition();
+  const [minSpin, setMinSpin] = useState(false);
+  const spinning = refreshing || minSpin;
   const well = useRef<HTMLDivElement>(null);
   const tracking = useRef(false);
   const maxPull = useRef(0);
@@ -49,7 +69,11 @@ export function PullToRefresh() {
       if (!tracking.current) return;
       tracking.current = false;
       setArmed(false);
-      if (maxPull.current >= TRIGGER) start(() => router.refresh());
+      if (maxPull.current >= TRIGGER) {
+        setMinSpin(true);
+        setTimeout(() => setMinSpin(false), MIN_SPIN_MS);
+        start(() => router.refresh());
+      }
     };
     window.addEventListener("touchstart", onStart, { passive: true });
     window.addEventListener("touchmove", onMove, { passive: true });
@@ -69,9 +93,13 @@ export function PullToRefresh() {
   return (
     <>
       <div ref={well} className="ptr-well" aria-hidden>
-        <span className="ptr-arrow">↓</span>
+        {spinning ? <Spinner className="ptr-well-spin" /> : <span className="ptr-arrow">↓</span>}
       </div>
-      {refreshing && <div className="ptr-bar" role="progressbar" aria-label="Refreshing" />}
+      {spinning && (
+        <div className="ptr-status" role="status" aria-label="Refreshing">
+          <Spinner className="ptr-status-spin" />
+        </div>
+      )}
     </>
   );
 }

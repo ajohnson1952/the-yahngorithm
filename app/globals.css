@@ -1159,19 +1159,23 @@ tr:hover td { background: var(--panel); }
 .ptr-arrow { display: inline-block; transition: transform 0.18s ease, color 0.18s ease; }
 .ptr-well.armed .ptr-arrow { transform: rotate(180deg); color: var(--text); }
 
-/* while the refresh is in flight: a slim indeterminate bar along the bottom
-   edge of the top bar (like Safari's page-load bar) */
-.ptr-bar {
-  position: fixed; left: 0; right: 0; z-index: 21;
-  top: calc(env(safe-area-inset-top, 0px) + 56px);
-  height: 2px; overflow: hidden; pointer-events: none;
+/* while the refresh is in flight: an iOS-style activity spinner in the top
+   bar's right side (empty on phones — the text nav is hidden there) */
+.ptr-status {
+  position: fixed; z-index: 21; pointer-events: none;
+  top: calc(env(safe-area-inset-top, 0px) + 28px);
+  right: max(16px, env(safe-area-inset-right));
+  transform: translateY(-50%);
+  display: flex; color: var(--text-dim);
 }
-.ptr-bar::before {
-  content: ""; position: absolute; top: 0; bottom: 0; width: 35%;
-  background: var(--blue); border-radius: 2px;
-  animation: ptr-slide 0.9s ease-in-out infinite;
+.ios-spinner {
+  display: block; fill: none; stroke: currentColor;
+  stroke-width: 2.4; stroke-linecap: round;
+  animation: ios-spin 0.8s steps(8) infinite;
 }
-@keyframes ptr-slide { from { left: -35%; } to { left: 100%; } }
+.ptr-status-spin { width: 20px; height: 20px; }
+.ptr-well-spin { width: 22px; height: 22px; color: var(--text); }
+@keyframes ios-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .ptr-bar::before { animation: none; left: 0; width: 100%; opacity: 0.6; }
+  .ios-spinner { animation-duration: 2.4s; }
 }
