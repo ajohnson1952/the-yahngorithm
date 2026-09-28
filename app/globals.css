@@ -50,6 +50,20 @@ a.inline-link:hover { color: var(--blue); }
 
 .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
 @media (max-width: 560px) { .wrap { padding: 0 14px; } }
+/* landscape notch clearance under viewport-fit=cover (max() keeps the
+   normal gutter everywhere else) */
+@supports (padding: max(0px)) {
+  .wrap {
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+  }
+  @media (max-width: 560px) {
+    .wrap {
+      padding-left: max(14px, env(safe-area-inset-left));
+      padding-right: max(14px, env(safe-area-inset-right));
+    }
+  }
+}
 
 /* ---------- top bar ---------- */
 .topbar {
@@ -59,6 +73,10 @@ a.inline-link:hover { color: var(--blue); }
   top: 0;
   z-index: 20;
   backdrop-filter: blur(6px);
+  /* home-screen (standalone) mode draws the iOS status bar over the page
+     (viewport-fit=cover + black-translucent) — push the bar's content below
+     it. 0 in a normal browser tab. */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 .topbar-inner {
   display: flex;
@@ -244,6 +262,27 @@ a.inline-link:hover { color: var(--blue); }
 }
 .flag-filter .flag-filter-clear:hover { background: none; }
 
+/* homepage header on phones: week stepper + sort toggle share one row (short
+   labels via .wide-only), and the flag chips become one swipeable row instead
+   of wrapping 2–3 lines deep. /watch's weeknav is untouched (no .board-nav). */
+@media (max-width: 560px) {
+  .wide-only { display: none; }
+  .board-meta { margin: 14px 0 8px; }
+  .board-nav { justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+  .board-nav .weeknav-ctl > a,
+  .board-nav .weeknav-ctl > .off { width: 30px; }
+  .board-nav .weeknav-cur { padding: 7px 10px; font-size: 15px; }
+  .board-nav .weeknav-cur .yr { display: none; }
+  .board-nav .weeknav-jump { order: 3; margin: 0 auto; }
+  .board-nav .sort-toggle a { padding: 7px 10px; }
+  .flag-filter {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    margin-right: -14px; padding-right: 14px; /* bleed to the screen edge */
+  }
+  .flag-filter::-webkit-scrollbar { display: none; }
+  .flag-filter > * { flex-shrink: 0; white-space: nowrap; }
+}
+
 /* ---------- watch guide ---------- */
 .watch-daytabs { flex-wrap: wrap; margin: 0 0 20px; }
 .watch-daytabs a .n { color: var(--text-faint); font-weight: 400; }
@@ -380,7 +419,7 @@ h2 { font-size: 15px; font-weight: 650; margin: 28px 0 12px; letter-spacing: -0.
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--text-faint);
   margin: 26px 0 10px; padding: 10px 0 8px;
-  position: sticky; top: 57px; z-index: 5;
+  position: sticky; top: calc(57px + env(safe-area-inset-top, 0px)); z-index: 5;
   background: var(--bg);
 }
 .section-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
@@ -681,8 +720,34 @@ a.card:hover .team-name { color: var(--blue); }
 
 /* ---------- game page ---------- */
 .gpage { max-width: 780px; }
-.gback { display: inline-block; margin: 18px 0 10px; }
-.gback:hover { color: var(--text) !important; }
+/* back to this game's week — a real tap target (home-screen mode has no
+   browser back button) */
+.gback {
+  display: inline-flex; align-items: center; min-height: 36px;
+  margin: 12px 0 8px; padding-right: 12px;
+  font-size: 13.5px; font-weight: 600; color: var(--text-dim);
+}
+.gback:hover { color: var(--text); }
+
+/* game-page jump bar — pinned under the top bar, swipeable on phones */
+.gjump {
+  position: sticky; top: calc(57px + env(safe-area-inset-top, 0px)); z-index: 5;
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  margin: 18px 0 0; padding: 8px 0;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.gjump::-webkit-scrollbar { display: none; }
+.gjump a {
+  flex-shrink: 0; padding: 4px 11px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; color: var(--text-dim);
+  background: var(--panel); border: 1px solid var(--border);
+}
+.gjump a:hover { color: var(--text); border-color: var(--text-faint); }
+/* land section headings below the top bar + jump bar, not under them */
+.gpage h2[id] { scroll-margin-top: calc(57px + 46px + 12px + env(safe-area-inset-top, 0px)); }
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.gjump) { scroll-behavior: smooth; }
+}
 
 .ghero {
   background: linear-gradient(180deg, var(--panel-2), var(--panel));
@@ -781,7 +846,7 @@ a.card:hover .team-name { color: var(--blue); }
 }
 .trend-outlier .trend-pct { color: color-mix(in srgb, var(--amber) 75%, var(--text)); }
 
-/* ---------- history lists (line movement / weather / injuries) ---------- */
+/* ---------- history lists (line movement / weather) ---------- */
 .hist { list-style: none; margin: 4px 0 6px; padding: 0; max-width: 780px; }
 .hist li {
   display: flex; justify-content: space-between; align-items: baseline;
@@ -1072,3 +1137,12 @@ tr:hover td { background: var(--panel); }
 
 .empty { color: var(--text-faint); padding: 40px 0; text-align: center; }
 .foot { color: var(--text-faint); font-size: 12px; margin: 40px 0 30px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+/* ---------- page transition ----------
+   app/template.tsx wraps each page in .page-fade — a quick fade-in on every
+   client-side navigation. */
+@keyframes page-in { from { opacity: 0; } }
+.page-fade { animation: page-in 0.18s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .page-fade { animation: none; }
+}

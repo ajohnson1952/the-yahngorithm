@@ -31,11 +31,6 @@ export const RUNNABLE: Record<
     label: "Pull weather",
     note: "Open-Meteo — free, no key. Inside 16 days only.",
   },
-  "pull-injuries": {
-    file: "scripts/pullInjuries.ts",
-    label: "Pull injuries",
-    note: "ESPN unofficial — no published limit. Feed is thin.",
-  },
   "pull-kalshi": {
     file: "scripts/pullKalshi.ts",
     label: "Pull prediction markets (Kalshi)",
@@ -117,7 +112,6 @@ export const RUN_ALL_ORDER: string[] = [
   "pull-lines-daily",
   "pull-kalshi",
   "pull-weather",
-  "pull-injuries",
   "compute-flags",
   "compute-market-flags",
   "compute-weather-flags",

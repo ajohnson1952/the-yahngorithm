@@ -53,7 +53,7 @@ for how to read any of this.
 | The Odds API | key | 500 credits/mo (2 per line pull) | ~34% with hourly gameday pulls |
 | Kalshi | none (public reads) | none | — |
 | Open-Meteo | none | fair use | negligible |
-| ESPN (unofficial) | none | none published | fine — `pull-injuries`, plus live scores for `/watch` (fetched on refresh, 15s shared cache) |
+| ESPN (unofficial) | none | none published | fine — live scores for `/watch` (fetched on refresh, 15s shared cache) |
 | Neon (Postgres host) | `NEON_API_KEY` (optional) | Free: 100 CU-h + 5 GB transfer + 0.5 GB storage / mo | `npm run neon-usage` |
 
 On the **Launch** plan as of Sept 2026 (usage-based, ~$5/mo) — moved off Free only
@@ -76,7 +76,7 @@ Standalone scripts in `scripts/`, each an npm script:
 | `pull-lines` | The Odds API line snapshots (`--type open\|daily\|close`) |
 | `pull-historical-lines` | CFBD `/lines` backfill for past seasons |
 | `pull-kalshi` | Kalshi win-probability snapshots |
-| `pull-weather` / `pull-injuries` | Open-Meteo / ESPN |
+| `pull-weather` | Open-Meteo |
 | `compute-flags` | situational flags |
 | `compute-market-flags` | steam / rlm |
 | `run-model` | write `ModelPrediction` rows |
@@ -100,7 +100,7 @@ how stale each source is and runs exactly what's due:
 - **~daily, early season** — extra `pull-ratings` runs once week ≥ 2 until
   CFBD's SP+ leaves the preseason baseline (so a mid-week update isn't missed)
 - **Sun ~10am** — advanced-stat checkpoint + team trends
-- **~6am & ~4pm** — weather + injuries
+- **~6am & ~4pm** — weather + weather flags
 
 The dispatched workflow needs three repo secrets: `DATABASE_URL`, `CFBD_API_KEY`,
 `ODDS_API_KEY`. Each group also has a manual `workflow_dispatch` workflow (and
@@ -114,7 +114,7 @@ The dispatched workflow needs three repo secrets: `DATABASE_URL`, `CFBD_API_KEY`
 |---|---|
 | `/` | the week's board — view by kickoff (default) / by edge / pinned, filter by any flag (situational / market / weather), search by team; page between weeks; each card shows the market number (most-posted book line), the model line, the edge, and a ▲/▼ line-movement chip |
 | `/watch` | quadbox viewing guide — the day's games sliced into windows of "which 4 to have on," ranked by a watchability score (competitiveness, pace, ranked-team stakes, rivalries); day/week nav. During a slate it pulls live scores from ESPN and re-ranks — a one-score 4th quarter jumps the board, a blowout benches — with an auto-refresh control |
-| `/game/[id]` | full breakdown: three spread models + Yahn breakdown, totals math, flags, snapshot-by-snapshot line movement, Kalshi panel, weather, injuries, trends, picks |
+| `/game/[id]` | full breakdown: three spread models + Yahn breakdown, totals math, flags, snapshot-by-snapshot line movement, Kalshi panel, weather, trends, picks (with a sticky section jump bar) |
 | `/picks` | season pick log with ATS record + CLV |
 | `/grades` | season-to-date: every spread model + every flag graded vs the closing line |
 | `/admin` | manual pipeline runs, data-freshness panel, API + Neon usage bars (password gate) |

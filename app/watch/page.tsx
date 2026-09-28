@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { currentSeason, currentWeek, weeksWithGames } from "../../lib/currentWeek";
 import { getWeekBoard } from "../../lib/webData";
 import { getLiveScores, type LiveGame } from "../../lib/liveScores";
@@ -169,9 +170,9 @@ export default async function WatchPage({
         stakes, and rivalries. Once games kick off it re-ranks on the live
         score (ESPN): a one-score game late jumps the board, a blowout drops
         to the bench.{" "}
-        <a href="/watch-timeline" className="inline-link" style={{ color: "var(--blue)" }}>
+        <Link href="/watch-timeline" className="inline-link" style={{ color: "var(--blue)" }}>
           Try the timeline view (prototype) →
-        </a>
+        </Link>
       </p>
 
       {refreshActive && (
@@ -181,9 +182,9 @@ export default async function WatchPage({
       <div className="weeknav">
         <div className="weeknav-ctl">
           {prev != null ? (
-            <a href={qs({ week: prev })} aria-label={`week ${prev}`}>
+            <Link href={qs({ week: prev })} aria-label={`week ${prev}`}>
               ‹
-            </a>
+            </Link>
           ) : (
             <span className="off" aria-hidden>
               ‹
@@ -194,9 +195,9 @@ export default async function WatchPage({
             <span className="yr">· {season}</span>
           </span>
           {next != null ? (
-            <a href={qs({ week: next })} aria-label={`week ${next}`}>
+            <Link href={qs({ week: next })} aria-label={`week ${next}`}>
               ›
-            </a>
+            </Link>
           ) : (
             <span className="off" aria-hidden>
               ›
@@ -204,23 +205,23 @@ export default async function WatchPage({
           )}
         </div>
         {week !== thisWeek && (
-          <a href={qs({})} className="weeknav-jump">
+          <Link href={qs({})} className="weeknav-jump">
             ↩ this week ({thisWeek})
-          </a>
+          </Link>
         )}
       </div>
 
       {days.length > 0 && (
         <div className="sort-toggle watch-daytabs">
           {days.map((d) => (
-            <a
+            <Link
               key={d}
               href={qs({ week: sp.week ? week : undefined, day: d })}
               className={d === day ? "on" : ""}
             >
               {ctDateLabel(byDay.get(d)![0].kickoff)}
               <span className="n"> ({byDay.get(d)!.length})</span>
-            </a>
+            </Link>
           ))}
         </div>
       )}

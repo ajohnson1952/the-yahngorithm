@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { WatchGame } from "../lib/watchGuide";
 import { TeamRow, FlagChip, kickoffStr, spreadStr, trim, teamShort } from "./ui";
 
@@ -12,7 +13,8 @@ export function WatchCard({ g, rank }: { g: WatchGame; rank?: number }) {
     isFinal && g.homeScore != null && g.awayScore != null && g.awayScore > g.homeScore;
 
   return (
-    <a
+    <Link
+      prefetch={false}
       href={`/game/${g.id}`}
       className={`watch-card${isLive ? " is-live" : ""}${
         live?.state === "post" ? " is-final" : ""
@@ -67,6 +69,6 @@ export function WatchCard({ g, rank }: { g: WatchGame; rank?: number }) {
           ))}
         </div>
       )}
-    </a>
+    </Link>
   );
 }

@@ -6,7 +6,7 @@
 // (via getNeonUsage in webData.ts). Not touched by the pipeline.
 //
 // Needs NEON_API_KEY (personal key, https://console.neon.tech/app/settings/api-keys)
-// — in .env locally, and in the Render service env for the /admin panel.
+// — in .env locally, and in the Vercel project env for the /admin panel.
 // ============================================================
 
 const API = "https://console.neon.tech/api/v2";

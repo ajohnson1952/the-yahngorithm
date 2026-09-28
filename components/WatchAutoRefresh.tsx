@@ -21,12 +21,29 @@ export function WatchAutoRefresh({
   const [on, setOn] = useState(active);
   const [now, setNow] = useState(renderedAt);
   const busy = useRef(false);
+  // tab / home-screen app in the background — no ticking, no refreshes (each
+  // refresh re-renders the page server-side, so this skips work nobody sees)
+  const [visible, setVisible] = useState(true);
 
-  // 1s heartbeat for the "updated Ns ago" label
   useEffect(() => {
+    const onVis = () => {
+      const v = document.visibilityState === "visible";
+      setVisible(v);
+      // coming back: re-read the clock right away, so a stale board refreshes
+      // immediately instead of on the next heartbeat
+      if (v) setNow(Date.now());
+    };
+    onVis();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  // 1s heartbeat for the "updated Ns ago" label (paused while hidden)
+  useEffect(() => {
+    if (!visible) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [visible]);
 
   // a new server payload arrived — clear the in-flight guard
   useEffect(() => {
@@ -36,12 +53,12 @@ export function WatchAutoRefresh({
   const ageSec = Math.max(0, Math.round((now - renderedAt) / 1000));
 
   useEffect(() => {
-    if (!on || busy.current) return;
+    if (!on || !visible || busy.current) return;
     if (ageSec >= intervalSec) {
       busy.current = true;
       router.refresh();
     }
-  }, [on, ageSec, intervalSec, router]);
+  }, [on, visible, ageSec, intervalSec, router]);
 
   const refreshNow = () => {
     busy.current = true;

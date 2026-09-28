@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { db } from "./db";
 
@@ -22,32 +23,38 @@ const WEEK_HOLD_MS = 12 * 3600 * 1000;
  * week's last kickoff we hold on it so results stay up for review instead of
  * jumping to a slate that's still days out.
  */
-export async function currentWeek(season: number = currentSeason()): Promise<number> {
+// React cache(): one lookup per request even when both a page and its
+// generateMetadata ask for it.
+export const currentWeek = cache(async function currentWeek(
+  season: number = currentSeason()
+): Promise<number> {
   const now = Date.now();
 
-  // earliest week with a game still to come or plausibly in progress. Games
-  // long overdue to be marked final (kickoff >18h ago, still not "final") are
-  // stale data — ignore them so one bad row can't wedge the site on an old week.
-  const pending = await db.game.findFirst({
-    where: {
-      season,
-      status: { not: "final" },
-      kickoffTime: { gte: new Date(now - 18 * 3600 * 1000) },
-    },
-    orderBy: { kickoffTime: "asc" },
-    select: { week: true },
-  });
-
-  // week of the most recent game to have kicked off inside the hold window —
-  // keep it up rather than skipping ahead to a distant next slate
-  const held = await db.game.findFirst({
-    where: {
-      season,
-      kickoffTime: { gte: new Date(now - WEEK_HOLD_MS), lte: new Date(now) },
-    },
-    orderBy: { kickoffTime: "desc" },
-    select: { week: true },
-  });
+  // the two lookups are independent — run them in one round trip
+  const [pending, held] = await Promise.all([
+    // earliest week with a game still to come or plausibly in progress. Games
+    // long overdue to be marked final (kickoff >18h ago, still not "final") are
+    // stale data — ignore them so one bad row can't wedge the site on an old week.
+    db.game.findFirst({
+      where: {
+        season,
+        status: { not: "final" },
+        kickoffTime: { gte: new Date(now - 18 * 3600 * 1000) },
+      },
+      orderBy: { kickoffTime: "asc" },
+      select: { week: true },
+    }),
+    // week of the most recent game to have kicked off inside the hold window —
+    // keep it up rather than skipping ahead to a distant next slate
+    db.game.findFirst({
+      where: {
+        season,
+        kickoffTime: { gte: new Date(now - WEEK_HOLD_MS), lte: new Date(now) },
+      },
+      orderBy: { kickoffTime: "desc" },
+      select: { week: true },
+    }),
+  ]);
 
   if (pending && held) return Math.min(pending.week, held.week);
   if (pending) return pending.week;
@@ -59,7 +66,7 @@ export async function currentWeek(season: number = currentSeason()): Promise<num
     select: { week: true },
   });
   return last?.week ?? 1;
-}
+});
 
 /** Every week number that has at least one game this season, ascending.
  *  Cached 10 min: it changes only when a new week's schedule lands, and it's

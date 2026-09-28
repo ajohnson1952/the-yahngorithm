@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -81,14 +82,14 @@ export function BottomNav() {
       {moreOpen && (
         <div className="bn-sheet" role="menu">
           {MORE_LINKS.map((l) => (
-            <a
+            <Link
               key={l.href}
               href={l.href}
               role="menuitem"
               className={isActive(path, l.href) ? "active" : ""}
             >
               {l.label}
-            </a>
+            </Link>
           ))}
         </div>
       )}
@@ -96,10 +97,10 @@ export function BottomNav() {
         {TABS.map((t) => {
           const active = isActive(path, t.href);
           return (
-            <a key={t.href} href={t.href} className={`bn-tab${active ? " active" : ""}`}>
+            <Link key={t.href} href={t.href} className={`bn-tab${active ? " active" : ""}`}>
               <t.Icon />
               {t.label}
-            </a>
+            </Link>
           );
         })}
         <button

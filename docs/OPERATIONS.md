@@ -22,7 +22,7 @@ don't use it. Instead:
 | **lines** | game windows, never Tuesday | `pull-lines --daily` — every ~30 min in the Sat 9a–8p core, every ~2.75 h otherwise. Also self-limits when monthly Odds credits run low |
 | **weekly** | Tue ~8–11am CT, once | the full heavy pull: ratings, polls, schedule, advanced + EPA, **opening lines**, Kalshi, flags, model, picks, grade |
 | **sunday** | Sun ~9am–noon CT, once | advanced-stat checkpoint + team trends |
-| **weather** | ~6am & ~4pm CT | weather forecast + injuries |
+| **weather** | ~6am & ~4pm CT | weather forecast + weather flags |
 | **preseason** | manual only (Actions tab) | talent, returning production, portal, per-team HFA |
 
 Budget with this cadence: CFBD ~55%/mo, The Odds API ~85–90%/mo (tighter in a

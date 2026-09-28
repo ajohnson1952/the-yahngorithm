@@ -101,7 +101,7 @@ function NeonPanel({ u }: { u: NeonUsageView }) {
       <div className="admin-limits">
         <strong>Neon — database host</strong>
         <p className="admin-usage-note">
-          Set <span className="mono">NEON_API_KEY</span> in the Render service env
+          Set <span className="mono">NEON_API_KEY</span> in the Vercel project env
           (a personal key from console.neon.tech) to show compute / transfer /
           storage here. Works locally already via <span className="mono">.env</span>.
         </p>
@@ -130,7 +130,7 @@ function NeonPanel({ u }: { u: NeonUsageView }) {
       <NeonBar
         label="Data transfer"
         m={u.transfer}
-        detail="Egress to clients — pipeline reads + cached web. The metric that forced the Sept Launch upgrade."
+        detail="Egress to clients — pipeline reads + cached web. The metric that forced the Sept Launch upgrade. Over the Free line is expected: Launch includes it, billed $0 so far."
       />
       <NeonBar
         label="Storage"
@@ -140,8 +140,9 @@ function NeonPanel({ u }: { u: NeonUsageView }) {
       <p className="admin-usage-note">
         Period {u.periodStart!.slice(0, 10)} → {u.periodEnd!.slice(0, 10)} ·{" "}
         {u.daysElapsed} of {u.daysTotal} days ({pctIn}%). On the{" "}
-        <strong>Launch</strong> plan (usage-based, ~$5/mo); the bars project
-        against the <em>Free</em> caps to judge when to move back. Projections are
+        <strong>Launch</strong> plan (usage-based, ~$8/mo for this project — nearly all compute); the bars
+        project against the <em>Free</em> caps to judge when to move back, so red
+        here is not an overage. Projections are
         straight-line — noisy early, skewed by heavy manual runs.{" "}
         <span className="dim">
           Checked{" "}

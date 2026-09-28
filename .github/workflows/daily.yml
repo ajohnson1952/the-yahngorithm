@@ -1,6 +1,6 @@
-# Manual trigger for the "weather" group (weather forecast + injuries).
+# Manual trigger for the "weather" group (weather forecast + weather flags).
 # Scheduling is handled by tick.yml + cron-job.org.
-name: Manual — weather + injuries
+name: Manual — weather
 
 on:
   workflow_dispatch:

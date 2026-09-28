@@ -18,7 +18,7 @@
 //   lines      pull-lines --daily                           game windows, rate-limited
 //   weekly     the full Tuesday heavy pull                   Tue ~9am CT, once
 //   sunday     pull-advanced + compute-trends                Sun ~10am CT, once
-//   weather    weather + injuries                            ~6am / ~4pm CT
+//   weather    weather forecast + weather flags              ~6am / ~4pm CT
 // ============================================================
 
 import { execFileSync } from "child_process";
@@ -102,7 +102,7 @@ async function main() {
     // trends: Sunday late morning, once.
     sunday: dow === 0 && hour >= 9 && hour <= 12 && minsAgo(lastTrends) > 20 * 60,
 
-    // weather + injuries: ~6am and ~4pm CT, once each.
+    // weather: ~6am and ~4pm CT, once each.
     weather: (hour === 6 || hour === 16) && minsAgo(lastWeather) > 5 * 60,
   };
 
@@ -138,7 +138,6 @@ async function main() {
     { name: "pull-lines", args: ["--type", run.lines ? "daily" : "open"], on: run.lines || w },
     { name: "pull-kalshi", args: [], on: run.heartbeat || w },
     { name: "pull-weather", args: [], on: run.weather },
-    { name: "pull-injuries", args: [], on: run.weather },
     { name: "compute-weather-flags", args: [], on: run.weather || w },
     { name: "compute-flags", args: [], on: w },
     { name: "compute-market-flags", args: [], on: run.heartbeat || w },

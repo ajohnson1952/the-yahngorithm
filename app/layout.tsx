@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import Link from "next/link";
+import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Nav } from "../components/Nav";
@@ -8,6 +9,18 @@ export const metadata: Metadata = {
   title: "the yahngorithm",
   description:
     "College football model vs. market — where our numbers and the sportsbooks disagree.",
+  // iOS home-screen web app: launches standalone, status bar drawn over the
+  // (dark) top bar — globals.css pads .topbar by safe-area-inset-top for it.
+  appleWebApp: {
+    capable: true,
+    title: "yahngorithm",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0b0e14",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -24,10 +37,10 @@ export default function RootLayout({
       <body>
         <header className="topbar">
           <div className="wrap topbar-inner">
-            <a href="/" className="brand">
+            <Link href="/" className="brand">
               <img className="brand-avatar" src="/joe.png" alt="" />
               the yahngorithm
-            </a>
+            </Link>
             <Nav />
           </div>
         </header>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 // Prototype: a Gantt/broadcast-schedule style view of the same watch-guide
 // data as /watch, inspired by cfb.guide's TV grid — one horizontal bar per
 // game, positioned by actual kickoff time, so overlaps are visible at a
@@ -227,7 +228,8 @@ export default async function WatchTimelinePage({
                     {g.homeScore != null && <span className="tl-label-score">{g.homeScore}</span>}
                   </div>
                 </div>
-                <a
+                <Link
+                  prefetch={false}
                   href={`/game/${g.id}`}
                   className={`tl-bar${isLive ? " is-live" : ""}${isFinal ? " is-final" : ""}`}
                   style={{ left, width, background: bg }}
@@ -236,7 +238,7 @@ export default async function WatchTimelinePage({
                   {isLive && <span className="tl-live-dot" />}
                   <span className="tl-bar-score">{g.score}</span>
                   <span className="tl-bar-reason">{g.reasons[0]}</span>
-                </a>
+                </Link>
               </div>
             );
           })}
@@ -250,9 +252,9 @@ export default async function WatchTimelinePage({
       <h1>Watch timeline (prototype)</h1>
       <p className="subhead">
         Same watchability scoring as the{" "}
-        <a href={`/watch${sp.week ? `?week=${week}` : ""}`} className="inline-link" style={{ color: "var(--blue)" }}>
+        <Link href={`/watch${sp.week ? `?week=${week}` : ""}`} className="inline-link" style={{ color: "var(--blue)" }}>
           quadbox guide
-        </a>
+        </Link>
         , shown as a broadcast-schedule timeline instead — one bar per game,
         positioned by kickoff, colored by score. Bar length is a fixed
         ~3h40m estimate, not an actual final time. Tap a bar for the game
@@ -268,7 +270,7 @@ export default async function WatchTimelinePage({
       <div className="weeknav">
         <div className="weeknav-ctl">
           {prev != null ? (
-            <a href={qs({ week: prev })} aria-label={`week ${prev}`}>‹</a>
+            <Link href={qs({ week: prev })} aria-label={`week ${prev}`}>‹</Link>
           ) : (
             <span className="off" aria-hidden>‹</span>
           )}
@@ -277,27 +279,27 @@ export default async function WatchTimelinePage({
             <span className="yr">· {season}</span>
           </span>
           {next != null ? (
-            <a href={qs({ week: next })} aria-label={`week ${next}`}>›</a>
+            <Link href={qs({ week: next })} aria-label={`week ${next}`}>›</Link>
           ) : (
             <span className="off" aria-hidden>›</span>
           )}
         </div>
         {week !== thisWeek && (
-          <a href={qs({})} className="weeknav-jump">↩ this week ({thisWeek})</a>
+          <Link href={qs({})} className="weeknav-jump">↩ this week ({thisWeek})</Link>
         )}
       </div>
 
       {days.length > 0 && (
         <div className="sort-toggle watch-daytabs">
           {days.map((d) => (
-            <a
+            <Link
               key={d}
               href={qs({ week: sp.week ? week : undefined, day: d })}
               className={d === day ? "on" : ""}
             >
               {ctDateLabel(byDay.get(d)![0].kickoff)}
               <span className="n"> ({byDay.get(d)!.length})</span>
-            </a>
+            </Link>
           ))}
         </div>
       )}

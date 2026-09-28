@@ -98,17 +98,17 @@ async function apRankMap(
   season: number,
   week: number
 ): Promise<Map<string, number>> {
-  const latest = await db.ranking.findFirst({
+  // one round trip: every AP row up to this week (≤ 25/week, a few hundred
+  // rows at most), then keep only the newest poll in JS — cheaper than the
+  // old findFirst-for-the-week + findMany pair of sequential queries.
+  const rows = await db.ranking.findMany({
     where: { season, poll: "ap", week: { lte: week } },
-    orderBy: { week: "desc" },
-    select: { week: true },
+    select: { teamId: true, rank: true, week: true },
   });
-  if (!latest) return new Map();
-  const ranks = await db.ranking.findMany({
-    where: { season, poll: "ap", week: latest.week },
-    select: { teamId: true, rank: true },
-  });
-  return new Map(ranks.map((r) => [r.teamId, r.rank]));
+  const latest = rows.reduce((m, r) => Math.max(m, r.week), -1);
+  return new Map(
+    rows.filter((r) => r.week === latest).map((r) => [r.teamId, r.rank])
+  );
 }
 
 /** e.g. -6.5 -> "-6.5", 0 -> "PK", 3 -> "+3" — mirrors components/ui.tsx
@@ -458,33 +458,25 @@ async function buildWeekBoard(
   return views;
 }
 
-export async function getGameDetail(id: string, uid: string) {
-  const g = await db.game.findUnique({
-    where: { id },
-    include: {
-      homeTeam: true,
-      awayTeam: true,
-      gameFlags: {
-        include: { team: { select: { canonicalName: true, abbreviation: true } } },
+/** Game page data, WITHOUT per-visitor pin state. Two round trips: everything
+ *  keyed on the game id in parallel, then the lookups that need the game's
+ *  season/week/teams (ratings, trends, AP ranks) in parallel. */
+async function buildGameDetail(id: string) {
+  const [g, pred, lines, weather, kalshi] = await Promise.all([
+    db.game.findUnique({
+      where: { id },
+      include: {
+        homeTeam: true,
+        awayTeam: true,
+        gameFlags: {
+          include: { team: { select: { canonicalName: true, abbreviation: true } } },
+        },
+        picks: true,
       },
-      picks: true,
-      injuries: { include: { team: { select: { canonicalName: true } } } },
-      pins: { where: { uid }, select: { gameId: true } },
-    },
-  });
-  if (!g) return null;
-
-  const [pred, ratings, lines, weather, apRanks] = await Promise.all([
+    }),
     db.modelPrediction.findFirst({
       where: { gameId: id },
       orderBy: { generatedAt: "desc" },
-    }),
-    db.teamRatingWeekly.findMany({
-      where: {
-        season: g.season,
-        week: g.week,
-        teamId: { in: [g.homeTeamId, g.awayTeamId] },
-      },
     }),
     db.line.findMany({
       where: { gameId: id },
@@ -497,23 +489,30 @@ export async function getGameDetail(id: string, uid: string) {
       orderBy: [{ capturedAt: "asc" }],
     }),
     db.weather.findMany({ where: { gameId: id }, orderBy: { pulledAt: "asc" } }),
-    apRankMap(g.season, g.week),
-  ]);
-
-  const [trends, kalshi] = await Promise.all([
-    db.teamTrend.findMany({
-      where: { season: g.season, teamId: { in: [g.homeTeamId, g.awayTeamId] } },
-    }),
     db.predictionMarket.findMany({
       where: { gameId: id },
       orderBy: { capturedAt: "desc" },
       take: 12,
     }),
   ]);
+  if (!g) return null;
+
+  const [ratings, trends, apRanks] = await Promise.all([
+    db.teamRatingWeekly.findMany({
+      where: {
+        season: g.season,
+        week: g.week,
+        teamId: { in: [g.homeTeamId, g.awayTeamId] },
+      },
+    }),
+    db.teamTrend.findMany({
+      where: { season: g.season, teamId: { in: [g.homeTeamId, g.awayTeamId] } },
+    }),
+    apRankMap(g.season, g.week),
+  ]);
 
   return {
     game: g,
-    pinned: g.pins.length > 0,
     pred,
     ratings,
     lines,
@@ -525,6 +524,41 @@ export async function getGameDetail(id: string, uid: string) {
     kalshi: kalshi[0] ?? null,
     kalshiHistory: [...kalshi].reverse(), // oldest -> newest
   };
+}
+
+/** Same freshness trade-off as the week board: the pipeline rewrites a game's
+ *  lines/model every ~30 min, so a 2-min window is invisible but stops repeat
+ *  views (and back/forward hops) from each waking Neon. */
+const GAME_DETAIL_TTL = 120;
+
+const cachedGameDetail = unstable_cache(buildGameDetail, ["game-detail"], {
+  revalidate: GAME_DETAIL_TTL,
+  tags: ["game-detail"],
+});
+
+// The data cache round-trips through JSON, so Prisma's Date fields come back as
+// ISO strings — turn them back into Dates so the page can keep using them as-is.
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+function reviveDates<T>(v: T): T {
+  if (typeof v === "string") return (ISO_DATE.test(v) ? new Date(v) : v) as T;
+  if (Array.isArray(v)) return v.map(reviveDates) as T;
+  if (v && typeof v === "object" && !(v instanceof Date)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v)) out[k] = reviveDates(x);
+    return out as T;
+  }
+  return v;
+}
+
+export async function getGameDetail(id: string, uid: string) {
+  const [data, pin] = await Promise.all([
+    cachedGameDetail(id),
+    uid
+      ? db.pinnedGame.findFirst({ where: { uid, gameId: id }, select: { gameId: true } })
+      : null,
+  ]);
+  if (!data) return null;
+  return { ...reviveDates(data), pinned: pin != null };
 }
 
 /** Pick log is append-mostly: a new row appears only when a fresh edge clears

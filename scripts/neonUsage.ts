@@ -41,6 +41,10 @@ async function main() {
 
   console.log(`\nNeon usage — ${u.projectName}`);
   console.log(
+    "(bars are vs the FREE-tier caps — on Launch they are not limits; compute is\n" +
+      " what actually bills, transfer/storage have been ~$0)"
+  );
+  console.log(
     `period  ${u.periodStart!.slice(0, 10)} → ${u.periodEnd!.slice(0, 10)}   ` +
       `(${u.daysElapsed} of ${u.daysTotal} days, ${Math.round((u.daysElapsed! / u.daysTotal!) * 100)}% in)\n`
   );

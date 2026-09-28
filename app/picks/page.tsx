@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { currentSeason } from "../../lib/currentWeek";
 import { getPickLog } from "../../lib/webData";
 import { signed, trim, kickoffStr } from "../../components/ui";
@@ -30,9 +31,9 @@ export default async function PicksPage() {
       <p className="subhead">
         Every pick logged the first moment it qualified, frozen at that line.
         Watch the CLV, not the record — see{" "}
-        <a href="/guide" style={{ color: "var(--blue)" }}>
+        <Link href="/guide" style={{ color: "var(--blue)" }}>
           guide §7
-        </a>
+        </Link>
         .
       </p>
 
@@ -100,7 +101,7 @@ export default async function PicksPage() {
                 <tr key={r.id}>
                   <td className="num">{r.week}</td>
                   <td>
-                    <a href={`/game/${r.gameId}`}>
+                    <Link href={`/game/${r.gameId}`} prefetch={false}>
                       {r.awayRank != null && (
                         <span className="ap-rank">{r.awayRank}</span>
                       )}
@@ -109,7 +110,7 @@ export default async function PicksPage() {
                         <span className="ap-rank">{r.homeRank}</span>
                       )}
                       {r.home}
-                    </a>
+                    </Link>
                     <div
                       style={{ color: "var(--text-faint)", fontSize: 11 }}
                     >

@@ -672,8 +672,9 @@ guide §11.
 - [ ] Kalshi "fair-value gap" flag (static book-vs-market divergence).
 - [ ] FCS SRS (`pull-ratings` only iterates SP+ rows = FBS today).
 - [ ] Bowl / postseason games.
-- [ ] Better injury source — ESPN's feed is thin, and injuries are the biggest
-      un-priced factor (CALIBRATION.md §4).
+- [ ] Better injury source — injuries are the biggest un-priced factor
+      (CALIBRATION.md §4). The ESPN pull was removed Sept 28 (0 rows all season);
+      any replacement needs a feed that actually populates.
 - [ ] Top-25 bounded-prior toggle — deprioritised, Yahn isn't a driver.
 
 ## Known limitations
@@ -684,6 +685,7 @@ guide §11.
 - SRS is empty in week 1, noisy through ~week 3 — early spread signal is SP+ only.
 - Rating edges on market spreads > ~20 are artifacts (books shade big favorites) — filtered.
 - The Odds API is current-week only; historical lines come from CFBD.
-- ESPN's CFB injury feed is thin — an empty report means "unknown", not "clean".
+- No injury data — the ESPN feed never populated and was removed (Sept 28).
+  The `Injury` table is left in the schema, unused.
 - The market is efficient on everything this tool measures from public data.
   Treat it as decision support, not an automated betting system.

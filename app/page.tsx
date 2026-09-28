@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
 import { getWeekBoard, getPinnedGameIds } from "../lib/webData";
@@ -25,21 +26,27 @@ const dayLabel = (iso: string) =>
     timeZone: "America/Chicago",
   });
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ week?: string; sort?: string }>;
-}) {
+type SP = Promise<{ week?: string; sort?: string }>;
+
+// ?week= is user input — accept only a positive integer in a sane range,
+// otherwise fall back to the current week (a bad value would 500 at Prisma).
+function resolveWeek(raw: string | undefined, thisWeek: number): number {
+  const n = Number(raw);
+  return raw && Number.isInteger(n) && n >= 1 && n <= 25 ? n : thisWeek;
+}
+
+// "Week 5 · the yahngorithm" in the tab / home-screen switcher
+export async function generateMetadata({ searchParams }: { searchParams: SP }) {
+  const sp = await searchParams;
+  const week = resolveWeek(sp.week, await currentWeek(currentSeason()));
+  return { title: `Week ${week} · the yahngorithm` };
+}
+
+export default async function Home({ searchParams }: { searchParams: SP }) {
   const season = currentSeason();
   const sp = await searchParams;
   const thisWeek = await currentWeek(season);
-  // ?week= is user input — accept only a positive integer in a sane range,
-  // otherwise fall back to the current week (a bad value would 500 at Prisma).
-  const parsedWeek = Number(sp.week);
-  const week =
-    sp.week && Number.isInteger(parsedWeek) && parsedWeek >= 1 && parsedWeek <= 25
-      ? parsedWeek
-      : thisWeek;
+  const week = resolveWeek(sp.week, thisWeek);
   // default view is by kickoff; ?sort=edge for the edge groups, ?sort=pinned
   // for the watch list. (?sort=time still works — it's the default.)
   const byEdge = sp.sort === "edge";
@@ -119,12 +126,12 @@ export default async function Home({
           : `${pickCount} pick${pickCount > 1 ? "s" : ""} logged`}
       </p>
 
-      <div className="weeknav">
+      <div className="weeknav board-nav">
         <div className="weeknav-ctl">
           {prev != null ? (
-            <a href={qs({ week: prev, sort: sp.sort })} aria-label={`week ${prev}`}>
+            <Link href={qs({ week: prev, sort: sp.sort })} aria-label={`week ${prev}`}>
               ‹
-            </a>
+            </Link>
           ) : (
             <span className="off" aria-hidden>
               ‹
@@ -135,9 +142,9 @@ export default async function Home({
             <span className="yr">· {season}</span>
           </span>
           {next != null ? (
-            <a href={qs({ week: next, sort: sp.sort })} aria-label={`week ${next}`}>
+            <Link href={qs({ week: next, sort: sp.sort })} aria-label={`week ${next}`}>
               ›
-            </a>
+            </Link>
           ) : (
             <span className="off" aria-hidden>
               ›
@@ -145,29 +152,30 @@ export default async function Home({
           )}
         </div>
         {week !== thisWeek && (
-          <a href={qs({ sort: sp.sort })} className="weeknav-jump">
+          <Link href={qs({ sort: sp.sort })} className="weeknav-jump">
             ↩ this week ({thisWeek})
-          </a>
+          </Link>
         )}
-        <div className="sort-toggle">
-          <a
+        <div className="sort-toggle" aria-label="Sort">
+          <Link
             href={qs({ week: sp.week ? week : undefined })}
             className={!byEdge && !pinnedOnly ? "on" : ""}
           >
-            By kickoff
-          </a>
-          <a
+            <span className="wide-only">By </span>kickoff
+          </Link>
+          <Link
             href={qs({ week: sp.week ? week : undefined, sort: "edge" })}
             className={byEdge ? "on" : ""}
           >
-            By edge
-          </a>
-          <a
+            <span className="wide-only">By </span>edge
+          </Link>
+          <Link
             href={qs({ week: sp.week ? week : undefined, sort: "pinned" })}
             className={pinnedOnly ? "on" : ""}
+            aria-label="Pinned games"
           >
-            ★ Pinned
-          </a>
+            ★<span className="wide-only"> Pinned</span>
+          </Link>
         </div>
       </div>
 
@@ -183,9 +191,9 @@ export default async function Home({
 
       <p className="foot">
         Decision support, not a guarantee. Read the{" "}
-        <a href="/guide" className="inline-link" style={{ color: "var(--blue)" }}>
+        <Link href="/guide" className="inline-link" style={{ color: "var(--blue)" }}>
           interpretation guide
-        </a>{" "}
+        </Link>{" "}
         before acting on anything here.
       </p>
     </>

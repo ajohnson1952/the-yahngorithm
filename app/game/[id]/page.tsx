@@ -1,3 +1,5 @@
+import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { getGameDetail } from "../../../lib/webData";
@@ -26,6 +28,35 @@ const r1 = (n: number) => Math.round(n * 10) / 10;
 const RECENT_LINES = 5; // line-movement rows shown (newest first)
 const RECENT_WEATHER = 3; // weather snapshots shown (newest first)
 const RECENT_KALSHI = 5; // kalshi history rows shown (oldest-of-the-recent first)
+
+// sticky jump bar under the hero — ids match the section <h2>s below
+const JUMP = [
+  { id: "spread", label: "Spread" },
+  { id: "totals", label: "Totals" },
+  { id: "flags", label: "Flags" },
+  { id: "trends", label: "Trends" },
+  { id: "lines", label: "Lines" },
+  { id: "kalshi", label: "Kalshi" },
+  { id: "weather", label: "Weather" },
+  { id: "picks", label: "Picks" },
+];
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  // cached game data (no uid → no pin lookup), so this is free after the page's own call
+  const data = await getGameDetail(id, "");
+  if (!data) return {};
+  const { game: g } = data;
+  const name = (t: { abbreviation: string | null; canonicalName: string }) =>
+    t.abbreviation ?? t.canonicalName;
+  return {
+    title: `${name(g.awayTeam)} @ ${name(g.homeTeam)} · Wk ${g.week} · the yahngorithm`,
+  };
+}
 
 interface LineRowLite {
   sportsbook: string;
@@ -221,13 +252,12 @@ export default async function GamePage({
   return (
     <div className="gpage">
       <div className="gpage-top">
-        <a
-          className="inline-link gback"
-          href="/"
-          style={{ color: "var(--text-faint)", fontSize: 12 }}
-        >
-          ← board
-        </a>
+        {/* the only way back in home-screen (standalone) mode, which has no
+            browser back button — so it's a real tap target, and it returns to
+            this game's own week rather than the current one */}
+        <Link className="gback" href={`/?week=${g.week}`}>
+          ‹ Week {g.week}
+        </Link>
         <PinButton gameId={g.id} pinned={data.pinned} large />
       </div>
 
@@ -270,8 +300,16 @@ export default async function GamePage({
         </div>
       </div>
 
+      <nav className="gjump" aria-label="Jump to section">
+        {JUMP.filter((j) => !(j.id === "weather" && g.indoor)).map((j) => (
+          <a key={j.id} href={`#${j.id}`}>
+            {j.label}
+          </a>
+        ))}
+      </nav>
+
       {/* ---------- spread ---------- */}
-      <h2>Spread models</h2>
+      <h2 id="spread">Spread models</h2>
       {modelSp == null ? (
         <p className="subhead">
           No model prediction for this game — usually means one side isn&apos;t
@@ -341,7 +379,7 @@ export default async function GamePage({
       )}
 
       {/* ---------- total ---------- */}
-      <h2>Totals model</h2>
+      <h2 id="totals">Totals model</h2>
       {modelTotal == null ? (
         <p className="subhead">No totals projection for this game.</p>
       ) : (
@@ -401,7 +439,7 @@ export default async function GamePage({
       )}
 
       {/* ---------- flags ---------- */}
-      <h2>Situational flags</h2>
+      <h2 id="flags">Situational flags</h2>
       {g.gameFlags.length === 0 ? (
         <p className="subhead">No situational flags on this game.</p>
       ) : (
@@ -453,7 +491,7 @@ export default async function GamePage({
       )}
 
       {/* ---------- team trends ---------- */}
-      <h2>
+      <h2 id="trends">
         Team trends{" "}
         <span className="dim" style={{ fontWeight: 400, fontSize: 12 }}>
           · {g.season} season to date
@@ -467,7 +505,7 @@ export default async function GamePage({
       />
 
       {/* ---------- current lines (per sportsbook) ---------- */}
-      <h2>Current lines</h2>
+      <h2 id="lines">Current lines</h2>
       <CurrentLines
         lines={lines as LineRowLite[]}
         home={homeShort}
@@ -520,7 +558,7 @@ export default async function GamePage({
       )}
 
       {/* ---------- prediction market ---------- */}
-      <h2>
+      <h2 id="kalshi">
         Prediction market{" "}
         <span className="dim" style={{ fontWeight: 400, fontSize: 12 }}>
           · Kalshi
@@ -538,7 +576,7 @@ export default async function GamePage({
       {/* ---------- weather ---------- */}
       {!g.indoor && (
         <>
-          <h2>Weather</h2>
+          <h2 id="weather">Weather</h2>
           {weather.length === 0 ? (
             <p className="subhead">
               No forecast yet — pulled once the game is inside the ~16-day
@@ -602,31 +640,8 @@ export default async function GamePage({
         </>
       )}
 
-      {/* ---------- injuries ---------- */}
-      <h2>Injuries</h2>
-      {g.injuries.length === 0 ? (
-        <p className="subhead">
-          No impact-player injuries listed. ESPN&apos;s CFB feed is thin — an empty
-          report means &quot;unknown,&quot; not &quot;clean.&quot; Guide §4.
-        </p>
-      ) : (
-        <ul className="hist">
-          {g.injuries.map((inj) => (
-            <li key={inj.id}>
-              <span className="hist-when">
-                {inj.team.canonicalName} — <strong>{inj.playerName}</strong>
-              </span>
-              <span className="hist-vals">
-                <span className="dim">{inj.position ?? "?"}</span>
-                <span style={{ textTransform: "capitalize" }}>{inj.status}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-
       {/* ---------- picks ---------- */}
-      <h2>Picks</h2>
+      <h2 id="picks">Picks</h2>
       {g.picks.length === 0 ? (
         <p className="subhead">
           No pick logged. Most model disagreements never become picks — see guide
@@ -696,9 +711,9 @@ export default async function GamePage({
 
       <p className="foot">
         Decision support, not a guarantee. Read the{" "}
-        <a className="inline-link" href="/guide" style={{ color: "var(--blue)" }}>
+        <Link className="inline-link" href="/guide" style={{ color: "var(--blue)" }}>
           interpretation guide
-        </a>
+        </Link>
         .
       </p>
     </div>

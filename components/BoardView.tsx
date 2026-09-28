@@ -42,20 +42,24 @@ function haystack(g: GameView): string {
 }
 
 const COMPACT_KEY = "yahn_compact";
+const FLAG_KEY = "yahn_flag";
 
 export function BoardView({ sections }: { sections: Section[] }) {
   const [q, setQ] = useState("");
-  const [flag, setFlag] = useState<string | null>(null);
+  // the remembered pick — may name a flag with no games this week; see `flag` below
+  const [chosenFlag, setChosenFlag] = useState<string | null>(null);
   const [compact, setCompact] = useState(false);
   const query = q.trim().toLowerCase();
 
-  // per-viewer display preference — read once on mount (SSR always starts
-  // false, so there's a one-frame flash to the stored value; harmless).
+  // per-viewer display preferences (density + flag filter) — read once on
+  // mount (SSR always starts with neither, so there's a one-frame flash to the
+  // stored values; harmless).
   useEffect(() => {
     try {
       setCompact(localStorage.getItem(COMPACT_KEY) === "1");
+      setChosenFlag(localStorage.getItem(FLAG_KEY) || null);
     } catch {
-      /* private browsing / storage blocked — just stay non-compact */
+      /* private browsing / storage blocked — just use the defaults */
     }
   }, []);
 
@@ -90,6 +94,19 @@ export function BoardView({ sections }: { sections: Section[] }) {
       })).filter((c) => c.count > 0),
     [allGames]
   );
+
+  // the remembered flag only applies in weeks that have it — otherwise show the
+  // full board (but keep remembering it for the weeks that do)
+  const flag = chosenFlag && flagChips.some((c) => c.flag === chosenFlag) ? chosenFlag : null;
+  const setFlag = (f: string | null) => {
+    setChosenFlag(f);
+    try {
+      if (f) localStorage.setItem(FLAG_KEY, f);
+      else localStorage.removeItem(FLAG_KEY);
+    } catch {
+      /* ignore — nothing to persist to */
+    }
+  };
 
   const hasFlag = (g: GameView) =>
     !flag || g.flags.some((f) => f.flagType === flag);

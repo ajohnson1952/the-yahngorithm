@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { GameView } from "../lib/webData";
 import {
   TeamRow,
@@ -88,7 +89,7 @@ export function GameCard({ g, compact = false }: { g: GameView; compact?: boolea
   return (
     <div className="card-wrap">
       <PinButton gameId={g.id} pinned={g.pinned} />
-      <a href={`/game/${g.id}`} className={cls}>
+      <Link href={`/game/${g.id}`} className={cls} prefetch={false}>
         <div className="card-grid">
         <div className="gc-matchup">
           <TeamRow team={g.away} score={g.awayScore} won={awayWon} />
@@ -244,7 +245,7 @@ export function GameCard({ g, compact = false }: { g: GameView; compact?: boolea
           )}
         </div>
         </div>
-      </a>
+      </Link>
     </div>
   );
 }

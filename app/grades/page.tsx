@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { currentSeason } from "../../lib/currentWeek";
 import { getGradeBoard } from "../../lib/webData";
 
@@ -61,9 +62,9 @@ export default async function GradesPage() {
         Every spread model and every flag, graded against the closing line on each
         final game — the hindsight-free record. Break-even is 52.4%. Backtests say
         expect ~50%; see the{" "}
-        <a href="/guide" style={{ color: "var(--blue)" }}>
+        <Link href="/guide" style={{ color: "var(--blue)" }}>
           guide
-        </a>
+        </Link>
         . {gamesGraded} game{gamesGraded === 1 ? "" : "s"} graded so far.
       </p>
 

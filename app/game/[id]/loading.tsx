@@ -1,5 +1,5 @@
 // Shown while a single game's detail data is loading (getGameDetail pulls
-// lines, weather, injuries, Kalshi, trends — several queries, uncached).
+// lines, weather, Kalshi, trends — several queries, uncached).
 export default function Loading() {
   return (
     <div className="gpage">
