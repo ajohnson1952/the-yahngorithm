@@ -169,7 +169,10 @@ export function BoardView({ sections }: { sections: Section[] }) {
               type="button"
               className={flag === c.flag ? "on" : ""}
               aria-pressed={flag === c.flag}
-              onClick={() => setFlag(flag === c.flag ? null : c.flag)}
+              onClick={() => {
+                haptic();
+                setFlag(flag === c.flag ? null : c.flag);
+              }}
             >
               {c.label} <span className="n">{c.count}</span>
             </button>
