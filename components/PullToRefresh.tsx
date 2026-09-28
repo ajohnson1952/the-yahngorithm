@@ -74,11 +74,13 @@ export function PullToRefresh() {
   if (!enabled || (pull === 0 && !refreshing)) return null;
 
   const armed = pull >= TRIGGER;
-  const offset = refreshing ? TRIGGER * 0.75 : pull * 0.75;
+  // starts 40px up, tucked behind the top bar (see .ptr) — so it peeks out as
+  // you pull and sits ~24px below the bar once armed / while refreshing
+  const offset = refreshing ? TRIGGER : pull;
   return (
     <div
       className={`ptr${refreshing ? " spinning" : ""}`}
-      style={{ transform: `translate(-50%, ${offset}px)`, opacity: refreshing ? 1 : Math.min(1, pull / TRIGGER) }}
+      style={{ transform: `translate(-50%, ${offset}px)` }}
       aria-live="polite"
       aria-label={refreshing ? "Refreshing" : undefined}
     >

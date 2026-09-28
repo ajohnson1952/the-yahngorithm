@@ -1148,10 +1148,12 @@ tr:hover td { background: var(--panel); }
 }
 
 /* ---------- pull-to-refresh (home-screen app only, components/PullToRefresh) ----------
-   a small round badge that slides down from under the top bar as you pull. */
+   a small round badge that slides out from UNDER the top bar as you pull:
+   it starts tucked behind the bar (z-index below .topbar's 20) and the
+   component translates it down. */
 .ptr {
-  position: fixed; left: 50%; z-index: 40;
-  top: calc(env(safe-area-inset-top, 0px) + 60px);
+  position: fixed; left: 50%; z-index: 19;
+  top: calc(env(safe-area-inset-top, 0px) + 57px - 40px);
   width: 34px; height: 34px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: var(--panel-2); border: 1px solid var(--border-bright);
@@ -1164,4 +1166,10 @@ tr:hover td { background: var(--panel); }
 @keyframes ptr-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   .ptr.spinning .ptr-icon { animation: none; }
+}
+/* In the home-screen app, iOS's rubber-band bounce at the top would drag the
+   sticky top bar down over the badge — and pull-to-refresh replaces what that
+   bounce was for anyway. Safari tabs keep their native behavior. */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior-y: none; }
 }
