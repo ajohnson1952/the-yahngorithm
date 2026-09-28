@@ -345,18 +345,15 @@ what makes the grading honest. The market line it's frozen at is a **real number
 a book was posting** at that moment (§2), so it stays gradeable against a real
 closing line later.
 
-**Early-season hold.** SP+ is Bill Connelly's own sheet now — it only updates
-when the operator sees his Google Sheet change and uploads it, so a "still
-preseason" gap mostly only affects a team CFBD is filling in as a fallback
-(Bill C hasn't covered it that week yet). Picks are held for a game until
-both teams' SP+ has moved off the season's preseason baseline — a
-per-team check, not just a whole-week one, precisely because a single
-week-level check let a stale fallback number through once (a pick logged off
-one team's number that hadn't actually refreshed that week). The hold lifts
-automatically once that team's number moves — usually the next Bill C upload,
-or CFBD's fallback catching up on its own for a team his sheet hasn't reached
-yet. (Week 1 is exempt: everyone, the market included, is working off
-preseason info then.)
+**Picks wait for Bill C.** From week 2 on, a pick is only logged once Bill
+Connelly's sheet has been uploaded for that week (`load-billc`) and **both**
+teams' SP+ comes from it. Before that, the week's ratings are filled from
+CFBD's SP+ feed, so the board and game pages still show model lines and
+edges — treat those as provisional; none of them becomes a pick. The hold lifts
+on its own: the first pipeline run after the upload logs whatever qualifies.
+A team his sheet doesn't cover that week (an unresolved name) stays on CFBD's
+number and its games stay pick-free. (Week 1 is exempt: everyone, the market
+included, is working off preseason info then.)
 
 Expect **few picks** — often 0–4 a week, sometimes zero. Early in the season
 there are fewer still, because the SRS corroborator isn't available yet. That's

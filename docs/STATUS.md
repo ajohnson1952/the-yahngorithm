@@ -3,7 +3,7 @@
 Living snapshot. `README.md` = architecture, `docs/OPERATIONS.md` = how to run
 it during the season, `docs/CALIBRATION.md` = what the backtests found.
 
-## Where it stands (2026 season, week 4)
+## Where it stands (2026 season, week 5)
 
 Everything is built and deployed. The pipeline runs itself on GitHub Actions;
 the webapp is live on **Vercel** (the-yahngorithm.com) off `main`, migrated
@@ -52,6 +52,26 @@ a CFBD/Odds monthly-quota exhaustion that hit the same day.
       env vars.
 
 ## Built this cycle
+
+### Sept 28 — picks require Bill C's sheet; home-screen app + UX pass
+
+- **Picks now come only from Bill C's numbers (week 2+).** `generate-picks`
+  holds the whole week until `load-billc` has run for it, and holds any game
+  where either team's SP+ that week isn't billc-sourced. CFBD's SP+ still
+  fills the week's rows first so the board has model lines. Replaces the old
+  "has SP+ moved off preseason" gates (`teamHasMoved` / week-level
+  `spPlusFreshness`), which CFBD's live numbers could pass — week 5 logged 15
+  picks at 8am CT off CFBD before the sheet was uploaded. (They turned out
+  identical after the upload: CFBD had already mirrored his week-5 update, and
+  the source offset is a flat ~0.45 that cancels in a spread — but that's luck
+  of timing, not a guarantee.) `spPlusFreshness` survives only as tick.ts's
+  cue to pull CFBD ratings daily for the board.
+- Week 5 sheet loaded (752/769 teams moved; Record column arrived
+  date-mangled, e.g. "Apr-00" — loader ignores it). The 15 CFBD-era week-5
+  picks were deleted and regenerated: same 15, same sides.
+- iOS home-screen web app (Joe icon, manifest, safe-area), client-side nav,
+  game-page jump bar + cached/2-round-trip data load, injuries feature removed
+  (0 rows ever) — commit 6a1270f.
 
 ### Sept 22/23 — nav/board refresh: bottom tab bar, compact view, watch timeline, and a long-standing mobile sticky-nav bug
 
@@ -679,9 +699,8 @@ guide §11.
 
 ## Known limitations
 
-- CFBD's SP+ is frozen at the preseason projection until Bill Connelly's first
-  in-season revision (~wk 2–3). Picks are **held** for the week until it moves
-  (via CFBD or a `load-billc` bridge) — see the Sept 8 entries.
+- Picks wait for Bill C's sheet each week (week 2+) — CFBD's SP+ fills the
+  board in the meantime but never produces a pick (Sept 28 entry).
 - SRS is empty in week 1, noisy through ~week 3 — early spread signal is SP+ only.
 - Rating edges on market spreads > ~20 are artifacts (books shade big favorites) — filtered.
 - The Odds API is current-week only; historical lines come from CFBD.

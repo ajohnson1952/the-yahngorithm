@@ -13,6 +13,10 @@
 //           - UNDER: strong wind, or a slow projected pace
 //           - OVER:  a fast projected pace
 //
+// Week 2+: only games where BOTH teams' SP+ that week comes from Bill C's
+// sheet (load-billc). CFBD's fallback numbers drive the board meanwhile but
+// never a pick.
+//
 // Picks are logged once (first time they qualify) and never rewritten
 // — the model line / market line / edge are captured as of that
 // moment, for honest grading later. No API calls.
@@ -34,12 +38,6 @@ import {
 } from "../lib/modelConfig";
 import { consensusByGame } from "../lib/consensus";
 import { latestLineBatchByGame } from "../lib/lineWindows";
-import {
-  spPlusFreshness,
-  ratingsAtWeek,
-  preseasonBaseline,
-  teamHasMoved,
-} from "../lib/ratingsFreshness";
 
 const prisma = new PrismaClient();
 
@@ -80,24 +78,31 @@ async function main() {
 
   console.log(`Pick generation — season ${season}, week ${week}\n`);
 
-  // Hold every pick for the week until SP+ has an in-season number in it.
-  // Before Bill Connelly's first revision (~wk 2-3) it's the frozen preseason
-  // projection, and grading a preseason model against a market that's seen a
-  // week of games just logs the model being stale as an "edge".
-  const fresh = await spPlusFreshness(prisma, season, week);
-  if (!fresh.fresh) {
-    console.log(
-      `⏸  SP+ for week ${week} still matches the week ${fresh.baselineWeek ?? "?"} ` +
-        `(preseason) baseline — ${Math.round(fresh.movedPct * 100)}% of ` +
-        `${fresh.comparedTeams || "?"} teams have moved.\n` +
-        `   Bill Connelly hasn't published his in-season update yet, or you ` +
-        `haven't uploaded it. Holding all week ${week} picks until it lands.\n` +
-        `   (Run \`npm run load-billc\` once his sheet is out; this clears itself. ` +
-        `pull-ratings alone won't — it's fallback-only now, see loadBillcRatings.ts.)\n`
-    );
-    await prisma.$disconnect();
-    return;
+  // Picks come ONLY from Bill C's sheet (week 2+). CFBD's SP+ fills the
+  // week's rows in the meantime so the model/board have numbers to show, but
+  // it's a live, unversioned endpoint that can lag or shift under us (JMU @
+  // SDSU wk3) — so no pick is logged on a CFBD-sourced rating, full stop.
+  // Week 1 is exempt: everyone, the market included, is on preseason info,
+  // and FBS week-1 rows are never billc-sourced by design (loadBillcRatings).
+  // Clears itself: the first tick after `npm run load-billc` logs the picks.
+  const billcTeams = new Set<string>();
+  if (week > 1) {
+    const rows = await prisma.teamRatingWeekly.findMany({
+      where: { season, week, spPlusSource: "billc" },
+      select: { teamId: true },
+    });
+    for (const r of rows) billcTeams.add(r.teamId);
+    if (billcTeams.size === 0) {
+      console.log(
+        `⏸  Bill C's SP+ isn't loaded for week ${week} yet — holding all week ` +
+          `${week} picks. The model/board run on CFBD's numbers meanwhile.\n` +
+          `   Run \`npm run load-billc\` once his sheet is out; the next tick logs the picks.\n`
+      );
+      await prisma.$disconnect();
+      return;
+    }
   }
+  const onBillc = (teamId: string) => week <= 1 || billcTeams.has(teamId);
 
   const games = await prisma.game.findMany({
     where: {
@@ -121,44 +126,6 @@ async function main() {
   });
   const predByGame = new Map<string, (typeof preds)[number]>();
   for (const p of preds) if (!predByGame.has(p.gameId)) predByGame.set(p.gameId, p);
-
-  // Per-team freshness, on top of the week-level gate above. spPlusFreshness
-  // only checks that >50% of ALL teams have moved off preseason — a lower-
-  // profile team's specific week can still be an unrefreshed duplicate of
-  // last week's pull even after that aggregate gate opens, because enough
-  // OTHER teams moved first. Compare against the PRIOR week (falling back to
-  // the preseason baseline when the prior week isn't a valid same-source
-  // comparison) — see teamHasMoved() for the full reasoning and caveats.
-  const [priorWeekRatings, base] =
-    week > 1
-      ? await Promise.all([
-          ratingsAtWeek(prisma, season, week - 1),
-          preseasonBaseline(prisma, season),
-        ])
-      : [new Map(), { overall: new Map<string, number>() }];
-  const ratingByTeam = new Map<
-    string,
-    { spPlusOverall: number | null; spPlusSource: string | null }
-  >();
-  if (week > 1) {
-    const ratings = await prisma.teamRatingWeekly.findMany({
-      where: { season, week },
-      select: { teamId: true, spPlusOverall: true, spPlusSource: true },
-    });
-    for (const r of ratings) ratingByTeam.set(r.teamId, r);
-  }
-  const teamMoved = (teamId: string) => {
-    if (week <= 1) return true;
-    const r = ratingByTeam.get(teamId);
-    return teamHasMoved(
-      priorWeekRatings,
-      base.overall,
-      teamId,
-      r?.spPlusOverall ?? null,
-      r?.spPlusSource ?? null,
-      week
-    );
-  };
 
   // Latest snapshot batch per game only — consensusByGame reads just the newest
   // batch, and the full week's Line history is 40k+ rows by Saturday.
@@ -196,12 +163,14 @@ async function main() {
     const home = g.homeTeam.canonicalName;
     const label = `${away} @ ${home}`;
 
-    const homeMoved = teamMoved(g.homeTeamId);
-    const awayMoved = teamMoved(g.awayTeamId);
-    if (!homeMoved || !awayMoved) {
+    // the sheet is loaded, but one side didn't resolve against it (new name,
+    // missing row) — that team is still on CFBD's fallback, so no pick
+    const homeOk = onBillc(g.homeTeamId);
+    const awayOk = onBillc(g.awayTeamId);
+    if (!homeOk || !awayOk) {
       staleHold.push(
-        `${label}: held — ${!homeMoved ? home : away}'s SP+ hasn't moved off ` +
-          `preseason yet (CFBD lag on this team specifically, even though the week is otherwise fresh)`
+        `${label}: held — ${!homeOk ? home : away}'s SP+ is CFBD fallback, ` +
+          `not from Bill C's sheet (check load-billc's unresolved names)`
       );
       continue;
     }
@@ -325,7 +294,7 @@ async function main() {
   }
 
   if (staleHold.length > 0) {
-    console.log(`\nHeld — a team's SP+ hasn't individually refreshed yet — ${staleHold.length}:`);
+    console.log(`\nHeld — a team isn't on Bill C's sheet this week — ${staleHold.length}:`);
     for (const s of staleHold) console.log(`  - ${s}`);
   }
 

@@ -132,27 +132,18 @@ over the closing line.** Use it as decision support:
   (so Saturday's results stay up Sunday morning, then it advances). This is
   independent of CFBD's calendar. Knob: `WEEK_HOLD_MS` in `lib/currentWeek.ts`.
 - **No picks are being logged for the week** — check the `generate-picks` log
-  for a `⏸ SP+ … still matches the preseason baseline` line. This only bites a
-  team CFBD is still supplying as a fallback (Bill C's sheet hasn't covered it
-  yet, or you haven't uploaded this week's sheet at all) — his sheet is the
-  source of record for SP+ now, so uploading it is the fastest way to clear
-  this for every team it covers. `generate-picks` holds all picks until the
-  week is broadly fresh — whether via a `load-billc` upload (step 0 of the
-  weekly rhythm) or CFBD's own fallback numbers catching up on their own.
-  Force it with `pull-ratings` + `generate-picks` from `/admin`. Logic:
-  `lib/ratingsFreshness.ts`.
-- **One specific game isn't getting a pick even though the week is fresh** —
-  check the log for a `Held — a team's SP+ hasn't individually refreshed yet`
-  line. Only fires for a team still on CFBD's fallback (billc-sourced rows
-  auto-pass — his sheet has a clean, discrete update you control, nothing to
-  gate). `spPlusFreshness` is a whole-week aggregate (>50% of teams moved); a
-  CFBD-fallback team can still be sitting on an unrefreshed number after that
-  gate opens because enough *other* teams moved first — this is exactly the
-  failure mode `load-billc` becoming the SP+ source of record was built to
-  route around (see step 0 above and STATUS.md, 2026-09-14/15). `generate-
-  picks` also checks each game's two teams individually (`teamHasMoved`)
-  before logging; it clears itself once that team's own number moves (usually
-  the next `pull-ratings`, or the Tuesday weekly pull).
+  for `⏸ Bill C's SP+ isn't loaded for week N yet`. Expected until you run
+  `load-billc` for the week (step 0 of the weekly rhythm): from week 2 on,
+  picks come **only** from Bill C's numbers. CFBD's SP+ fills the week's rows
+  in the meantime so the board has model lines, but it never produces a pick —
+  `pull-ratings` can't clear this. The first tick after the upload logs the
+  picks (or run `generate-picks` from `/admin`).
+- **One specific game isn't getting a pick even though the sheet is loaded** —
+  check the log for `Held — a team isn't on Bill C's sheet this week`. One of
+  the two teams didn't resolve against his sheet (see `load-billc`'s
+  "Unresolved sheet names" list), so it's still on CFBD's fallback number. Fix
+  the name mapping (`NAME_OVERRIDES` in `scripts/loadBillcRatings.ts`) and
+  re-run `load-billc`.
 
 ## The Grades page
 
