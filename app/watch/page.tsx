@@ -11,6 +11,7 @@ import {
 } from "../../lib/watchGuide";
 import { WatchCard } from "../../components/WatchCard";
 import { WatchAutoRefresh } from "../../components/WatchAutoRefresh";
+import { HapticSegments } from "../../components/HapticSegments";
 
 export const metadata = { title: "Watch guide · the yahngorithm" };
 
@@ -212,18 +213,21 @@ export default async function WatchPage({
       </div>
 
       {days.length > 0 && (
-        <div className="sort-toggle watch-daytabs">
-          {days.map((d) => (
-            <Link
-              key={d}
-              href={qs({ week: sp.week ? week : undefined, day: d })}
-              className={d === day ? "on" : ""}
-            >
-              {ctDateLabel(byDay.get(d)![0].kickoff)}
-              <span className="n"> ({byDay.get(d)!.length})</span>
-            </Link>
-          ))}
-        </div>
+        <HapticSegments
+          className="sort-toggle watch-daytabs"
+          groupLabel="Day"
+          items={days.map((d) => ({
+            href: qs({ week: sp.week ? week : undefined, day: d }),
+            on: d === day,
+            label: ctDateLabel(byDay.get(d)![0].kickoff),
+            children: (
+              <>
+                {ctDateLabel(byDay.get(d)![0].kickoff)}
+                <span className="n"> ({byDay.get(d)!.length})</span>
+              </>
+            ),
+          }))}
+        />
       )}
 
       {watchGames.length === 0 ? (

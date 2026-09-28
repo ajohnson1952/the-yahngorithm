@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { HapticToggle } from "./HapticToggle";
 
 /** Live-score refresher for /watch. Re-runs the server component (which
  *  re-pulls ESPN and re-ranks the quadbox) on an interval while games are
@@ -68,17 +69,19 @@ export function WatchAutoRefresh({
 
   return (
     <div className="watch-refresh">
-      <button type="button" onClick={refreshNow} aria-label="refresh live scores">
+      {/* HapticToggles so iPhones tick; refresh is a momentary press, so its
+          switch is never "on" (React snaps it back after each tap) */}
+      <HapticToggle checked={false} onChange={refreshNow} label="Refresh live scores">
         ↻ refresh
-      </button>
-      <button
-        type="button"
+      </HapticToggle>
+      <HapticToggle
+        checked={on}
+        onChange={() => setOn((v) => !v)}
+        label="Auto-refresh live scores"
         className={on ? "on" : ""}
-        onClick={() => setOn((v) => !v)}
-        aria-pressed={on}
       >
         {on ? "● auto" : "○ auto"}
-      </button>
+      </HapticToggle>
       <span>
         {busy.current
           ? "updating…"

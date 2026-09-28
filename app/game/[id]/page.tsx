@@ -7,6 +7,7 @@ import { median } from "../../../lib/consensus";
 import { HOME_FIELD_ADVANTAGE } from "../../../lib/modelConfig";
 import { probToSpread } from "../../../lib/winProb";
 import { PinButton } from "../../../components/PinButton";
+import { GameJumpBar } from "../../../components/GameJumpBar";
 import {
   TeamRow,
   FlagChip,
@@ -300,13 +301,7 @@ export default async function GamePage({
         </div>
       </div>
 
-      <nav className="gjump" aria-label="Jump to section">
-        {JUMP.filter((j) => !(j.id === "weather" && g.indoor)).map((j) => (
-          <a key={j.id} href={`#${j.id}`}>
-            {j.label}
-          </a>
-        ))}
-      </nav>
+      <GameJumpBar items={JUMP.filter((j) => !(j.id === "weather" && g.indoor))} />
 
       {/* ---------- spread ---------- */}
       <h2 id="spread">Spread models</h2>

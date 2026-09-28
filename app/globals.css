@@ -303,7 +303,8 @@ a.inline-link:hover { color: var(--blue); }
 
 /* ---------- watch guide ---------- */
 .watch-daytabs { flex-wrap: wrap; margin: 0 0 20px; }
-.watch-daytabs a .n { color: var(--text-faint); font-weight: 400; }
+.watch-daytabs a .n,
+.watch-daytabs .seg .n { color: var(--text-faint); font-weight: 400; }
 .watch-summary { color: var(--text-faint); font-size: 12.5px; margin: 0 0 18px; }
 
 .watch-window { margin: 0 0 32px; }
@@ -383,13 +384,15 @@ a.inline-link:hover { color: var(--blue); }
   display: flex; align-items: center; gap: 8px;
   font-size: 12px; color: var(--text-faint); margin: 0 0 18px;
 }
-.watch-refresh button {
+.watch-refresh button,
+.watch-refresh .haptic-toggle {
   font: inherit; color: var(--text-dim); cursor: pointer;
   background: var(--panel); border: 1px solid var(--border);
   border-radius: 6px; padding: 3px 9px;
 }
-.watch-refresh button:hover { border-color: var(--border-bright); color: var(--text); }
-.watch-refresh button.on { color: var(--green); border-color: color-mix(in srgb, var(--green) 45%, var(--border)); }
+.watch-refresh button:hover,
+.watch-refresh .haptic-toggle:hover { border-color: var(--border-bright); color: var(--text); }
+.watch-refresh .haptic-toggle.on { color: var(--green); border-color: color-mix(in srgb, var(--green) 45%, var(--border)); }
 
 .watch-card-top-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .watch-live {
@@ -758,12 +761,12 @@ a.card:hover .team-name { color: var(--blue); }
   background: var(--bg); border-bottom: 1px solid var(--border);
 }
 .gjump::-webkit-scrollbar { display: none; }
-.gjump a {
+.gjump .gjump-chip {
   flex-shrink: 0; padding: 4px 11px; border-radius: 999px;
   font-size: 12px; font-weight: 600; color: var(--text-dim);
   background: var(--panel); border: 1px solid var(--border);
 }
-.gjump a:hover { color: var(--text); border-color: var(--text-faint); }
+.gjump .gjump-chip:hover { color: var(--text); border-color: var(--text-faint); }
 /* land section headings below the top bar + jump bar, not under them */
 .gpage h2[id] { scroll-margin-top: calc(57px + 46px + 12px + env(safe-area-inset-top, 0px)); }
 @media (prefers-reduced-motion: no-preference) {
@@ -930,7 +933,7 @@ tr:hover td { background: var(--panel); }
   font-family: var(--sans); cursor: pointer;
 }
 .login-form button:hover, .rk-save:hover, .admin-btn:hover { border-color: var(--blue); }
-.rk-save:disabled { opacity: 0.5; cursor: default; }
+.rk-save:has(.haptic-input:disabled) { opacity: 0.5; cursor: default; }
 .login-err { color: var(--red); font-size: 12px; }
 .rk-ok { color: var(--green); font-size: 12px; font-weight: 600; }
 

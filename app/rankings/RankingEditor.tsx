@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { HapticToggle } from "../../components/HapticToggle";
 import {
   DndContext,
   closestCenter,
@@ -154,9 +155,16 @@ export function RankingEditor({
     <div className="rk-wrap">
       <div className="rk-main">
         <div className="rk-toolbar">
-          <button className="rk-save" onClick={save} disabled={!dirty || pending}>
+          {/* HapticToggle so iPhones tick on save (momentary — never "on") */}
+          <HapticToggle
+            checked={false}
+            onChange={save}
+            disabled={!dirty || pending}
+            label="Save ranking"
+            className="rk-save"
+          >
             {pending ? "Saving…" : dirty ? "Save ranking" : "Saved"}
-          </button>
+          </HapticToggle>
           {dirty && (
             <button
               className="rk-reset"

@@ -4,14 +4,19 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { HapticToggle } from "./HapticToggle";
 
-/** The board's sort control (kickoff / edge / pinned) as a segmented control
- *  that ticks on iPhone: each segment is a HapticToggle that navigates on
- *  change. The selected segment's switch is disabled, so re-tapping it
- *  neither navigates nor ticks — like a native segmented control. */
-export function SortSegments({
+/** A pick-one row of links (board sort, /watch day tabs) as a segmented
+ *  control that ticks on iPhone: each segment is a HapticToggle that
+ *  navigates on change. The selected segment's switch is disabled, so
+ *  re-tapping it neither navigates nor ticks — like a native segmented
+ *  control. */
+export function HapticSegments({
   items,
+  className = "sort-toggle",
+  groupLabel,
 }: {
   items: { href: string; on: boolean; label: string; children: React.ReactNode }[];
+  className?: string;
+  groupLabel: string;
 }) {
   const router = useRouter();
   // these were <Link>s — keep their prefetch so switching stays instant
@@ -20,7 +25,7 @@ export function SortSegments({
   }, [items, router]);
 
   return (
-    <div className="sort-toggle" role="group" aria-label="Sort">
+    <div className={className} role="group" aria-label={groupLabel}>
       {items.map((it) => (
         <HapticToggle
           key={it.href}
