@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
 import { getWeekBoard, getPinnedGameIds } from "../lib/webData";
 import { BoardView } from "../components/BoardView";
+import { HapticSegmented } from "../components/HapticSegmented";
 
 // The page itself still renders per request (it reads ?week=/?sort= and the
 // yahn_uid cookie), but the expensive part — getWeekBoard's queries — is cached
@@ -156,7 +157,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             ↩ this week ({thisWeek})
           </Link>
         )}
-        <div className="sort-toggle" aria-label="Sort">
+        <HapticSegmented className="sort-toggle" aria-label="Sort">
           <Link
             href={qs({ week: sp.week ? week : undefined })}
             className={!byEdge && !pinnedOnly ? "on" : ""}
@@ -176,7 +177,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           >
             ★<span className="wide-only"> Pinned</span>
           </Link>
-        </div>
+        </HapticSegmented>
       </div>
 
       {pinnedOnly && sections.length === 0 && (

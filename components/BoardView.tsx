@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { GameView } from "../lib/webData";
 import { GameCard } from "./GameCard";
 import { FLAG_LABEL } from "./ui";
+import { haptic } from "../lib/haptics";
 
 type Section = { label: string; games: GameView[] };
 
@@ -64,6 +65,7 @@ export function BoardView({ sections }: { sections: Section[] }) {
   }, []);
 
   const toggleCompact = () => {
+    haptic(); // it's a switch — iOS switches tick
     setCompact((c) => {
       const next = !c;
       try {

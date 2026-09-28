@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { togglePin } from "../app/actions";
+import { haptic } from "../lib/haptics";
 
 export function PinButton({
   gameId,
@@ -21,6 +22,7 @@ export function PinButton({
     e.preventDefault();
     e.stopPropagation();
     const next = !on;
+    haptic();
     setOn(next); // optimistic
     start(async () => {
       const res = await togglePin(gameId);
