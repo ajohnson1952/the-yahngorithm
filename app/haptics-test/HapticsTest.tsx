@@ -122,6 +122,24 @@ export function HapticsTest() {
           </button>
         ))}
       </div>
+      <h2>3. Invisible switch laid over a button — tap the button</h2>
+      <p className="subhead" style={{ marginBottom: 8 }}>
+        Your finger lands on a real (invisible) switch. If one of these ticks, we
+        can build every haptic control this way.
+      </p>
+      <div style={{ display: "grid", gap: 8 }}>
+        <OverlayButton
+          label="F · switch input stretched over the button (opacity 0.01)"
+          mode="input"
+          onToggle={() => note("F toggled")}
+        />
+        <OverlayButton
+          label="G · label covering the button, switch inside it"
+          mode="label"
+          onToggle={() => note("G toggled")}
+        />
+      </div>
+
       <label
         ref={hiddenBody}
         aria-hidden
@@ -137,6 +155,45 @@ export function HapticsTest() {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+const btnStyle: React.CSSProperties = {
+  position: "relative", textAlign: "left", padding: "12px 14px", borderRadius: 10,
+  fontSize: 14, color: "var(--text)", background: "var(--panel)",
+  border: "1px solid var(--border)", overflow: "hidden",
+};
+
+function OverlayButton({
+  label,
+  mode,
+  onToggle,
+}: {
+  label: string;
+  mode: "input" | "label";
+  onToggle: () => void;
+}) {
+  const cover: React.CSSProperties = {
+    position: "absolute", inset: 0, width: "100%", height: "100%",
+    margin: 0, opacity: 0.01, cursor: "pointer",
+  };
+  return (
+    <div style={btnStyle}>
+      {label}
+      {mode === "input" ? (
+        <input type="checkbox" {...{ switch: "" }} style={cover} onChange={onToggle} aria-label={label} />
+      ) : (
+        <label style={{ ...cover, display: "block" }}>
+          <input
+            type="checkbox"
+            {...{ switch: "" }}
+            onChange={onToggle}
+            style={{ opacity: 0.01, position: "absolute", left: 0, top: 0 }}
+            aria-label={label}
+          />
+        </label>
+      )}
     </div>
   );
 }
