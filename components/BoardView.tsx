@@ -163,15 +163,18 @@ export function BoardView({ sections }: { sections: Section[] }) {
         <div className="flag-filter">
           <span className="flag-filter-label">flag</span>
           {flagChips.map((c) => (
-            <HapticToggle
+            // plain buttons, deliberately NOT HapticToggles: this row scrolls
+            // sideways on phones, and an iOS switch swallows horizontal drags
+            // (it's draggable), so invisible switches here blocked the scroll
+            <button
               key={c.flag}
-              checked={flag === c.flag}
-              onChange={() => setFlag(flag === c.flag ? null : c.flag)}
-              label={`Only ${c.label} games`}
+              type="button"
               className={`flag-chip${flag === c.flag ? " on" : ""}`}
+              aria-pressed={flag === c.flag}
+              onClick={() => setFlag(flag === c.flag ? null : c.flag)}
             >
               {c.label} <span className="n">{c.count}</span>
-            </HapticToggle>
+            </button>
           ))}
           {flag && (
             <button

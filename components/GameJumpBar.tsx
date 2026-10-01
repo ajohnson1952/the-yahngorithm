@@ -1,11 +1,12 @@
 "use client";
 
-import { HapticToggle } from "./HapticToggle";
-
-/** The game page's sticky section jump bar. Each chip is a momentary
- *  HapticToggle (ticks on iPhone, never stays "on") that scrolls to its
- *  section — the h2's scroll-margin-top keeps it clear of the top bar +
- *  this bar. Updates the #hash without adding a history entry. */
+/** The game page's sticky section jump bar. Each chip scrolls to its section
+ *  — the h2's scroll-margin-top keeps it clear of the top bar + this bar —
+ *  and updates the #hash without adding a history entry.
+ *
+ *  Plain buttons, deliberately NOT HapticToggles: the bar scrolls sideways on
+ *  phones, and an iOS switch swallows horizontal drags (it's draggable), so
+ *  invisible switches over the chips blocked the scroll. */
 export function GameJumpBar({ items }: { items: { id: string; label: string }[] }) {
   const jump = (id: string) => {
     const el = document.getElementById(id);
@@ -17,15 +18,9 @@ export function GameJumpBar({ items }: { items: { id: string; label: string }[] 
   return (
     <nav className="gjump" aria-label="Jump to section">
       {items.map((j) => (
-        <HapticToggle
-          key={j.id}
-          checked={false}
-          onChange={() => jump(j.id)}
-          label={`Jump to ${j.label}`}
-          className="gjump-chip"
-        >
+        <button key={j.id} type="button" className="gjump-chip" onClick={() => jump(j.id)}>
           {j.label}
-        </HapticToggle>
+        </button>
       ))}
     </nav>
   );
