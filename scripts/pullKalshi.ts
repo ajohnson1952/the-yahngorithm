@@ -21,8 +21,20 @@ import {
 
 const prisma = new PrismaClient();
 
-// Kalshi "School Mascot" -> our canonicalName, only where a prefix match fails
+// Kalshi name -> our canonicalName, only where the normal matching fails.
+// Kalshi has used two formats: short names ("San Jose St.", "UMass" — current
+// as of Oct 2026) and "School Mascot" (earlier). Both are kept. If a team
+// goes missing, the "FBS games with no Kalshi market" list this script prints
+// is the canary — add its Kalshi spelling here.
 const OVERRIDES: Record<string, string> = {
+  // short names
+  "Appalachian St.": "App State",
+  "Louisiana-Monroe": "UL Monroe",
+  "UMass": "Massachusetts",
+  "Tennessee-Martin": "UT Martin",
+  "University at Albany": "UAlbany",
+  "LIU": "Long Island University",
+  // "School Mascot" format
   "Miami RedHawks": "Miami (OH)",
   "Massachusetts Minutemen": "Massachusetts",
   "Louisiana Ragin' Cajuns": "Louisiana",
@@ -46,9 +58,14 @@ function parseArgs() {
   return { season: v("--season"), week: v("--week") };
 }
 
+/** lower-case, accents stripped — "San Jose State" finds "San José State" */
+const fold = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 function resolveTeam(
   raw: string,
-  byCanonical: Map<string, string>
+  byCanonical: Map<string, string>,
+  byFolded: Map<string, string>
 ): string | null {
   if (OVERRIDES[raw]) return byCanonical.get(OVERRIDES[raw]) ?? null;
   // Kalshi abbreviates "State" -> "St." and drops some words
@@ -58,6 +75,8 @@ function resolveTeam(
     .replace(/\bMiss\.\s/g, "Mississippi ")
     .replace(/\bLa\.\s/g, "Louisiana ");
   if (byCanonical.has(kalshiName)) return byCanonical.get(kalshiName)!;
+  const folded = byFolded.get(fold(kalshiName));
+  if (folded) return folded;
   // longest canonical name that is a whole-word prefix of the Kalshi string
   let best: { id: string; len: number } | null = null;
   for (const [canon, id] of byCanonical) {
@@ -83,10 +102,19 @@ async function main() {
     select: { id: true, canonicalName: true },
   });
   const byCanonical = new Map(teams.map((t) => [t.canonicalName, t.id]));
+  const byFolded = new Map(teams.map((t) => [fold(t.canonicalName), t.id]));
 
   const games = await prisma.game.findMany({
     where: { season, week },
-    select: { id: true, homeTeamId: true, awayTeamId: true },
+    select: {
+      id: true,
+      homeTeamId: true,
+      awayTeamId: true,
+      status: true,
+      kickoffTime: true,
+      homeTeam: { select: { canonicalName: true, classification: true } },
+      awayTeam: { select: { canonicalName: true, classification: true } },
+    },
   });
   const gameByPair = new Map<string, string>();
   for (const g of games) {
@@ -102,8 +130,8 @@ async function main() {
   const unmatched: string[] = [];
 
   for (const e of events as KalshiGameMarket[]) {
-    const idA = resolveTeam(e.a.team, byCanonical);
-    const idB = resolveTeam(e.b.team, byCanonical);
+    const idA = resolveTeam(e.a.team, byCanonical, byFolded);
+    const idB = resolveTeam(e.b.team, byCanonical, byFolded);
     if (!idA || !idB) {
       unmatched.push(`${e.a.team} vs ${e.b.team}`);
       continue;
@@ -154,6 +182,26 @@ async function main() {
       `\nKalshi events not matched to a team (${unmatched.length}):\n  ` +
         unmatched.slice(0, 25).join("\n  ")
     );
+  }
+  // The canary: an upcoming FBS-vs-FBS game on this week's board with no
+  // Kalshi price. Usually a name Kalshi spells differently (fix: OVERRIDES);
+  // occasionally a game Kalshi simply hasn't listed yet.
+  const priced = new Set(rows.map((r) => r.gameId));
+  const missing = games.filter(
+    (g) =>
+      !priced.has(g.id) &&
+      g.status !== "final" &&
+      g.kickoffTime.getTime() > Date.now() &&
+      g.homeTeam.classification === "fbs" &&
+      g.awayTeam.classification === "fbs"
+  );
+  if (missing.length) {
+    console.log(
+      `\n⚠ FBS games with no Kalshi market (${missing.length}):\n  ` +
+        missing.map((g) => `${g.awayTeam.canonicalName} @ ${g.homeTeam.canonicalName}`).join("\n  ")
+    );
+  } else {
+    console.log("\nEvery upcoming FBS-vs-FBS game this week has a Kalshi market.");
   }
   console.log("============================================================");
 
