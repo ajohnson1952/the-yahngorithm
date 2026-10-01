@@ -63,7 +63,25 @@ async function latestMs(
 }
 const minsAgo = (ms: number) => (ms === 0 ? Infinity : (Date.now() - ms) / 60000);
 
+/** Wake Neon before anything else. A cold start is normally ~0.4 s, but 1 of
+ *  ~1,700 in Sept took 27 s (Oct 1 00:00Z) — past Prisma's 5 s connect
+ *  timeout, which crashed the tick before it ran a single step. Retry for up
+ *  to ~a minute; the child scripts then find the DB already awake. */
+async function wakeDb(tries = 6, waitMs = 5000) {
+  for (let i = 1; ; i++) {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      return;
+    } catch (e) {
+      if (i >= tries) throw e;
+      console.log(`  DB not reachable yet (try ${i}/${tries}) — retrying in ${waitMs / 1000}s`);
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+}
+
 async function main() {
+  await wakeDb();
   const { dow, hour, minute } = centralNow();
   const activeHours = hour >= 8 || hour <= 1; // 8am–1am CT covers late West-coast kicks
   // No scores/lines pulls all day Tuesday (the weekly pull covers it) or before
