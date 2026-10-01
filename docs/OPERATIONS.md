@@ -17,12 +17,13 @@ don't use it. Instead:
 
 | Group | Fires | What runs |
 |---|---|---|
+| *(quiet hours)* | 10pm–8am CT, except Sat night until 2am | nothing — the tick exits before any DB call so Neon stays asleep. Manual `--only` runs still work. |
 | **heartbeat** | every tick (~30 min) | Kalshi, market flags, model, picks — all free |
 | **scores** | game windows (all week except Tue daytime) | `pull-games` + `grade-picks` — ~30 min on Saturday, ~hourly otherwise. A final is graded within ~30 min |
 | **lines** | game windows, never Tuesday | `pull-lines --daily` — every ~30 min in the Sat 9a–8p core, every ~2.75 h otherwise. Also self-limits when monthly Odds credits run low |
 | **weekly** | Tue ~8–11am CT, once | the full heavy pull: ratings, polls, schedule, advanced + EPA, **opening lines**, Kalshi, flags, model, picks, grade |
 | **sunday** | Sun ~9am–noon CT, once | advanced-stat checkpoint + team trends |
-| **weather** | ~6am & ~4pm CT | weather forecast + weather flags |
+| **weather** | ~8am & ~4pm CT | weather forecast + weather flags |
 | **preseason** | manual only (Actions tab) | talent, returning production, portal, per-team HFA |
 
 Budget with this cadence: CFBD ~55%/mo, The Odds API ~85–90%/mo (tighter in a

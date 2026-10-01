@@ -18,14 +18,15 @@
 //   lines      pull-lines --daily                           game windows, rate-limited
 //   weekly     the full Tuesday heavy pull                   Tue ~9am CT, once
 //   sunday     pull-advanced + compute-trends                Sun ~10am CT, once
-//   weather    weather forecast + weather flags              ~6am / ~4pm CT
-//   (polls)    pull-rankings, until the new AP poll lands    Sun 3/6/9pm, Mon 6/10am CT
+//   weather    weather forecast + weather flags              ~8am / ~4pm CT
+//   (polls)    pull-rankings, until the new AP poll lands    Sun 3/6/9pm, Mon 8/10am CT
 // ============================================================
 
 import { execFileSync } from "child_process";
 import { PrismaClient } from "@prisma/client";
 import { getCurrentSeasonWeek } from "../lib/cfbd";
 import { spPlusFreshness } from "../lib/ratingsFreshness";
+import { SITE_URL, revalidateToken } from "../lib/pipelineCache";
 
 const prisma = new PrismaClient();
 
@@ -80,10 +81,68 @@ async function wakeDb(tries = 6, waitMs = 5000) {
   }
 }
 
+/** Tell the site its cached data is stale, then load the main pages once so
+ *  their caches are rebuilt NOW, while Neon is already awake from this run —
+ *  the next real visitor (or bot) then costs no DB wake-up at all. The site's
+ *  caches have a long (12 h) backstop, so this call IS the freshness
+ *  mechanism: a blip is retried once and then left to the next tick, but a
+ *  401 (token mismatch — won't fix itself) fails the run so it gets noticed.
+ *  See lib/pipelineCache.ts. */
+async function refreshSite(): Promise<"ok" | "auth" | "error"> {
+  const token = revalidateToken();
+  if (!token) {
+    console.log("site refresh skipped — no CFBD_API_KEY to derive the token from");
+    return "auth";
+  }
+  try {
+    const r = await fetch(`${SITE_URL}/api/revalidate`, {
+      method: "POST",
+      headers: { "x-yahn-token": token },
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!r.ok) {
+      console.error(
+        `⚠ site revalidate failed: HTTP ${r.status}` +
+          (r.status === 401 ? " — CFBD_API_KEY differs between GitHub and Vercel?" : "")
+      );
+      return r.status === 401 ? "auth" : "error";
+    }
+    // the nav pages, between them, fill every shared cache (board, current
+    // week, weeks list, pick log, grade board)
+    const codes: number[] = [];
+    for (const path of ["/", "/watch", "/picks", "/grades"]) {
+      const warm = await fetch(`${SITE_URL}${path}`, { signal: AbortSignal.timeout(40_000) });
+      await warm.text(); // drain the stream so the render (and its cache fill) completes
+      codes.push(warm.status);
+    }
+    console.log(`site caches refreshed (revalidate ok, warm-up HTTP ${codes.join("/")})`);
+    return "ok";
+  } catch (e) {
+    console.error(`⚠ site refresh failed: ${(e as Error).message}`);
+    return "error";
+  }
+}
+
 async function main() {
-  await wakeDb();
   const { dow, hour, minute } = centralNow();
-  const activeHours = hour >= 8 || hour <= 1; // 8am–1am CT covers late West-coast kicks
+
+  // Quiet hours: run 8am–10pm CT only. Every tick wakes Neon for its run plus
+  // the 5-min autosuspend tail, and nothing overnight is worth that — no
+  // lines to pull, nobody looking. The one exception is Saturday night until
+  // 2am: late West-coast kicks (9:30–10:30pm CT) still need scores + grading.
+  // Checked BEFORE any DB call so a skipped tick costs zero compute. Manual
+  // --only runs always go through.
+  const lateSaturday = (dow === 6 && hour >= 22) || (dow === 0 && hour < 2);
+  if (!onlyArg && (hour < 8 || hour >= 22) && !lateSaturday) {
+    console.log(
+      `tick — ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} CT: ` +
+        `quiet hours (runs 8am–10pm CT, Sat until 2am) — skipping, DB left asleep`
+    );
+    return;
+  }
+
+  await wakeDb();
+  const activeHours = hour >= 8 || hour <= 1; // only the late-Saturday exception reaches the <=1 side now
   // No scores/lines pulls all day Tuesday (the weekly pull covers it) or before
   // ~5pm Wednesday — the only mid-week games are Tue/Wed-night MACtion in Nov.
   const midweekQuiet = dow === 2 || (dow === 3 && hour < 17);
@@ -121,8 +180,8 @@ async function main() {
     // trends: Sunday late morning, once.
     sunday: dow === 0 && hour >= 9 && hour <= 12 && minsAgo(lastTrends) > 20 * 60,
 
-    // weather: ~6am and ~4pm CT, once each.
-    weather: (hour === 6 || hour === 16) && minsAgo(lastWeather) > 5 * 60,
+    // weather: ~8am (first tick of the day) and ~4pm CT, once each.
+    weather: (hour === 8 || hour === 16) && minsAgo(lastWeather) > 5 * 60,
   };
 
   // --only <groups>: run exactly those, ignore the gates entirely.
@@ -158,7 +217,7 @@ async function main() {
   // nothing, so a too-early try is harmless.
   let rankingsArgs: string[] | null = null;
   const pollSlot =
-    ((dow === 0 && [15, 18, 21].includes(hour)) || (dow === 1 && [6, 10].includes(hour))) &&
+    ((dow === 0 && [15, 18, 21].includes(hour)) || (dow === 1 && [8, 10].includes(hour))) &&
     minute < 30;
   if (!run.weekly && !onlyArg && pollSlot) {
     try {
@@ -234,6 +293,10 @@ async function main() {
     })
     .catch(() => {});
 
+  let site = await refreshSite();
+  if (site === "error") site = await refreshSite(); // one retry for a blip
+  if (site !== "ok") failed.push("site-refresh");
+
   await prisma.$disconnect();
   console.log(
     `\ntick done — ${plan.length - failed.length}/${plan.length} ok` +
@@ -248,9 +311,9 @@ async function main() {
     "compute-flags", "compute-market-flags", "compute-weather-flags", "run-model",
     "generate-picks", "grade-picks", "compute-trends",
   ]);
-  const hardFail = failed.some(
-    (f) => onlyArg != null || run.weekly || COMPUTE.has(f.split(" ")[0])
-  );
+  const hardFail =
+    site === "auth" ||
+    failed.some((f) => onlyArg != null || run.weekly || COMPUTE.has(f.split(" ")[0]));
   if (failed.length && !hardFail) {
     console.log("  (data-pull failures only — treating as a transient upstream outage, not failing the tick)");
   }

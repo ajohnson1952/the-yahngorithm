@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { db } from "./db";
+import { PIPELINE_TAG, PIPELINE_TTL } from "./pipelineCache";
 
 /** The CFB season a date belongs to (Jan bowls still belong to the prior year). */
 export function currentSeason(now: Date = new Date()): number {
@@ -23,11 +24,7 @@ const WEEK_HOLD_MS = 12 * 3600 * 1000;
  * week's last kickoff we hold on it so results stay up for review instead of
  * jumping to a slate that's still days out.
  */
-// React cache(): one lookup per request even when both a page and its
-// generateMetadata ask for it.
-export const currentWeek = cache(async function currentWeek(
-  season: number = currentSeason()
-): Promise<number> {
+async function computeCurrentWeek(season: number): Promise<number> {
   const now = Date.now();
 
   // the two lookups are independent — run them in one round trip
@@ -66,10 +63,26 @@ export const currentWeek = cache(async function currentWeek(
     select: { week: true },
   });
   return last?.week ?? 1;
+}
+
+// Cached like the rest of the pipeline data (expired by each tick): this used
+// to run on EVERY page render — the one query that woke Neon for every bot
+// hit and every /watch auto-refresh. The week only flips when a game goes
+// final or a hold window lapses; it catches up on the next tick (≤30 min in
+// the day, or the 8am tick after an overnight lapse).
+const cachedCurrentWeek = unstable_cache(computeCurrentWeek, ["current-week"], {
+  revalidate: PIPELINE_TTL,
+  tags: ["current-week", PIPELINE_TAG],
 });
 
+// React cache() on top: one lookup per request even when both a page and its
+// generateMetadata ask for it.
+export const currentWeek = cache(
+  (season: number = currentSeason()): Promise<number> => cachedCurrentWeek(season)
+);
+
 /** Every week number that has at least one game this season, ascending.
- *  Cached 10 min: it changes only when a new week's schedule lands, and it's
+ *  Cached until the next pipeline run: it changes only when a new week's schedule lands, and it's
  *  hit on every render of most pages (incl. the /watch live-refresh loop).
  *  `groupBy` pushes the dedupe to Postgres — `distinct` doesn't (Prisma
  *  applies it after the rows are already off the wire). */
@@ -83,5 +96,5 @@ export const weeksWithGames = unstable_cache(
     return rows.map((r) => r.week);
   },
   ["weeks-with-games"],
-  { revalidate: 600, tags: ["weeks-with-games"] }
+  { revalidate: PIPELINE_TTL, tags: ["weeks-with-games", PIPELINE_TAG] }
 );

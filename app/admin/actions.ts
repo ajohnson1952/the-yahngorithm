@@ -4,7 +4,9 @@ import { execFile } from "child_process";
 import { existsSync } from "fs";
 import { promisify } from "util";
 import path from "path";
+import { updateTag } from "next/cache";
 import { isAdmin } from "../../lib/adminAuth";
+import { PIPELINE_TAG } from "../../lib/pipelineCache";
 import { RUNNABLE } from "./scripts";
 
 const run = promisify(execFile);
@@ -39,6 +41,9 @@ export async function runScript(
       }
     );
     const out = `${stdout}${stderr ? `\n${stderr}` : ""}`.trim();
+    // a manual run changed pipeline data — expire the site's caches, same as
+    // the tick does through /api/revalidate
+    updateTag(PIPELINE_TAG);
     return { ok: true, output: out.slice(-8000), ms: Date.now() - started };
   } catch (e: unknown) {
     const err = e as { stdout?: string; stderr?: string; message?: string };

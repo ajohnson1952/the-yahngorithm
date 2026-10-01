@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 import { cookies } from "next/headers";
 import { db } from "../lib/db";
+import { pinsTag } from "../lib/pipelineCache";
 
 /** Toggle a game's pin for the current visitor. Pins are per-browser
  *  (keyed on the anonymous `yahn_uid` cookie set by middleware) — no
@@ -38,7 +39,8 @@ export async function togglePin(
     if (!game) return { ok: false, error: "No such game." };
     await db.pinnedGame.create({ data: { gameId, uid } });
   }
-  revalidatePath("/");
-  revalidatePath(`/game/${gameId}`);
+  // only this visitor's cached pin list changed — the board / game data
+  // caches are shared and untouched (PinButton follows up with router.refresh)
+  updateTag(pinsTag(uid));
   return { ok: true, pinned: !existing };
 }

@@ -53,6 +53,44 @@ a CFBD/Odds monthly-quota exhaustion that hit the same day.
 
 ## Built this cycle
 
+### Oct 1 — Neon compute: the website, not the pipeline, was keeping the DB awake
+
+- **Finding** (Neon operations log, start/suspend pairs): the DB was awake
+  60–75% of every day since ~Sept 20 (≈4–4.5 CU-h/day, ≈130 CU-h/mo ≈ $14),
+  and ~75% of that awake time was started by **web requests, not ticks** —
+  around the clock, i.e. bots/crawlers. Each hit landed on a 2-min-TTL cache
+  miss or an uncached per-request query (`currentWeek()`, the pin lookup),
+  and every wake-up bills ≥ 5 min (Launch's autosuspend floor).
+- **Fix — the site only reads the DB when the pipeline changed it**
+  (`lib/pipelineCache.ts`): every pipeline-derived cache (week board, game
+  detail, pick log, grade board, current week, weeks list) carries one
+  `pipeline` tag. `tick.ts` ends each run with `POST /api/revalidate` (token =
+  one-way hash of `CFBD_API_KEY`, which GitHub and Vercel both already have —
+  no new secret) and then loads `/`, `/watch`, `/picks`, `/grades` to refill
+  the caches while Neon is still awake. TTLs went 2–15 min → a 12-hour
+  backstop (the revalidate call is the freshness mechanism now).
+  `/admin` script runs expire the tag in-process.
+- **Quiet hours:** ticks only do work 8am–10pm CT, plus Saturday night until
+  2am for late West-coast kicks (204 of 336 weekly ticks). A skipped tick
+  exits before any DB call. Weather moved 6am → 8am; the Monday poll slot
+  6am → 8am. Consequence: a Thu/Fri game ending after 10pm is scored and
+  graded at 8am.
+- Pins: a uid minted on this request (every cookieless bot) skips the pin
+  lookup (`proxy.ts` → `x-yahn-new-uid` → `lib/visitor.ts`); real visitors'
+  pins are cached per uid and expired by `togglePin`. `togglePin` no longer
+  `revalidatePath`s (that was flushing the shared board cache on every pin).
+- `robots.txt` now disallows `/game/`, `/admin`, `/rankings`, `/api/`,
+  `/watch-timeline`.
+- If a tick FAILS with `⚠ site revalidate failed: HTTP 401`, the CFBD key
+  differs between GitHub secrets and Vercel env. The run fails on purpose:
+  with a 12-hour backstop, a silently broken revalidate would mean a stale
+  site. (A network blip is retried once, then left to the next tick.)
+- Also Oct 1: `tick.ts` retries its first DB connection (one Neon cold start
+  in ~1,700 took 27 s and crashed a run).
+- **To verify:** re-run the operations-log analysis after 2–3 days; expect
+  awake time to fall toward the tick-only floor (~15–20% duty with quiet
+  hours).
+
 ### Sept 28 — picks require Bill C's sheet; home-screen app + UX pass
 
 - **Picks now come only from Bill C's numbers (week 2+).** `generate-picks`

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { visitor } from "../lib/visitor";
 import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
 import { getWeekBoard, getPinnedGameIds } from "../lib/webData";
 import { BoardView } from "../components/BoardView";
@@ -53,11 +53,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const byEdge = sp.sort === "edge";
   const pinnedOnly = sp.sort === "pinned";
 
-  const uid = (await cookies()).get("yahn_uid")?.value ?? "";
+  const { uid, isNew } = await visitor();
   const [rawBoard, weeks, pins] = await Promise.all([
     getWeekBoard(season, week),
     weeksWithGames(season),
-    getPinnedGameIds(uid),
+    getPinnedGameIds(uid, isNew),
   ]);
   const board = pins.size
     ? rawBoard.map((g) => (pins.has(g.id) ? { ...g, pinned: true } : g))

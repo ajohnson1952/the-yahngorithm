@@ -92,7 +92,8 @@ used. Instead **cron-job.org** hits the GitHub API every ~30 min to dispatch
 `.github/workflows/tick.yml`, and **`scripts/tick.ts`** reads the wall clock +
 how stale each source is and runs exactly what's due:
 
-- **every tick (~30 min)** — Kalshi, market flags, model, picks
+- **quiet hours** — ticks only do work 8am–10pm CT (Saturday night until 2am for late kicks); outside that they exit before touching the DB, so Neon stays asleep overnight
+- **every tick (~30 min)** — Kalshi, market flags, model, picks; each run ends by expiring the site's caches (`/api/revalidate`) and re-loading the main pages
 - **game windows** (all week except Tue daytime) — scores + grading; line
   snapshots every ~30 min in the Sat 9a–8p core, every ~2–3 h otherwise
 - **Tue ~9am** — the heavy weekly pull: ratings, polls, schedule, advanced +
@@ -100,7 +101,7 @@ how stale each source is and runs exactly what's due:
 - **~daily, early season** — extra `pull-ratings` runs once week ≥ 2 until
   CFBD's SP+ leaves the preseason baseline (so a mid-week update isn't missed)
 - **Sun ~10am** — advanced-stat checkpoint + team trends
-- **~6am & ~4pm** — weather + weather flags
+- **~8am & ~4pm** — weather + weather flags
 
 The dispatched workflow needs three repo secrets: `DATABASE_URL`, `CFBD_API_KEY`,
 `ODDS_API_KEY`. Each group also has a manual `workflow_dispatch` workflow (and

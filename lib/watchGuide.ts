@@ -317,5 +317,6 @@ export const getRivalryPairs = unstable_cache(
     return rows.map((r) => ({ key: pairKey(r.teamAId, r.teamBId), name: r.name }));
   },
   ["rivalry-pairs"],
-  { revalidate: 3600, tags: ["rivalry-pairs"] }
+  // static seed data — was 1h, i.e. a DB wake-up per hour of /watch traffic
+  { revalidate: 24 * 3600, tags: ["rivalry-pairs"] }
 );

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
+import { visitor } from "../../../lib/visitor";
 import { getGameDetail } from "../../../lib/webData";
 import { median } from "../../../lib/consensus";
 import { HOME_FIELD_ADVANTAGE } from "../../../lib/modelConfig";
@@ -175,8 +175,8 @@ export default async function GamePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const uid = (await cookies()).get("yahn_uid")?.value ?? "";
-  const data = await getGameDetail(id, uid);
+  const { uid, isNew } = await visitor();
+  const data = await getGameDetail(id, uid, isNew);
   if (!data) notFound();
 
   const {

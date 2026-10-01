@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { PIPELINE_TAG, PIPELINE_TTL, pinsTag } from "./pipelineCache";
 import { db } from "./db";
 import { consensusByGame } from "./consensus";
 import { fetchNeonProjectUsage } from "./neonUsage";
@@ -146,15 +147,14 @@ function clvOf(p: {
   return r1(backHome ? p.closingLine - p.marketLine : p.marketLine - p.closingLine);
 }
 
-/** How long the per-week board stays cached (seconds). The pipeline refreshes
- *  the underlying data every ~30 min; this window just stops a burst of visitors
- *  from each re-running the board's queries (a full `force-dynamic` homepage
- *  doing exactly that is what blew the Neon transfer cap). */
-const WEEK_BOARD_TTL = 120;
+// The per-week board is cached until the pipeline says its data changed
+// (PIPELINE_TAG, expired by the tick — see lib/pipelineCache.ts), with
+// PIPELINE_TTL as the backstop. It used to be a flat 2-min TTL, which meant
+// nearly every bot hit was a cache miss and a 5-min Neon wake-up.
 
 const cachedWeekBoard = unstable_cache(buildWeekBoard, ["week-board"], {
-  revalidate: WEEK_BOARD_TTL,
-  tags: ["week-board"],
+  revalidate: PIPELINE_TTL,
+  tags: ["week-board", PIPELINE_TAG],
 });
 
 /** The per-week board, WITHOUT per-visitor pin state — cached in the Next data
@@ -166,14 +166,30 @@ export function getWeekBoard(season: number, week: number): Promise<GameView[]> 
 
 /** Game ids this visitor has pinned. Tiny (a visitor pins a handful of games),
  *  so we fetch them all rather than filtering by the current week's ids. */
-export async function getPinnedGameIds(uid: string): Promise<Set<string>> {
-  if (!uid) return new Set();
-  const rows = await db.pinnedGame.findMany({
-    where: { uid },
-    select: { gameId: true },
-  });
-  return new Set(rows.map((r) => r.gameId));
+export async function getPinnedGameIds(
+  uid: string,
+  isNew = false
+): Promise<Set<string>> {
+  // a uid minted on this very request (every cookieless bot) has no pins —
+  // don't wake the DB to confirm it
+  if (!uid || isNew) return new Set();
+  return new Set(await cachedPins(uid)());
 }
+
+/** One visitor's pins, cached per uid for a day and expired by togglePin
+ *  (pinsTag) — so browsing the board doesn't hit the DB for them either. */
+const cachedPins = (uid: string) =>
+  unstable_cache(
+    async () => {
+      const rows = await db.pinnedGame.findMany({
+        where: { uid },
+        select: { gameId: true },
+      });
+      return rows.map((r) => r.gameId);
+    },
+    ["pins", uid],
+    { revalidate: 24 * 3600, tags: [pinsTag(uid)] }
+  );
 
 async function buildWeekBoard(
   season: number,
@@ -526,14 +542,12 @@ async function buildGameDetail(id: string) {
   };
 }
 
-/** Same freshness trade-off as the week board: the pipeline rewrites a game's
- *  lines/model every ~30 min, so a 2-min window is invisible but stops repeat
- *  views (and back/forward hops) from each waking Neon. */
-const GAME_DETAIL_TTL = 120;
+// Cached the same way as the week board: until the pipeline's next run
+// (PIPELINE_TAG), PIPELINE_TTL as the backstop.
 
 const cachedGameDetail = unstable_cache(buildGameDetail, ["game-detail"], {
-  revalidate: GAME_DETAIL_TTL,
-  tags: ["game-detail"],
+  revalidate: PIPELINE_TTL,
+  tags: ["game-detail", PIPELINE_TAG],
 });
 
 // The data cache round-trips through JSON, so Prisma's Date fields come back as
@@ -550,25 +564,22 @@ function reviveDates<T>(v: T): T {
   return v;
 }
 
-export async function getGameDetail(id: string, uid: string) {
-  const [data, pin] = await Promise.all([
+export async function getGameDetail(id: string, uid: string, isNew = false) {
+  const [data, pins] = await Promise.all([
     cachedGameDetail(id),
-    uid
-      ? db.pinnedGame.findFirst({ where: { uid, gameId: id }, select: { gameId: true } })
-      : null,
+    getPinnedGameIds(uid, isNew),
   ]);
   if (!data) return null;
-  return { ...reviveDates(data), pinned: pin != null };
+  return { ...reviveDates(data), pinned: pins.has(id) };
 }
 
-/** Pick log is append-mostly: a new row appears only when a fresh edge clears
- *  the filters, and results/CLV land after `grade-picks` runs post-final. A few
- *  minutes of lag is invisible here. */
-const PICK_LOG_TTL = 10 * 60;
+// Pick log is append-mostly: a new row appears only when a fresh edge clears
+// the filters, and results/CLV land after `grade-picks` runs post-final —
+// both pipeline steps, so it's cached until the next run (PIPELINE_TAG).
 
 const cachedPickLog = unstable_cache(buildPickLog, ["pick-log"], {
-  revalidate: PICK_LOG_TTL,
-  tags: ["pick-log"],
+  revalidate: PIPELINE_TTL,
+  tags: ["pick-log", PIPELINE_TAG],
 });
 
 export function getPickLog(season: number) {
@@ -669,13 +680,12 @@ const meanAbs = (a: number[]) =>
   a.length ? r1(a.reduce((s, x) => s + Math.abs(x), 0) / a.length) : null;
 
 /** Season-to-date scoreboard: each spread model + each flag vs the closing line.
- *  A row only moves when a game goes final and `grade-picks` runs, so a ~15-min
- *  cache is invisible — the numbers are stable between results. */
-const GRADE_BOARD_TTL = 15 * 60;
+ *  A row only moves when a game goes final and `grade-picks` runs, so it's
+ *  cached until the pipeline's next run (PIPELINE_TAG). */
 
 const cachedGradeBoard = unstable_cache(buildGradeBoard, ["grade-board"], {
-  revalidate: GRADE_BOARD_TTL,
-  tags: ["grade-board"],
+  revalidate: PIPELINE_TTL,
+  tags: ["grade-board", PIPELINE_TAG],
 });
 
 export function getGradeBoard(season: number) {
