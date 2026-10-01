@@ -77,7 +77,8 @@ export async function latestLineBatchByGame(
 export async function recentLinesByGame(
   prisma: PrismaClient,
   gameIds: string[],
-  lookbackHours = 40
+  lookbackHours = 40,
+  market?: string
 ): Promise<LineRow[]> {
   if (gameIds.length === 0) return [];
   const windows = await gameWindows(
@@ -86,5 +87,9 @@ export async function recentLinesByGame(
     (max) => max - lookbackHours * 3_600_000
   );
   if (windows.length === 0) return [];
-  return prisma.line.findMany({ where: { OR: windows }, select: LINE_SELECT });
+  return prisma.line.findMany({
+    // `market` (optional) keeps the other markets' rows off the wire
+    where: market ? { market, OR: windows } : { OR: windows },
+    select: LINE_SELECT,
+  });
 }

@@ -244,7 +244,10 @@ async function main() {
     { name: "pull-weather", args: [], on: run.weather },
     { name: "compute-weather-flags", args: [], on: run.weather || w },
     { name: "compute-flags", args: [], on: w },
-    { name: "compute-market-flags", args: [], on: run.heartbeat || w },
+    // steam/RLM only change when new lines land (or, slowly, as Kalshi drifts) —
+    // and this step re-reads ~40 h of line history, so run it when lines were
+    // just pulled and on the top-of-the-hour tick, not every 30 min
+    { name: "compute-market-flags", args: [], on: run.lines || w || (run.heartbeat && minute < 30) },
     { name: "run-model", args: [], on: run.heartbeat || w },
     { name: "generate-picks", args: [], on: run.heartbeat || w },
     { name: "grade-picks", args: [], on: run.scores || w || run.sunday },

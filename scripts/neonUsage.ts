@@ -3,9 +3,9 @@
 // ============================================================
 // Prints compute / data-transfer / storage for the current billing
 // period against the FREE-tier caps, with a straight-line projection to
-// period end. Use it to decide whether this project can move back to the
-// free plan (see docs/STATUS.md — we moved to Launch only because of the
-// Sept transfer-leak bug). Same data feeds the /admin panel.
+// period end. The project is back on the Free plan (since Oct 1, 2026), so
+// these caps are hard limits: a projection past 100% means the database is
+// cut off before the month ends. Same data feeds the /admin panel.
 //
 // Needs NEON_API_KEY in .env. Read-only. Not part of the pipeline.
 // ============================================================
@@ -41,8 +41,8 @@ async function main() {
 
   console.log(`\nNeon usage — ${u.projectName}`);
   console.log(
-    "(bars are vs the FREE-tier caps — on Launch they are not limits; compute is\n" +
-      " what actually bills, transfer/storage have been ~$0)"
+    "(Free plan — these caps are hard limits; a projection past 100% means the DB\n" +
+      " is cut off before the month ends)"
   );
   console.log(
     `period  ${u.periodStart!.slice(0, 10)} → ${u.periodEnd!.slice(0, 10)}   ` +

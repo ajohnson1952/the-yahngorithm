@@ -95,7 +95,15 @@ async function main() {
       awayTeamId: true,
       homeTeam: { select: { canonicalName: true } },
       awayTeam: { select: { canonicalName: true } },
-      predictionMarkets: { orderBy: { capturedAt: "asc" } },
+      // Kalshi is snapshotted every tick, so a game's full history is hundreds
+      // of wide rows by the weekend. RLM only compares "now" to the reading
+      // ~30–40 h before the latest line snapshot (which can itself be half a
+      // day old), so a 72 h trailing window and three columns cover it.
+      predictionMarkets: {
+        where: { capturedAt: { gte: new Date(Date.now() - 72 * 3_600_000) } },
+        orderBy: { capturedAt: "asc" },
+        select: { capturedAt: true, homeWinProb: true, volume: true },
+      },
     },
   });
 
@@ -103,7 +111,8 @@ async function main() {
   // RLM a 30 h one; pulling the whole week's history (40k+ rows by Saturday)
   // every heartbeat tick was the bulk of the Neon egress.
   const linesByGame = new Map<string, LineRow[]>();
-  for (const l of await recentLinesByGame(prisma, games.map((g) => g.id))) {
+  // spread rows only — neither steam nor RLM reads totals
+  for (const l of await recentLinesByGame(prisma, games.map((g) => g.id), 40, "spread")) {
     const arr = linesByGame.get(l.gameId);
     if (arr) arr.push(l);
     else linesByGame.set(l.gameId, [l]);

@@ -121,7 +121,7 @@ function NeonPanel({ u }: { u: NeonUsageView }) {
   const pctIn = Math.round((u.daysElapsed! / u.daysTotal!) * 100);
   return (
     <div className="admin-limits">
-      <strong>Neon — database host (bars vs Free-tier caps)</strong>
+      <strong>Neon — database host (Free plan — these caps are hard limits)</strong>
       <NeonBar
         label="Compute"
         m={u.compute}
@@ -130,7 +130,7 @@ function NeonPanel({ u }: { u: NeonUsageView }) {
       <NeonBar
         label="Data transfer"
         m={u.transfer}
-        detail="Egress to clients — pipeline reads + cached web. The metric that forced the Sept Launch upgrade. Over the Free line is expected: Launch includes it, billed $0 so far."
+        detail="Egress to clients — pipeline reads + cached web. The metric that blew the Free cap in early Sept; Sept ran ~0.6 GB/day, which would spend this cap in ~8 days."
       />
       <NeonBar
         label="Storage"
@@ -140,9 +140,9 @@ function NeonPanel({ u }: { u: NeonUsageView }) {
       <p className="admin-usage-note">
         Period {u.periodStart!.slice(0, 10)} → {u.periodEnd!.slice(0, 10)} ·{" "}
         {u.daysElapsed} of {u.daysTotal} days ({pctIn}%). On the{" "}
-        <strong>Launch</strong> plan (usage-based, ~$8/mo for this project — nearly all compute); the bars
-        project against the <em>Free</em> caps to judge when to move back, so red
-        here is not an overage. Projections are
+        <strong>Free</strong> plan (since Oct 1) — a bar projecting past 100% means
+        the database gets cut off before the month ends, taking the site and the
+        pipeline with it. Projections are
         straight-line — noisy early, skewed by heavy manual runs.{" "}
         <span className="dim">
           Checked{" "}

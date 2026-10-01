@@ -53,6 +53,36 @@ a CFBD/Odds monthly-quota exhaustion that hit the same day.
 
 ## Built this cycle
 
+### Oct 1 (later) — back on Neon FREE: caps are hard limits now
+
+- Plan switched Launch → Free at ~15:23Z Oct 1 (usage counters reset then).
+  Free caps per project/month: **100 CU-h compute, 5 GB transfer, 0.5 GB
+  storage**. Blowing one cuts the DB off (site + pipeline) until next month.
+- **The switch reset the endpoint to autoscale 0.25–2 CU** — re-pinned to
+  min=max 0.25 via the API (endpoint + project default). At 2 CU the compute
+  allowance burns 8× faster. Re-check after any future plan change.
+- **Compute:** 100 CU-h = 400 awake hours = ~55% duty at 0.25 CU. September
+  ran 60–75% (would NOT have fit); the tick-driven caching + quiet hours
+  below should land well under.
+- **Transfer was the real threat:** September ran ~0.64 GB/day (5 GB in ~8
+  days). Measured per-script DB download (nettop) and fixed the two hogs:
+  - `generate-picks` pulled every ModelPrediction row for the week each tick
+    (3.4 MB, growing ~100 rows/tick) → newest batch only: **0.12 MB**.
+  - `compute-market-flags` pulled 40 h of all line markets + full Kalshi
+    history per game each tick (3.1 MB) → spread rows only, 72 h / 3 columns
+    of Kalshi: **1.1 MB**, and it now runs on line pulls + the top-of-hour
+    tick instead of every tick. Output verified identical.
+  - Left alone (infrequent): `compute-flags` 1.9 MB (weekly),
+    `compute-trends` 17 MB (Sunday, once), `run-model` 0.5 MB/tick.
+  - Rough budget now: ~1.3 MB/tick × ~29 ticks/day ≈ 40 MB/day + pulls +
+    site cache rebuilds → on the order of 1.5–2.5 GB/mo. **Unverified until
+    Neon's own counter has a few days of data.**
+- **Storage:** 150 MB of 500 (ModelPrediction 53 MB / 108k rows, Line 46 MB,
+  PredictionMarket 23 MB), growing ~25 MB/week → ~3 months of runway, tight
+  for bowl season. Follow-up: stop re-writing unchanged predictions every
+  tick and/or prune superseded rows for finished weeks (needs the board's and
+  generate-picks' "newest batch" windows changed to per-game-latest first).
+
 ### Oct 1 — Neon compute: the website, not the pipeline, was keeping the DB awake
 
 - **Finding** (Neon operations log, start/suspend pairs): the DB was awake

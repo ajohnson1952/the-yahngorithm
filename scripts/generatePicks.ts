@@ -120,10 +120,26 @@ async function main() {
   });
 
   // latest ModelPrediction per game
-  const preds = await prisma.modelPrediction.findMany({
+  // Newest run-model batch only. This used to pull EVERY prediction for the
+  // week — ~100 rows are appended per tick, so by Saturday that was ~20k rows
+  // (several MB) downloaded every 30 min just to keep the newest per game:
+  // the single biggest chunk of Neon data transfer. run-model writes a batch
+  // in one createMany, so a 20-min window from the newest row is that batch
+  // (and never reaches back to the previous tick's).
+  const newest = await prisma.modelPrediction.findFirst({
     where: { game: { season, week } },
     orderBy: { generatedAt: "desc" },
+    select: { generatedAt: true },
   });
+  const preds = newest
+    ? await prisma.modelPrediction.findMany({
+        where: {
+          game: { season, week },
+          generatedAt: { gte: new Date(newest.generatedAt.getTime() - 20 * 60 * 1000) },
+        },
+        orderBy: { generatedAt: "desc" },
+      })
+    : [];
   const predByGame = new Map<string, (typeof preds)[number]>();
   for (const p of preds) if (!predByGame.has(p.gameId)) predByGame.set(p.gameId, p);
 
