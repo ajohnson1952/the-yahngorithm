@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { PIPELINE_TAG, PIPELINE_TTL, pinsTag } from "./pipelineCache";
 import { db } from "./db";
@@ -564,9 +565,14 @@ function reviveDates<T>(v: T): T {
   return v;
 }
 
+// One lookup per request: the game page's generateMetadata and the page itself
+// both ask for the same game at the same moment, and on a cache miss each was
+// running the full query set (seen in pg_stat_statements: 2× per page view).
+const gameDetailOnce = cache((id: string) => cachedGameDetail(id));
+
 export async function getGameDetail(id: string, uid: string, isNew = false) {
   const [data, pins] = await Promise.all([
-    cachedGameDetail(id),
+    gameDetailOnce(id),
     getPinnedGameIds(uid, isNew),
   ]);
   if (!data) return null;

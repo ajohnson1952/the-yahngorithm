@@ -6,9 +6,56 @@ import { NextResponse, type NextRequest } from "next/server";
 const COOKIE = "yahn_uid";
 const ONE_YEAR = 60 * 60 * 24 * 365;
 const NEW_UID_HEADER = "x-yahn-new-uid"; // keep in sync with lib/visitor.ts
+const WALL_PARAM = "_c"; // marks the one cookie-check hop
+
+/** Pages whose render can miss the cache and read the DB: one cache entry per
+ *  game (hundreds across a season), the rankings editor (uncached), and any
+ *  board / watch URL with params (other weeks / days). The plain nav pages
+ *  (/, /watch, /picks, /grades, /guide) are always served from cache and stay
+ *  open to everyone. */
+function costly(req: NextRequest): boolean {
+  const { pathname, search } = req.nextUrl;
+  if (pathname.startsWith("/game/") || pathname.startsWith("/rankings")) return true;
+  return search !== "" && ["/", "/watch", "/watch-timeline"].includes(pathname);
+}
 
 export function proxy(req: NextRequest) {
-  if (req.cookies.get(COOKIE)?.value) {
+  const hasCookie = !!req.cookies.get(COOKIE)?.value;
+
+  // Cookie check for the DB-costly pages. Crawlers walking game pages
+  // overnight were waking Neon dozens of times a night (~2/3 of compute on
+  // the Free plan) — most bots don't keep cookies, browsers do. A cookieless
+  // request gets the cookie + one redirect back to itself; a browser returns
+  // with it (one extra hop on a first-ever visit), a bot comes back without
+  // it and gets a tiny 403 that never touches the DB.
+  if (costly(req)) {
+    const url = req.nextUrl.clone();
+    if (!hasCookie) {
+      if (url.searchParams.has(WALL_PARAM)) {
+        return new NextResponse("Cookies are required to view this page.", {
+          status: 403,
+          headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+        });
+      }
+      url.searchParams.set(WALL_PARAM, "1");
+      const res = NextResponse.redirect(url, 307);
+      res.cookies.set(COOKIE, crypto.randomUUID(), {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: ONE_YEAR,
+      });
+      return res;
+    }
+    if (url.searchParams.has(WALL_PARAM)) {
+      // passed the check — drop the marker so the address bar stays clean
+      url.searchParams.delete(WALL_PARAM);
+      return NextResponse.redirect(url, 307);
+    }
+  }
+
+  if (hasCookie) {
     // returning visitor — make sure a client can't spoof the "new" flag on
     if (!req.headers.has(NEW_UID_HEADER)) return NextResponse.next();
     const headers = new Headers(req.headers);
