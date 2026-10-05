@@ -53,6 +53,23 @@ a CFBD/Odds monthly-quota exhaustion that hit the same day.
 
 ## Built this cycle
 
+### Oct 5 — bots on per-game pages were still ~2/3 of Neon compute
+
+- First 4.1 days on Free: **20.2 CU-h org-wide** (Neon org `/consumption`;
+  the per-project API counters read 0 on Free — use the org endpoint or the
+  operations log). yahngorithm ≈ 13 of it → on pace for ~95–100 of 100.
+- Ops log: during quiet hours (no ticks) the DB still woke dozens of times a
+  night at irregular minutes. `pg_stat_statements` on a fresh wake showed the
+  game-detail query set ×2 — crawlers walking `/game/<id>` (each id is its own
+  cache entry, ~hundreds per season; robots.txt is ignored by many) and every
+  page running its queries twice (generateMetadata + page).
+- Fix: `proxy.ts` cookie check — cookieless requests to `/game/*`,
+  `/rankings`, and board/watch URLs with params get the cookie + one redirect;
+  browsers come back with it, cookieless bots get a 403 that never renders.
+  `getGameDetail` wrapped in React `cache()` (one lookup per request).
+- Side effect: link previews (iMessage etc.) of a game URL won't render.
+- **Re-measure** with the org `/consumption` endpoint + ops log after 2 days.
+
 ### Oct 1 (later) — back on Neon FREE: caps are hard limits now
 
 - Plan switched Launch → Free at ~15:23Z Oct 1 (usage counters reset then).
