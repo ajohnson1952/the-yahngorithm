@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { currentSeason } from "../../lib/currentWeek";
 import { getPickLog } from "../../lib/webData";
-import { signed, trim, kickoffStr } from "../../components/ui";
+import { signed, trim, kickoffStr, unitsAt110 } from "../../components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,7 @@ export default async function PicksPage() {
   const graded = record.win + record.loss + record.push;
   const decided = record.win + record.loss;
   const winPct = decided ? Math.round((record.win / decided) * 100) : null;
+  const units = unitsAt110(record.win, record.loss);
 
   return (
     <>
@@ -51,6 +52,13 @@ export default async function PicksPage() {
                 ? `${winPct}% of decided`
                 : ""}
           </div>
+        </div>
+        <div className="tile">
+          <div className="k">Units</div>
+          <div className={`v ${decided === 0 ? "" : units > 0 ? "pos" : units < 0 ? "neg" : ""}`}>
+            {decided === 0 ? "–" : `${units > 0 ? "+" : units < 0 ? "−" : ""}${Math.abs(units).toFixed(2)}u`}
+          </div>
+          <div className="sub">1 unit per pick at −110</div>
         </div>
         <div className="tile">
           <div className="k">Avg CLV</div>

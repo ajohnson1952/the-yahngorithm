@@ -181,6 +181,24 @@ export function signed(n: number): string {
   return n > 0 ? `+${trim(n)}` : trim(n);
 }
 
+/** Profit in units betting 1 unit per decided game at standard −110 odds:
+ *  a win pays 100/110 ≈ 0.909, a loss costs 1, a push returns the stake. */
+export function unitsAt110(win: number, loss: number): number {
+  return Math.round((win * (100 / 110) - loss) * 100) / 100;
+}
+
+/** "+2.45u" / "−1.27u", green/red. */
+export function Units({ win, loss }: { win: number; loss: number }) {
+  if (win + loss === 0) return <span style={{ color: "var(--text-faint)" }}>–</span>;
+  const u = unitsAt110(win, loss);
+  return (
+    <span className={`mono ${u > 0 ? "pos" : u < 0 ? "neg" : ""}`}>
+      {u > 0 ? "+" : u < 0 ? "−" : ""}
+      {Math.abs(u).toFixed(2)}u
+    </span>
+  );
+}
+
 /** all game times shown in US Central.
  *  Date and time are formatted SEPARATELY and joined with a fixed ", " —
  *  combining both in one toLocaleString(..) call lets the ICU implementation

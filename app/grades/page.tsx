@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Units } from "../../components/ui";
 import { currentSeason } from "../../lib/currentWeek";
 import { getGradeBoard } from "../../lib/webData";
 
@@ -74,7 +75,9 @@ export default async function GradesPage() {
         decided bets; 52.4% is break-even at −110. <strong>Edge ≥ 2</strong> = only
         games the model was ≥ 2 pts off the close. <strong>MAE</strong> = average
         miss between the predicted and actual final margin, in points — with the
-        closing line&apos;s own MAE on the same games below it. Lower is better;
+        closing line&apos;s own MAE on the same games below it. <strong>Units</strong> =
+        profit betting 1 unit on every graded game at −110 (a win pays 0.91, a loss
+        costs 1). Lower is better;
         green = the model beat the market at raw prediction. (Beating the market
         on MAE is a different thing from beating it ATS.)
       </p>
@@ -100,6 +103,7 @@ export default async function GradesPage() {
                   <th>Model</th>
                   <th className="num">ATS</th>
                   <th className="num">Win %</th>
+                  <th className="num">Units</th>
                   <th className="num">Edge ≥ 2</th>
                   <th className="num">MAE</th>
                 </tr>
@@ -114,6 +118,9 @@ export default async function GradesPage() {
                     </td>
                     <td className="num">
                       <Rate rate={r.rate} />
+                    </td>
+                    <td className="num">
+                      <Units win={r.win} loss={r.loss} />
                     </td>
                     <td className="num mono">
                       {r.bigWin + r.bigLoss === 0
@@ -140,6 +147,7 @@ export default async function GradesPage() {
                     <th>Flag</th>
                     <th className="num">ATS</th>
                     <th className="num">Win %</th>
+                    <th className="num">Units</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -152,6 +160,9 @@ export default async function GradesPage() {
                       </td>
                       <td className="num">
                         <Rate rate={r.rate} />
+                      </td>
+                      <td className="num">
+                        <Units win={r.win} loss={r.loss} />
                       </td>
                     </tr>
                   ))}
