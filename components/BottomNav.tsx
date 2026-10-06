@@ -60,6 +60,8 @@ const TABS = [
 const MORE_LINKS = [
   { href: "/guide", label: "Guide" },
   { href: "/admin", label: "Admin" },
+  // TEMP — Cavepicks cross-link mockups; remove with app/lab when decided
+  { href: "/lab", label: "Lab" },
 ];
 
 const isActive = (path: string, href: string) =>
