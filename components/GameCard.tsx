@@ -49,7 +49,16 @@ function EdgeTag({
   );
 }
 
-export function GameCard({ g, compact = false }: { g: GameView; compact?: boolean }) {
+export function GameCard({
+  g,
+  compact = false,
+  cave = 0,
+}: {
+  g: GameView;
+  compact?: boolean;
+  /** locked Cavepicks picks on this game (0 = no chip) — see lib/cave.ts */
+  cave?: number;
+}) {
   const homeWon =
     g.homeScore != null && g.awayScore != null && g.homeScore > g.awayScore;
   const awayWon =
@@ -233,6 +242,12 @@ export function GameCard({ g, compact = false }: { g: GameView; compact?: boolea
               )}
             </span>
           ))}
+          {cave > 0 && (
+            <span className="cave-chip" title={`${cave} locked pick${cave === 1 ? "" : "s"} on Cavepicks`}>
+              <img src="/cavepicks.png" alt="Cavepicks" width={15} height={15} />
+              {cave}
+            </span>
+          )}
           {!compact && (g.flags.length > 0 || paceFlags.length > 0) && (
             <span className="chips">
               {g.flags.map((f, i) => (

@@ -45,7 +45,14 @@ function haystack(g: GameView): string {
 const COMPACT_KEY = "yahn_compact";
 const FLAG_KEY = "yahn_flag";
 
-export function BoardView({ sections }: { sections: Section[] }) {
+export function BoardView({
+  sections,
+  cave = {},
+}: {
+  sections: Section[];
+  /** gameId -> locked Cavepicks picks on that game (the caveman chip) */
+  cave?: Record<string, number>;
+}) {
   const [q, setQ] = useState("");
   // the remembered pick — may name a flag with no games this week; see `flag` below
   const [chosenFlag, setChosenFlag] = useState<string | null>(null);
@@ -192,7 +199,7 @@ export function BoardView({ sections }: { sections: Section[] }) {
         results.length > 0 ? (
           <section>
             {results.map((g) => (
-              <GameCard key={g.id} g={g} compact={compact} />
+              <GameCard key={g.id} g={g} compact={compact} cave={cave[g.id] ?? 0} />
             ))}
           </section>
         ) : (
@@ -206,7 +213,7 @@ export function BoardView({ sections }: { sections: Section[] }) {
           <section key={s.label}>
             <div className="section-label">{s.label}</div>
             {s.games.map((g) => (
-              <GameCard key={g.id} g={g} compact={compact} />
+              <GameCard key={g.id} g={g} compact={compact} cave={cave[g.id] ?? 0} />
             ))}
           </section>
         ))

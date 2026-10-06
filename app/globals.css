@@ -190,6 +190,30 @@ a.inline-link:hover { color: var(--blue); }
 .haptic-input:disabled { cursor: default; }
 .haptic-toggle:has(.haptic-input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
 
+/* Cavepicks' locked-pick counts (lib/cave.ts): the chip on a board card, and
+   the "how the cave picked it" split under the game page's hero numbers */
+.cave-chip {
+  display: inline-flex; align-items: center; gap: 4px; align-self: flex-start;
+  padding: 1px 7px 1px 3px; border-radius: 999px;
+  background: var(--panel-2); border: 1px solid var(--border);
+  font-size: 11px; font-weight: 650; color: var(--text-dim); font-family: var(--mono);
+}
+.cave-chip img { border-radius: 4px; }
+.cave-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); text-align: left; }
+.cave-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 12px; font-weight: 700; color: var(--text-dim);
+}
+.cave-head img { border-radius: 4px; vertical-align: -4px; margin-right: 6px; }
+.cave-head a { color: var(--text-faint); font-weight: 600; white-space: nowrap; }
+.cave-row { margin-top: 8px; }
+.cave-row-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: 650; }
+.cave-row-labels .n { color: var(--text-dim); }
+.cave-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 4px; background: var(--panel-2); }
+.cave-bar .a { background: var(--blue); }
+.cave-bar .b { background: var(--amber); }
+.cave-dog { margin-top: 8px; font-size: 11.5px; color: var(--text-faint); }
+
 /* cross-link to Cavepicks (top bar + More sheet): caveman icon + label */
 .nav-cave { display: inline-flex !important; align-items: center; gap: 7px; }
 .nav-cave img { border-radius: 4px; flex-shrink: 0; }

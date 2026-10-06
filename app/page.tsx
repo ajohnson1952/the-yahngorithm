@@ -2,6 +2,7 @@ import Link from "next/link";
 import { visitor } from "../lib/visitor";
 import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
 import { getWeekBoard, getPinnedGameIds } from "../lib/webData";
+import { getCaveSplits, type CaveSplit } from "../lib/cave";
 import { BoardView } from "../components/BoardView";
 import { HapticSegments } from "../components/HapticSegments";
 
@@ -54,11 +55,17 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const pinnedOnly = sp.sort === "pinned";
 
   const { uid, isNew } = await visitor();
-  const [rawBoard, weeks, pins] = await Promise.all([
+  const [rawBoard, weeks, pins, caveSplits] = await Promise.all([
     getWeekBoard(season, week),
     weeksWithGames(season),
     getPinnedGameIds(uid, isNew),
+    // Cavepicks' locked-pick counts (cached; only this week / last have any)
+    week >= thisWeek - 1 && week <= thisWeek
+      ? getCaveSplits(season, week).catch(() => ({} as Record<string, CaveSplit>))
+      : ({} as Record<string, CaveSplit>),
   ]);
+  const cave: Record<string, number> = {};
+  for (const [id, s] of Object.entries(caveSplits)) cave[id] = s.picks;
   const board = pins.size
     ? rawBoard.map((g) => (pins.has(g.id) ? { ...g, pinned: true } : g))
     : rawBoard;
@@ -198,7 +205,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         <p className="empty">No pinned games. Tap the ☆ on a card to pin it.</p>
       )}
 
-      <BoardView sections={sections} />
+      <BoardView sections={sections} cave={cave} />
 
       {board.length === 0 && (
         <p className="empty">No games loaded for this week yet.</p>

@@ -132,8 +132,8 @@ export default function LabPage() {
     <div style={{ paddingBottom: 30 }}>
       <h1>Lab</h1>
       <p className="subhead">
-        Mockups of how <Cave size={16} /> Cavepicks could show up here. Sample data, nothing live. (The
-        Cavepicks nav link is real now; these two are still ideas.)
+        Mockups of how <Cave size={16} /> Cavepicks could show up here. Sample data, nothing live. (All
+        of these are live now: the nav link, the split on game pages and the chip on the board.)
       </p>
 
       <Section

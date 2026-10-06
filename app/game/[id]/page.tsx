@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { visitor } from "../../../lib/visitor";
 import { getGameDetail } from "../../../lib/webData";
+import { getCaveSplits, CAVEPICKS_URL, type CaveSplit } from "../../../lib/cave";
 import { median } from "../../../lib/consensus";
 import { HOME_FIELD_ADVANTAGE } from "../../../lib/modelConfig";
 import { probToSpread } from "../../../lib/winProb";
@@ -178,6 +179,9 @@ export default async function GamePage({
   const { uid, isNew } = await visitor();
   const data = await getGameDetail(id, uid, isNew);
   if (!data) notFound();
+  // how Cavepicks' players have locked this game (counts only) — cached
+  const caveSplit: CaveSplit | null =
+    (await getCaveSplits(data.game.season, data.game.week).catch(() => ({} as Record<string, CaveSplit>)))[id] ?? null;
 
   const {
     game: g,
@@ -299,6 +303,7 @@ export default async function GamePage({
             </span>
           </div>
         </div>
+        {caveSplit && <CaveBox s={caveSplit} home={homeShort} away={awayShort} />}
       </div>
 
       <GameJumpBar items={JUMP.filter((j) => !(j.id === "weather" && g.indoor))} />
@@ -711,6 +716,57 @@ export default async function GamePage({
         </Link>
         .
       </p>
+    </div>
+  );
+}
+
+/** one "left n ▮▮▮▯ n right" bar of the cave split */
+function CaveBar({ left, right, l, r }: { left: string; right: string; l: number; r: number }) {
+  if (l + r === 0) return null;
+  return (
+    <div className="cave-row">
+      <div className="cave-row-labels">
+        <span>
+          {left} <span className="mono n">{l}</span>
+        </span>
+        <span>
+          <span className="mono n">{r}</span> {right}
+        </span>
+      </div>
+      <div className="cave-bar">
+        <div style={{ width: `${(100 * l) / (l + r)}%` }} className="a" />
+        <div style={{ width: `${(100 * r) / (l + r)}%` }} className="b" />
+      </div>
+    </div>
+  );
+}
+
+/** "How the cave picked it": Cavepicks' locked picks on this game — counts
+ *  only, no names (lib/cave.ts). Away on the left to match the hero. */
+function CaveBox({ s, home, away }: { s: CaveSplit; home: string; away: string }) {
+  const dogs = s.dog.home + s.dog.away;
+  return (
+    <div className="cave-box">
+      <div className="cave-head">
+        <span>
+          <img src="/cavepicks.png" alt="" width={18} height={18} />
+          The cave &middot; {s.players}
+          {s.leagueSize ? ` of ${s.leagueSize}` : ""} locked in
+        </span>
+        <a href={CAVEPICKS_URL} target="_blank" rel="noreferrer">
+          Cavepicks ›
+        </a>
+      </div>
+      <CaveBar left={away} right={home} l={s.spread.away} r={s.spread.home} />
+      <CaveBar left="Over" right="Under" l={s.total.over} r={s.total.under} />
+      {dogs > 0 && (
+        <div className="cave-dog">
+          Dog pick:{" "}
+          {[s.dog.away > 0 ? `${s.dog.away} on ${away}` : null, s.dog.home > 0 ? `${s.dog.home} on ${home}` : null]
+            .filter(Boolean)
+            .join(", ")}
+        </div>
+      )}
     </div>
   );
 }

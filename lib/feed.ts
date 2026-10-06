@@ -17,7 +17,7 @@ import { getWeekBoard, getPickLog } from "./webData";
 import { PIPELINE_TAG, PIPELINE_TTL, SITE_URL } from "./pipelineCache";
 import { spreadToProb } from "./winProb";
 
-const cachedOddsNames = unstable_cache(
+export const cachedOddsNames = unstable_cache(
   async () =>
     db.teamSourceAlias.findMany({
       where: { source: "odds_api" },
