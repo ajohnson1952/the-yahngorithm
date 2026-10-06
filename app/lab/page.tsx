@@ -132,49 +132,12 @@ export default function LabPage() {
     <div style={{ paddingBottom: 30 }}>
       <h1>Lab</h1>
       <p className="subhead">
-        Mockups of how <Cave size={16} /> Cavepicks could show up here. Sample data, nothing live. Each
-        caveman badge just opens the Cavepicks home page for now.
+        Mockups of how <Cave size={16} /> Cavepicks could show up here. Sample data, nothing live. (The
+        Cavepicks nav link is real now; these two are still ideas.)
       </p>
 
       <Section
-        title="A · Caveman badge on the game page"
-        blurb="Link only. Sits next to the pin star and opens that week's board on Cavepicks."
-      >
-        <div style={frame}>
-          <div className="gpage-top" style={{ marginBottom: 8 }}>
-            <span className="gback" style={{ margin: 0 }}>‹ Week 6</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <CaveBadge />
-              <span className="pin-btn lg" style={{ cursor: "default" }}>☆</span>
-            </span>
-          </div>
-          <Hero />
-        </div>
-      </Section>
-
-      <Section
-        title="B · Cavepicks in the nav"
-        blurb="One entry in the More menu (phone) and the top bar (desktop) to hop over to the pick'em."
-      >
-        <div style={{ ...frame, maxWidth: 240, padding: 6, background: "var(--panel-2)" }}>
-          {["Guide", "Admin"].map((l) => (
-            <div key={l} style={{ padding: "10px 12px", fontSize: 14, fontWeight: 600, color: "var(--text-dim)" }}>
-              {l}
-            </div>
-          ))}
-          <a
-            href={CAVE_URL}
-            target="_blank"
-            rel="noreferrer"
-            style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", fontSize: 14, fontWeight: 600, color: "var(--text)" }}
-          >
-            <Cave size={20} /> Cavepicks <span style={{ color: "var(--text-faint)", marginLeft: "auto" }}>↗</span>
-          </a>
-        </div>
-      </Section>
-
-      <Section
-        title="C · How the cave picked it"
+        title="How the cave picked it"
         blurb="A step past linking: show how the 7 players split on this game, next to the model's number. It would need Cavepicks to share its locked picks, and would only count picks that are already locked."
       >
         <div style={frame}>
@@ -199,7 +162,7 @@ export default function LabPage() {
       </Section>
 
       <Section
-        title="D · Caveman chip on a board card"
+        title="Caveman chip on a board card"
         blurb="A small marker on the week board for games somebody in the cave has locked a pick on."
       >
         <div style={{ ...frame, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>

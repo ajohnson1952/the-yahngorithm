@@ -190,6 +190,10 @@ a.inline-link:hover { color: var(--blue); }
 .haptic-input:disabled { cursor: default; }
 .haptic-toggle:has(.haptic-input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
 
+/* cross-link to Cavepicks (top bar + More sheet): caveman icon + label */
+.nav-cave { display: inline-flex !important; align-items: center; gap: 7px; }
+.nav-cave img { border-radius: 4px; flex-shrink: 0; }
+
 /* ---------- week nav ---------- */
 .board-meta {
   margin: 22px 0 8px; font-size: 12px; color: var(--text-faint);

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { CAVEPICKS_URL } from "./Nav";
 
 // Small inline line icons — no external assets, and `stroke="currentColor"`
 // means each one automatically picks up the tab's active/inactive color for
@@ -93,6 +94,11 @@ export function BottomNav() {
               {l.label}
             </Link>
           ))}
+          {/* the owner's pick'em app — a different site, so a plain link */}
+          <a href={CAVEPICKS_URL} target="_blank" rel="noreferrer" role="menuitem" className="nav-cave">
+            <img src="/cavepicks.png" alt="" width={20} height={20} />
+            Cavepicks
+          </a>
         </div>
       )}
       <nav className="bottom-nav" aria-label="Primary">
