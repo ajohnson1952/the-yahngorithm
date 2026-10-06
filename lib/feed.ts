@@ -15,6 +15,7 @@ import { unstable_cache } from "next/cache";
 import { db } from "./db";
 import { getWeekBoard, getPickLog } from "./webData";
 import { PIPELINE_TAG, PIPELINE_TTL, SITE_URL } from "./pipelineCache";
+import { spreadToProb } from "./winProb";
 
 const cachedOddsNames = unstable_cache(
   async () =>
@@ -37,6 +38,9 @@ export interface FeedPick {
   /** what corroborated it (srs, revenge, travel, wind, …) */
   why: string[];
   result: string | null; // win | loss | push once graded
+  /** when the model logged it — Cavepicks' ghost player only counts picks
+   *  that existed before a game's lock deadline */
+  loggedAt: string | null;
 }
 
 export interface FeedTeam {
@@ -51,6 +55,9 @@ export interface FeedGame {
   kickoff: string;
   home: FeedTeam;
   away: FeedTeam;
+  /** the model's chance the HOME team wins outright (0..1), null if no model
+   *  — Cavepicks' ghost player uses it to choose its underdog */
+  homeWinProb: number | null;
   picks: FeedPick[];
 }
 
@@ -95,6 +102,8 @@ export async function buildFeed(season: number, week: number): Promise<YahnFeed>
       kickoff: g.kickoff,
       home: team(g.home),
       away: team(g.away),
+      homeWinProb:
+        g.modelSpreadSp != null ? Math.round(spreadToProb(g.modelSpreadSp) * 1000) / 1000 : null,
       picks: g.picks
         .filter((p) => p.market === "spread" || p.market === "total")
         .map((p) => ({
@@ -108,6 +117,7 @@ export async function buildFeed(season: number, week: number): Promise<YahnFeed>
           edge: r1(Math.abs(p.edge)),
           why: p.flags,
           result: p.atsResult,
+          loggedAt: p.loggedAt ?? null,
         })),
     })),
   };

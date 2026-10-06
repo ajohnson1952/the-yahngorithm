@@ -42,6 +42,8 @@ export interface PickView {
   actualResult: number | null;
   closingLine: number | null;
   clv: number | null;
+  /** ISO time the pick was logged (board only — the Cavepicks feed uses it) */
+  loggedAt?: string;
 }
 
 export interface GameView {
@@ -390,6 +392,7 @@ async function buildWeekBoard(
         actualResult: p.actualResult,
         closingLine: p.closingLine,
         clv,
+        loggedAt: p.suggestedAt.toISOString(),
       };
     });
 
