@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { PIPELINE_TAG, PIPELINE_TTL, pinsTag } from "./pipelineCache";
+import { noteDbTouch } from "./dbTouch";
 import { db } from "./db";
 import { consensusByGame } from "./consensus";
 import { fetchNeonProjectUsage } from "./neonUsage";
@@ -184,6 +185,7 @@ export async function getPinnedGameIds(
 const cachedPins = (uid: string) =>
   unstable_cache(
     async () => {
+      noteDbTouch("pins lookup");
       const rows = await db.pinnedGame.findMany({
         where: { uid },
         select: { gameId: true },
@@ -198,6 +200,7 @@ async function buildWeekBoard(
   season: number,
   week: number
 ): Promise<GameView[]> {
+  noteDbTouch(`buildWeekBoard ${season} ${week}`);
   const games = await db.game.findMany({
     where: {
       season,
@@ -482,6 +485,7 @@ async function buildWeekBoard(
  *  keyed on the game id in parallel, then the lookups that need the game's
  *  season/week/teams (ratings, trends, AP ranks) in parallel. */
 async function buildGameDetail(id: string) {
+  noteDbTouch(`buildGameDetail ${id}`);
   const [g, pred, lines, weather, kalshi] = await Promise.all([
     db.game.findUnique({
       where: { id },
@@ -596,6 +600,7 @@ export function getPickLog(season: number) {
 }
 
 async function buildPickLog(season: number) {
+  noteDbTouch(`buildPickLog ${season}`);
   const picks = await db.pick.findMany({
     where: { game: { season } },
     include: {
@@ -702,6 +707,7 @@ export function getGradeBoard(season: number) {
 }
 
 async function buildGradeBoard(season: number) {
+  noteDbTouch(`buildGradeBoard ${season}`);
   const grades = await db.modelGrade.findMany({
     where: { season },
     select: {

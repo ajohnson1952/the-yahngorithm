@@ -16,13 +16,16 @@ import { db } from "./db";
 import { getWeekBoard, getPickLog } from "./webData";
 import { PIPELINE_TAG, PIPELINE_TTL, SITE_URL } from "./pipelineCache";
 import { spreadToProb } from "./winProb";
+import { noteDbTouch } from "./dbTouch";
 
 export const cachedOddsNames = unstable_cache(
-  async () =>
-    db.teamSourceAlias.findMany({
+  async () => {
+    noteDbTouch("odds names");
+    return db.teamSourceAlias.findMany({
       where: { source: "odds_api" },
       select: { teamId: true, sourceName: true },
-    }),
+    });
+  },
   ["odds-api-names"],
   { revalidate: PIPELINE_TTL, tags: ["odds-api-names", PIPELINE_TAG] }
 );

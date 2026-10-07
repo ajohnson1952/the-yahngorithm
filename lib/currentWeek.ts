@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { db } from "./db";
 import { PIPELINE_TAG, PIPELINE_TTL } from "./pipelineCache";
+import { noteDbTouch } from "./dbTouch";
 
 /** The CFB season a date belongs to (Jan bowls still belong to the prior year). */
 export function currentSeason(now: Date = new Date()): number {
@@ -25,6 +26,7 @@ const WEEK_HOLD_MS = 12 * 3600 * 1000;
  * jumping to a slate that's still days out.
  */
 async function computeCurrentWeek(season: number): Promise<number> {
+  noteDbTouch("currentWeek");
   const now = Date.now();
 
   // the two lookups are independent — run them in one round trip
@@ -88,6 +90,7 @@ export const currentWeek = cache(
  *  applies it after the rows are already off the wire). */
 export const weeksWithGames = unstable_cache(
   async (season: number = currentSeason()): Promise<number[]> => {
+    noteDbTouch("weeksWithGames");
     const rows = await db.game.groupBy({
       by: ["week"],
       where: { season },

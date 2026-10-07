@@ -19,37 +19,50 @@ function costly(req: NextRequest): boolean {
   return search !== "" && ["/", "/watch", "/watch-timeline"].includes(pathname);
 }
 
+// The JS door for DB-costly pages. A request without the `yahn_ok` cookie gets
+// a tiny static page whose script sets that cookie and reloads - so only a
+// client that actually RUNS JavaScript ever reaches a page that can read the
+// database. (The first version handed the cookie out on a redirect; crawlers
+// that follow redirects and keep cookies walked straight through it - Neon
+// showed game pages being rendered at 3am again.) Real browsers pass in one
+// blink, once. Carries link-preview tags so a pasted game link still previews.
+const OK_COOKIE = "yahn_ok";
+
+function door(reloadTo: string | null): NextResponse {
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>the yahngorithm</title>
+<meta property="og:title" content="the yahngorithm">
+<meta property="og:description" content="College football model vs. market.">
+<meta name="robots" content="noindex">
+<style>html,body{background:#0b0e14;color:#667085;font-family:system-ui,sans-serif;margin:0}
+p{padding:40px 20px;text-align:center;font-size:14px}</style></head><body>
+<p>${reloadTo ? "Loading…" : "This page needs JavaScript and cookies turned on."}</p>
+${
+  reloadTo
+    ? `<script>document.cookie="${OK_COOKIE}=1; Max-Age=${ONE_YEAR}; Path=/; SameSite=Lax"+(location.protocol==="https:"?"; Secure":"");location.replace(${JSON.stringify(reloadTo)})</script>`
+    : ""
+}
+</body></html>`;
+  return new NextResponse(html, {
+    status: 200,
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+  });
+}
+
 export function proxy(req: NextRequest) {
   const hasCookie = !!req.cookies.get(COOKIE)?.value;
 
-  // Cookie check for the DB-costly pages. Crawlers walking game pages
-  // overnight were waking Neon dozens of times a night (~2/3 of compute on
-  // the Free plan) — most bots don't keep cookies, browsers do. A cookieless
-  // request gets the cookie + one redirect back to itself; a browser returns
-  // with it (one extra hop on a first-ever visit), a bot comes back without
-  // it and gets a tiny 403 that never touches the DB.
   if (costly(req)) {
     const url = req.nextUrl.clone();
-    if (!hasCookie) {
-      if (url.searchParams.has(WALL_PARAM)) {
-        return new NextResponse("Cookies are required to view this page.", {
-          status: 403,
-          headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
-        });
-      }
+    if (req.cookies.get(OK_COOKIE)?.value !== "1") {
+      // already sent through the door once and still no cookie: JS or cookies are off
+      if (url.searchParams.has(WALL_PARAM)) return door(null);
       url.searchParams.set(WALL_PARAM, "1");
-      const res = NextResponse.redirect(url, 307);
-      res.cookies.set(COOKIE, crypto.randomUUID(), {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: ONE_YEAR,
-      });
-      return res;
+      return door(url.pathname + url.search);
     }
     if (url.searchParams.has(WALL_PARAM)) {
-      // passed the check — drop the marker so the address bar stays clean
+      // passed the door — drop the marker so the address bar stays clean
       url.searchParams.delete(WALL_PARAM);
       return NextResponse.redirect(url, 307);
     }
