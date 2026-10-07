@@ -36,6 +36,10 @@ export interface FeedPick {
   side: "home" | "away" | "over" | "under";
   /** display text as logged, e.g. "Tennessee -13.5" / "Under 57.5" */
   label: string;
+  /** the same pick at the MODEL's projected number instead of the market's:
+   *  "TENN -18.9" (what the model makes the spread) / "Under 51.2" (the
+   *  model's projected total). Cavepicks shows this on its pick sheet. */
+  modelLabel: string;
   /** size of the model's disagreement with the market, in points (always +) */
   edge: number;
   /** what corroborated it (srs, revenge, travel, wind, …) */
@@ -74,6 +78,7 @@ export interface YahnFeed {
 }
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
+const fmtSpread = (n: number) => (Math.abs(n) < 0.05 ? "PK" : n > 0 ? `+${n}` : `${n}`);
 
 export async function buildFeed(season: number, week: number): Promise<YahnFeed> {
   const [board, aliases, log] = await Promise.all([
@@ -117,6 +122,14 @@ export async function buildFeed(season: number, week: number): Promise<YahnFeed>
               ? p.edge > 0 ? "home" : "away"
               : p.edge > 0 ? "over" : "under",
           label: p.side,
+          // modelLine uses the market line's convention: home margin for a
+          // spread (+ = home favored), points for a total
+          modelLabel:
+            p.market === "spread"
+              ? `${(p.edge > 0 ? g.home : g.away).abbr ?? (p.edge > 0 ? g.home : g.away).name} ${fmtSpread(
+                  r1(p.edge > 0 ? -p.modelLine : p.modelLine)
+                )}`
+              : `${p.edge > 0 ? "Over" : "Under"} ${r1(p.modelLine)}`,
           edge: r1(Math.abs(p.edge)),
           why: p.flags,
           result: p.atsResult,
