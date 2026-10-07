@@ -12,9 +12,11 @@
 const API = "https://console.neon.tech/api/v2";
 const PROJECT_ID = process.env.NEON_PROJECT_ID ?? "dawn-block-29232776"; // the-yahngorithm
 
-/** Neon Free plan allowances (per project / month). Transfer cap per the
- *  Sept 2026 incident; compute/storage from Neon's free-plan FAQ. */
-export const NEON_FREE = { computeCuH: 100, transferGB: 5, storageGB: 0.5 } as const;
+/** Neon Free plan allowances, PER PROJECT per month — checked against
+ *  neon.com/docs/introduction/plans on 2026-10-07: 100 CU-hours, 5 GB egress,
+ *  1 GB storage. Running out of compute or egress suspends the database
+ *  until the next billing period. */
+export const NEON_FREE = { computeCuH: 100, transferGB: 5, storageGB: 1 } as const;
 
 const GB = 1024 ** 3;
 
