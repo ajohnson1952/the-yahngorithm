@@ -164,6 +164,35 @@ async function main() {
     }
   }
 
+  // Stamp every attempt (a real pull OR a deliberate skip) so the scheduler
+  // can pace itself off "when did we last try", not "when did a line last get
+  // saved". Those differ once every game has kicked off: a pull then saves
+  // nothing, and tick.ts - which used to key off the newest Line row - re-ran
+  // this on EVERY tick all Sunday and late Saturday night, 2 credits a time
+  // (~66 wasted credits a week, found Oct 8 2026).
+  const stampAttempt = (outcome: string) =>
+    prisma.meta.upsert({
+      where: { key: "lastLinesAttempt" },
+      update: { value: { outcome, season, week } },
+      create: { key: "lastLinesAttempt", value: { outcome, season, week } },
+    });
+
+  // Nothing left to price: every game this week has kicked off (or the week
+  // has no games yet), so the pull couldn't save a single row - live prices
+  // are dropped below. Don't spend the credits. --force overrides.
+  const GRACE_MS = 10 * 60_000; // a pull landing within 10 min of kickoff still counts
+  const stillToKick = games.filter((g) => g.kickoffTime.getTime() + GRACE_MS > Date.now()).length;
+  if (stillToKick === 0 && !force) {
+    console.log(
+      `No week-${week} game is still to kick off (${games.length} on the schedule) - ` +
+        `skipping the Odds API call, nothing it returns could be saved (--force overrides).`
+    );
+    await stampAttempt("skipped-no-upcoming-games");
+    await recordCfbdUsage(prisma, getCfbdCallCount());
+    await prisma.$disconnect();
+    return;
+  }
+
   // Hard budget backstop. The Odds API's own header tells us how many credits
   // are left this calendar month (persisted on every pull). If we're near the
   // floor, skip the call and exit cleanly — better to lose a few hours of line
@@ -182,6 +211,7 @@ async function main() {
         `skipping this pull to stay under the monthly cap (resets on the 1st; ` +
         `--force overrides).`
     );
+    await stampAttempt("skipped-low-credits");
     await recordCfbdUsage(prisma, getCfbdCallCount());
     await prisma.$disconnect();
     return;
@@ -197,10 +227,10 @@ async function main() {
       `${creditsRemaining ?? "?"} remaining this month.`
   );
   await recordOddsUsage(prisma, { remaining: creditsRemaining, cost: creditsLastCost });
+  await stampAttempt("pulled");
 
   const rows: Prisma.LineCreateManyInput[] = [];
   const now = Date.now();
-  const GRACE_MS = 10 * 60_000; // a pull landing within 10 min of kickoff still counts
   let matchedGames = 0;
   let unresolvedEvents = 0;
   let rescued = 0;

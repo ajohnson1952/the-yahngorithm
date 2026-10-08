@@ -23,8 +23,8 @@
 // ============================================================
 
 import { execFileSync } from "child_process";
-import { PrismaClient } from "@prisma/client";
-import { getCurrentSeasonWeek } from "../lib/cfbd";
+import { PrismaClient, type Prisma } from "@prisma/client";
+import { getCurrentSeasonWeek, cfbdAccount } from "../lib/cfbd";
 import { spPlusFreshness } from "../lib/ratingsFreshness";
 import { SITE_URL, revalidateToken } from "../lib/pipelineCache";
 
@@ -148,13 +148,20 @@ async function main() {
   // ~5pm Wednesday — the only mid-week games are Tue/Wed-night MACtion in Nov.
   const midweekQuiet = dow === 2 || (dow === 3 && hour < 17);
 
-  const [lastGames, lastLines, lastRatings, lastTrends, lastWeather] = await Promise.all([
+  const [lastGames, lastLineRow, lastRatings, lastTrends, lastWeather, lastLinesAttempt] = await Promise.all([
     latestMs(prisma.game.findFirst({ orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }), "updatedAt"),
     latestMs(prisma.line.findFirst({ orderBy: { capturedAt: "desc" }, select: { capturedAt: true } }), "capturedAt"),
     latestMs(prisma.teamRatingWeekly.findFirst({ orderBy: { pulledAt: "desc" }, select: { pulledAt: true } }), "pulledAt"),
     latestMs(prisma.teamTrend.findFirst({ orderBy: { computedAt: "desc" }, select: { computedAt: true } }), "computedAt"),
     latestMs(prisma.weather.findFirst({ orderBy: { pulledAt: "desc" }, select: { pulledAt: true } }), "pulledAt"),
+    latestMs(prisma.meta.findUnique({ where: { key: "lastLinesAttempt" }, select: { updatedAt: true } }), "updatedAt"),
   ]);
+  // Pace line pulls off the last ATTEMPT, not the last saved row: once a
+  // week's games have all kicked off a pull saves nothing, so the newest Line
+  // row stops moving and the gate below would fire on every tick (it did -
+  // all day Sunday, 2 Odds credits each). pull-lines stamps the Meta row on
+  // every run, including the ones it skips.
+  const lastLines = Math.max(lastLineRow, lastLinesAttempt);
 
   // ---- decide which groups are due ----
   const satCore = dow === 6 && hour >= 9 && hour <= 20;
@@ -169,11 +176,14 @@ async function main() {
       activeHours && !midweekQuiet &&
       minsAgo(lastGames) >= (satCore ? 25 : 55),
 
-    // lines: game windows. 30 min in the Saturday core, ~2.75 h elsewhere.
-    // pull-lines also self-limits when the monthly Odds credits run low.
+    // lines: game windows. 30 min in the Saturday core, ~4 h elsewhere (was
+    // ~2.75 h until Oct 8 2026: a five-Saturday month landed dead on the 500
+    // credit cap with no margin). pull-lines also self-limits when the
+    // monthly Odds credits run low, and skips for free when no game in the
+    // week is still to kick off.
     lines:
       activeHours && !midweekQuiet &&
-      minsAgo(lastLines) >= (satCore ? 25 : 165),
+      minsAgo(lastLines) >= (satCore ? 25 : 225),
 
     // weekly heavy pull: Tuesday morning, once (last ratings pull > 20 h ago).
     weekly: dow === 2 && hour >= 8 && hour <= 11 && minsAgo(lastRatings) > 20 * 60,
@@ -273,6 +283,18 @@ async function main() {
     return;
   }
 
+  // CFBD meter before/after the steps (free to read). Our own call counter
+  // was a third low in both Sept and Oct 2026 - this log shows whether the
+  // missing calls happen inside a tick (and next to which steps) or between
+  // ticks (something else using the key). Read it with `npm run cfbd-usage`.
+  const countedCfbd = async () =>
+    (
+      await prisma.apiUsage
+        .findUnique({ where: { api_yearMonth: { api: "cfbd", yearMonth: new Date().toISOString().slice(0, 7) } } })
+        .catch(() => null)
+    )?.calls ?? 0;
+  const [cfbdBefore, countedBefore] = await Promise.all([cfbdAccount(), countedCfbd()]);
+
   const failed: string[] = [];
   for (const s of plan) {
     const label = s.name + (s.args.length ? ` ${s.args.join(" ")}` : "");
@@ -286,6 +308,33 @@ async function main() {
       console.error(`✗ ${label} failed`);
       failed.push(label);
     }
+  }
+
+  try {
+    const [cfbdAfter, countedAfter] = await Promise.all([cfbdAccount(), countedCfbd()]);
+    if (cfbdBefore && cfbdAfter) {
+      const row = await prisma.meta.findUnique({ where: { key: "cfbdUsageLog" } });
+      const log = Array.isArray(row?.value) ? (row!.value as unknown[]) : [];
+      log.push({
+        t: new Date().toISOString(),
+        before: cfbdBefore.used,
+        after: cfbdAfter.used,
+        counted: countedAfter - countedBefore,
+        steps: plan.map((s) => s.name).filter((n) => n.startsWith("pull-")),
+      });
+      const value = log.slice(-400) as Prisma.InputJsonValue;
+      await prisma.meta.upsert({
+        where: { key: "cfbdUsageLog" },
+        update: { value },
+        create: { key: "cfbdUsageLog", value },
+      });
+      console.log(
+        `\nCFBD: ${cfbdAfter.used - cfbdBefore.used} calls this tick (we counted ${countedAfter - countedBefore}) - ` +
+          `${cfbdAfter.remaining} of ${cfbdAfter.limit} left this month`
+      );
+    }
+  } catch {
+    /* bookkeeping only - never fail a tick over it */
   }
 
   // heartbeat marker for the /admin freshness panel — "the scheduler fired"

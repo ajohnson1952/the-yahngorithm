@@ -81,6 +81,25 @@ export async function cfbdGet<T = unknown>(path: string, attempts = 4): Promise<
   throw new Error(`CFBD ${path} -> ${lastErr}`);
 }
 
+/** CFBD's own account meter (`/info`): exact calls used / left this month.
+ *  Free to ask - it does not count against the quota (checked Oct 8 2026) -
+ *  so the tick reads it before and after its steps to catch calls our own
+ *  counter misses. Null on any failure; never throws. */
+export async function cfbdAccount(): Promise<{ used: number; remaining: number; limit: number } | null> {
+  try {
+    const res = await fetch(`${CFBD_BASE}/info`, {
+      headers: { Authorization: `Bearer ${requireCfbdKey()}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { usedCalls?: number; remainingCalls?: number; monthlyLimit?: number };
+    if (typeof j.usedCalls !== "number" || typeof j.remainingCalls !== "number") return null;
+    return { used: j.usedCalls, remaining: j.remainingCalls, limit: j.monthlyLimit ?? j.usedCalls + j.remainingCalls };
+  } catch {
+    return null;
+  }
+}
+
 export interface CfbdCalendarWeek {
   season: number;
   week: number;

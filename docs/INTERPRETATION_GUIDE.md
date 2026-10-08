@@ -438,10 +438,10 @@ losing play — the value's already gone — but it tells you which side the
 sharp money is on, which is useful as a corroborator or a "don't fade this"
 signal.
 
-`pull-lines` snapshots the board every ~2.75 h during game windows (every 25 min
+`pull-lines` snapshots the board every ~4 h during game windows (every 25 min
 in the Saturday 9a–8p core), which is enough to see these moves — `steam` and
 `rlm` both fire in a normal week. The one gap: a fast move that starts *and*
-finishes inside a single 2.75 h window on a Thursday or Friday can be missed.
+finishes inside a single 4 h window on a Thursday or Friday can be missed.
 
 > **Backtest note.** Using open→close as a stand-in for line movement,
 > **neither following nor fading the move beats the close** (49.5% / 50.5%,

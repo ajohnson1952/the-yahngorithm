@@ -29,6 +29,7 @@
     "seed-rivalries": "tsx --env-file=.env scripts/seedRivalries.ts",
     "neon-usage": "tsx --env-file=.env scripts/neonUsage.ts",
     "db-touches": "tsx --env-file=.env scripts/dbTouches.ts",
+    "cfbd-usage": "tsx --env-file=.env scripts/cfbdUsage.ts",
     "compute-flags": "tsx --env-file=.env scripts/computeFlags.ts",
     "compute-market-flags": "tsx --env-file=.env scripts/computeMarketFlags.ts",
     "compute-weather-flags": "tsx --env-file=.env scripts/computeWeatherFlags.ts",
