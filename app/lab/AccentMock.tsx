@@ -93,7 +93,7 @@ export default function AccentMock() {
     <div style={{ marginBottom: 24 }}>
       <div style={{ fontWeight: 800, fontSize: 15, color: text }}>🎨 Shared accent colours</div>
       <p style={{ fontSize: 13, color: dim, margin: "4px 0 0" }}>
-        Three candidate sets. Whichever is chosen becomes the green, red, amber and blue in both apps. This
+        The three sets that were on offer. C (Blend) is live in both apps now. Whichever was chosen became the green, red, amber and blue in both apps. This
         same card is on the other app&apos;s lab page too, so check each set against both backgrounds.
       </p>
       {SETS.map((p) => (

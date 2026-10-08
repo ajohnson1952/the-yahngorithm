@@ -8,10 +8,12 @@
   --text: #e6edf3;
   --text-dim: #9aa5b1;
   --text-faint: #667085;
-  --blue: #4c9aff;
-  --green: #46c46a;
-  --red: #f0616d;
-  --amber: #e0a83a;
+  /* blue / green / red / amber are the SHARED accents - identical in
+     Cavepicks' globals.css. Change them in both or not at all. */
+  --blue: #5b98ff;
+  --green: #3fd07a;
+  --red: #f8565c;
+  --amber: #e6ac44;
   --purple: #a684f0;
   --mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --sans: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
