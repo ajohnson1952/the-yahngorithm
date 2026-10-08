@@ -1,10 +1,18 @@
 import Link from "next/link";
 import type { Metadata, Viewport } from "next";
+import { Inter, Roboto_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Nav } from "../components/Nav";
 import { BottomNav } from "../components/BottomNav";
 import { PullToRefresh } from "../components/PullToRefresh";
+
+// Real typefaces (until Oct 2026 the CSS only NAMED Inter, so every device
+// fell back to its own system font). Inter for text; Roboto Mono for every
+// number - the same number font as Cavepicks, so lines and spreads read alike
+// in both apps. Both are variable fonts: any weight the CSS asks for exists.
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const robotoMono = Roboto_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
   title: "the yahngorithm",
@@ -34,7 +42,7 @@ export default function RootLayout({
   const cfBeacon = process.env.CF_BEACON_TOKEN;
 
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${robotoMono.variable}`}>
       <body>
         <header className="topbar">
           <div className="wrap topbar-inner">

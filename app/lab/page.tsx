@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import AccentMock from "./AccentMock";
 
 // Unlinked-from-the-web test bench (reachable from the More menu while it's
 // in use): mockups of how Cavepicks — the owner's pick'em game for 7 friends —
@@ -135,6 +136,8 @@ export default function LabPage() {
         Mockups of how <Cave size={16} /> Cavepicks could show up here. Sample data, nothing live. (All
         of these are live now: the nav link, the split on game pages and the chip on the board.)
       </p>
+
+      <AccentMock />
 
       <Section
         title="How the cave picked it"
