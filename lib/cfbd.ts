@@ -46,7 +46,11 @@ export const getCfbdLastRemaining = () => cfbdLastRemaining;
  *  Retries transient errors (429, 5xx) a few times with backoff — except a
  *  monthly-quota 429 (remaining=0), which is never transient and would just
  *  waste ~4 attempts of backoff before failing anyway. */
-export async function cfbdGet<T = unknown>(path: string, attempts = 4): Promise<T> {
+// Two attempts, not four (Oct 2026): CFBD bills a call even when it answers
+// with an error or we give up waiting, and none of those were in our own
+// count - on its slow days the retries alone ran ~40% over the quota. The
+// next tick is the real retry.
+export async function cfbdGet<T = unknown>(path: string, attempts = 2): Promise<T> {
   const key = requireCfbdKey();
   const url = path.startsWith("http") ? path : `${CFBD_BASE}${path}`;
   let lastErr = "";

@@ -84,6 +84,27 @@ async function getVenues(prisma: PrismaClient): Promise<CfbdVenue[]> {
   return v;
 }
 
+/** TV listings barely change inside a day, but this script runs up to twice
+ *  an hour on a Saturday - and on CFBD's free tier (1,000 calls/month) the
+ *  media call was half of every run. Cache it per week for most of a day. */
+const MEDIA_TTL_MS = 20 * 60 * 60 * 1000;
+async function getMedia(prisma: PrismaClient, key: string, path: string): Promise<CfbdMedia[]> {
+  const metaKey = `media:${key}`;
+  const row = await prisma.meta.findUnique({ where: { key: metaKey } });
+  if (row && Date.now() - row.updatedAt.getTime() < MEDIA_TTL_MS && Array.isArray(row.value)) {
+    console.log(`  tv listings: ${(row.value as unknown[]).length} (cached)`);
+    return row.value as unknown as CfbdMedia[];
+  }
+  const m = await cfbdGet<CfbdMedia[]>(path).catch(() => null);
+  if (!m) return row && Array.isArray(row.value) ? (row.value as unknown as CfbdMedia[]) : []; // stale beats none
+  const value = m.map(({ id, mediaType, outlet }) => ({ id, mediaType, outlet })) as unknown as Prisma.InputJsonValue;
+  await prisma.meta
+    .upsert({ where: { key: metaKey }, update: { value }, create: { key: metaKey, value } })
+    .catch(() => {});
+  console.log(`  tv listings: ${m.length} (refreshed)`);
+  return m;
+}
+
 interface CfbdMedia {
   id: number; // game id
   mediaType: string | null; // 'tv' | 'radio' | 'web' | 'ppv' | 'mobile'
@@ -177,7 +198,7 @@ async function main() {
   const [allGames, venues, media] = await Promise.all([
     cfbdGet<CfbdGame[]>(gamesPath),
     getVenues(prisma),
-    cfbdGet<CfbdMedia[]>(mediaPath).catch(() => [] as CfbdMedia[]),
+    getMedia(prisma, `${season}:${oneWeek ?? "all"}`, mediaPath),
   ]);
   const broadcastById = broadcastMap(media);
 

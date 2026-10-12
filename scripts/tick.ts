@@ -163,6 +163,21 @@ async function main() {
   // every run, including the ones it skips.
   const lastLines = Math.max(lastLineRow, lastLinesAttempt);
 
+  // Is there a score to chase? A game that has kicked off (or is about to) and
+  // isn't final yet, within the last 3 days. When there isn't, pulling the
+  // schedule hourly just burns CFBD's 1,000-calls-a-month free quota for
+  // nothing (it ran out Sept 22 and was on course to again in October) - a
+  // refresh twice a day is plenty for kickoff-time and TV changes.
+  const scoresLive =
+    (await prisma.game
+      .count({
+        where: {
+          status: { not: "final" },
+          kickoffTime: { lte: new Date(Date.now() + 15 * 60_000), gte: new Date(Date.now() - 72 * 3600_000) },
+        },
+      })
+      .catch(() => 1)) > 0; // can't tell -> behave as before
+
   // ---- decide which groups are due ----
   const satCore = dow === 6 && hour >= 9 && hour <= 20;
 
@@ -170,11 +185,12 @@ async function main() {
     // cheap, DB-only + free Kalshi reads — every tick
     heartbeat: true,
 
-    // scores: game windows, skip the mid-week daytime dead zone. Rate-limit so
-    // it's ~30 min on Saturday, ~hourly otherwise.
+    // scores: only while a game is in progress or overdue to go final (see
+    // scoresLive) - ~30 min on Saturday, ~hourly otherwise; with nothing live,
+    // twice a day. Skips the mid-week daytime dead zone.
     scores:
       activeHours && !midweekQuiet &&
-      minsAgo(lastGames) >= (satCore ? 25 : 55),
+      minsAgo(lastGames) >= (scoresLive ? (satCore ? 25 : 55) : 12 * 60),
 
     // lines: game windows. 30 min in the Saturday core, ~4 h elsewhere (was
     // ~2.75 h until Oct 8 2026: a five-Saturday month landed dead on the 500
@@ -274,7 +290,7 @@ async function main() {
       (onlyArg ? `   [--only ${onlyArg.join(",")}]` : "")
   );
   console.log(
-    `  staleness: games ${Math.round(minsAgo(lastGames))}m · lines ${Math.round(minsAgo(lastLines))}m`
+    `  staleness: games ${Math.round(minsAgo(lastGames))}m · lines ${Math.round(minsAgo(lastLines))}m · ${scoresLive ? "a game is live/overdue" : "no game live"}`
   );
   console.log(`  plan: ${plan.map((s) => s.name + (s.args.length ? ` ${s.args.join(" ")}` : "")).join(" → ") || "(nothing due)"}`);
 
