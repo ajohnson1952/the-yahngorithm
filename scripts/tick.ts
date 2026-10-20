@@ -148,13 +148,14 @@ async function main() {
   // ~5pm Wednesday — the only mid-week games are Tue/Wed-night MACtion in Nov.
   const midweekQuiet = dow === 2 || (dow === 3 && hour < 17);
 
-  const [lastGames, lastLineRow, lastRatings, lastTrends, lastWeather, lastLinesAttempt] = await Promise.all([
+  const [lastGames, lastLineRow, lastRatings, lastTrends, lastWeather, lastLinesAttempt, lastWeekly] = await Promise.all([
     latestMs(prisma.game.findFirst({ orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }), "updatedAt"),
     latestMs(prisma.line.findFirst({ orderBy: { capturedAt: "desc" }, select: { capturedAt: true } }), "capturedAt"),
     latestMs(prisma.teamRatingWeekly.findFirst({ orderBy: { pulledAt: "desc" }, select: { pulledAt: true } }), "pulledAt"),
     latestMs(prisma.teamTrend.findFirst({ orderBy: { computedAt: "desc" }, select: { computedAt: true } }), "computedAt"),
     latestMs(prisma.weather.findFirst({ orderBy: { pulledAt: "desc" }, select: { pulledAt: true } }), "pulledAt"),
     latestMs(prisma.meta.findUnique({ where: { key: "lastLinesAttempt" }, select: { updatedAt: true } }), "updatedAt"),
+    latestMs(prisma.meta.findUnique({ where: { key: "lastWeekly" }, select: { updatedAt: true } }), "updatedAt"),
   ]);
   // Pace line pulls off the last ATTEMPT, not the last saved row: once a
   // week's games have all kicked off a pull saves nothing, so the newest Line
@@ -202,7 +203,11 @@ async function main() {
       minsAgo(lastLines) >= (satCore ? 25 : 225),
 
     // weekly heavy pull: Tuesday morning, once (last ratings pull > 20 h ago).
-    weekly: dow === 2 && hour >= 8 && hour <= 11 && minsAgo(lastRatings) > 20 * 60,
+    // Keyed off its own stamp, not the newest ratings row: loading Bill C's
+    // sheet on a Monday afternoon creates the new week's rating rows, which
+    // used to push this past the 8-11am window and skip Tuesday's pull
+    // entirely (Oct 19 2026 came within 20 minutes of it).
+    weekly: dow === 2 && hour >= 8 && hour <= 11 && minsAgo(lastWeekly) > 20 * 60,
 
     // trends: Sunday late morning, once.
     sunday: dow === 0 && hour >= 9 && hour <= 12 && minsAgo(lastTrends) > 20 * 60,
@@ -351,6 +356,12 @@ async function main() {
     }
   } catch {
     /* bookkeeping only - never fail a tick over it */
+  }
+
+  if (run.weekly && !failed.some((f) => f.startsWith("pull-ratings"))) {
+    await prisma.meta
+      .upsert({ where: { key: "lastWeekly" }, update: { value: {} }, create: { key: "lastWeekly", value: {} } })
+      .catch(() => {});
   }
 
   // heartbeat marker for the /admin freshness panel — "the scheduler fired"
