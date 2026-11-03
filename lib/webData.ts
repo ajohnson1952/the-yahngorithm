@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import { teamLogo } from "./teamLogo";
 import { PIPELINE_TAG, PIPELINE_TTL, pinsTag } from "./pipelineCache";
 import { noteDbTouch } from "./dbTouch";
 import { db } from "./db";
@@ -319,7 +320,7 @@ async function buildWeekBoard(
     id: t.id,
     name: t.canonicalName,
     abbr: t.abbreviation,
-    logo: t.logoDark ?? t.logoLight,
+    logo: teamLogo(t),
     color: t.color,
     classification: t.classification,
     conference: t.conference,

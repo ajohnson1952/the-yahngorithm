@@ -1302,3 +1302,43 @@ tr:hover td { background: var(--panel); }
   .pl-stat { text-align: left; font-size: 12px; }
   .pl-label { display: inline; color: var(--text-faint); }
 }
+
+/* ---------- /admin/logos picker ---------- */
+.lp-back { margin: 0 0 8px; font-size: 13px; }
+.lp-back a { color: var(--text-dim); text-decoration: none; }
+.lp-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+.lp-search {
+  flex: 1 1 220px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); padding: 8px 12px; font: inherit;
+}
+.lp-filter { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.lp-filter button {
+  background: var(--panel); color: var(--text-dim); border: 0; padding: 7px 12px;
+  font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.lp-filter button + button { border-left: 1px solid var(--border); }
+.lp-filter button.on { color: var(--text); background: color-mix(in srgb, var(--blue) 14%, var(--panel)); }
+.lp-error { color: var(--red); font-size: 13px; }
+.lp-group { margin-bottom: 22px; }
+.lp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.lp-team {
+  background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 12px;
+}
+.lp-name { font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+.lp-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lp-option {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  /* same colour as the board's game cards, so you judge each logo where it'll live */
+  background: var(--panel); border: 2px solid var(--border); border-radius: 8px;
+  padding: 10px 6px 6px; cursor: pointer; color: var(--text-faint); font: inherit;
+}
+.lp-option:hover:not(:disabled) { border-color: var(--border-bright); }
+.lp-option.on { border-color: var(--blue); color: var(--text); }
+.lp-option:disabled { opacity: 0.4; cursor: default; }
+.lp-imgs { display: flex; align-items: center; gap: 10px; height: 48px; }
+.lp-big { width: 44px; height: 44px; object-fit: contain; }
+.lp-small { width: 18px; height: 18px; object-fit: contain; }
+.lp-none { height: 48px; display: flex; align-items: center; font-size: 12px; }
+.lp-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.lp-option.on .lp-label::before { content: "✓ "; color: var(--blue); }

@@ -23,6 +23,7 @@ import {
   trim,
   spreadStr,
 } from "../../../components/ui";
+import { teamLogo } from "../../../lib/teamLogo";
 
 export const dynamic = "force-dynamic";
 
@@ -1312,6 +1313,7 @@ function lite(
     abbreviation: string | null;
     logoLight: string | null;
     logoDark: string | null;
+    logoPref: string | null;
     color: string | null;
     classification: string;
     conference: string | null;
@@ -1322,7 +1324,7 @@ function lite(
     id: t.id,
     name: t.canonicalName,
     abbr: t.abbreviation,
-    logo: t.logoDark ?? t.logoLight,
+    logo: teamLogo(t),
     color: t.color,
     classification: t.classification,
     conference: t.conference,

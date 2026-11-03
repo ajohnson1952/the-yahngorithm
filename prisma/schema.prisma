@@ -46,6 +46,10 @@ model Team {
   // brand assets for the eventual web UI
   logoLight     String?
   logoDark      String?
+  // which of the two logos the site shows: "dark" = logoDark, anything else
+  // (null) = logoLight. Picked by hand at /admin/logos — ESPN's dark set
+  // fixes navy/black logos but turns many others plain white.
+  logoPref      String?
   color         String?
   altColor      String?
   espnId        Int?      // ESPN's numeric team id — for the injuries feed

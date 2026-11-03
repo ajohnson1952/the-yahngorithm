@@ -4,6 +4,7 @@ import { currentSeason } from "../../lib/currentWeek";
 import { tierRatings, YAHN_TIERS } from "../../lib/yahn";
 import { LoginForm } from "./LoginForm";
 import { RankingEditor } from "./RankingEditor";
+import { teamLogo } from "../../lib/teamLogo";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Top 25 · the yahngorithm" };
@@ -50,6 +51,7 @@ export default async function RankingsPage() {
         abbreviation: true,
         logoLight: true,
         logoDark: true,
+        logoPref: true,
         conference: true,
       },
       orderBy: { canonicalName: "asc" },
@@ -77,7 +79,7 @@ export default async function RankingsPage() {
     id: t.id,
     name: t.canonicalName,
     abbr: t.abbreviation,
-    logo: t.logoDark ?? t.logoLight,
+    logo: teamLogo(t),
     conference: t.conference,
     spPlus: spByTeam.get(t.id) ?? null,
   }));

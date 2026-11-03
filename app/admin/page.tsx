@@ -250,6 +250,10 @@ export default async function AdminPage() {
         server against the live database.
       </p>
 
+      <p className="subhead">
+        <a href="/admin/logos" style={{ color: "var(--blue)" }}>Pick team logos →</a>
+      </p>
+
       <FreshnessPanel rows={freshness} />
 
       <div className="admin-limits">
