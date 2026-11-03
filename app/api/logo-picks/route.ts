@@ -4,13 +4,11 @@ import { LOGO_PICKS_TAG, logoEspnId } from "../../../lib/teamLogo";
 import { noteDbTouch } from "../../../lib/dbTouch";
 
 // GET /api/logo-picks: ESPN team ids whose dark-background logo was picked at
-// /admin/logos, for Cavepicks (its games store ESPN logo links, so it matches
-// on the id). Picks are set once and rarely touched, so this has its OWN cache
-// tag, NOT the pipeline one: the tick expires the pipeline tag every ~30 min,
-// and riding on it would make Cavepicks' 15-min check re-read (and possibly
-// wake) the database all day for a list that never changes. Only saving a
-// pick (setLogoPref) expires LOGO_PICKS_TAG, so this reads the database once
-// after a change or a deploy, not on a schedule.
+// /admin/logos. Cavepicks does NOT read this at runtime: its
+// `npm run sync-logos` copies it into Cavepicks' code (lib/darkLogoIds.ts)
+// when picks change. (Its games store ESPN logo links, so it matches on id.)
+// Has its own cache tag, not the pipeline one, so it only reads the database
+// after a pick is saved (setLogoPref) or a deploy, never on a schedule.
 const cachedDarkIds = unstable_cache(
   async () => {
     noteDbTouch("logo picks");

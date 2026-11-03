@@ -50,8 +50,10 @@ export default async function LogosPage() {
       <p className="subhead">
         Each team has two logos: the standard one, and a version made for dark
         backgrounds. Tap whichever looks better. It saves right away and shows
-        on the board, game pages and rankings here, and on Cavepicks within
-        about 15 minutes.
+        on the board, game pages and rankings here. Cavepicks keeps its own
+        built-in copy: after changing picks, run{" "}
+        <code>npm run sync-logos</code> in the Cavepicks project and push it
+        (or ask Claude to).
       </p>
       <LogoPicker teams={teams} />
     </>
