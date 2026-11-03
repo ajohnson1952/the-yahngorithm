@@ -5,6 +5,9 @@
 
 export type LogoChoice = "light" | "dark";
 
+/** Cache tag for the dark-logo list Cavepicks reads (/api/logo-picks). */
+export const LOGO_PICKS_TAG = "logo-picks";
+
 export function teamLogo(t: {
   logoLight: string | null;
   logoDark: string | null;

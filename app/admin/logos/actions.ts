@@ -4,7 +4,7 @@ import { updateTag } from "next/cache";
 import { db } from "../../../lib/db";
 import { isAdmin } from "../../../lib/adminAuth";
 import { PIPELINE_TAG } from "../../../lib/pipelineCache";
-import type { LogoChoice } from "../../../lib/teamLogo";
+import { LOGO_PICKS_TAG, type LogoChoice } from "../../../lib/teamLogo";
 
 /** Save which logo a team shows, then expire the site's caches so the board,
  *  game pages and Cavepicks' logo list pick it up on their next load. */
@@ -19,6 +19,7 @@ export async function setLogoPref(
     // null = the standard logo (the default), so only real picks are stored
     data: { logoPref: choice === "dark" ? "dark" : null },
   });
-  updateTag(PIPELINE_TAG);
+  updateTag(PIPELINE_TAG); // board, game pages, rankings
+  updateTag(LOGO_PICKS_TAG); // the list Cavepicks reads
   return { ok: true };
 }
