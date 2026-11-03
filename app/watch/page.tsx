@@ -119,6 +119,9 @@ export default async function WatchPage({
   const pastWindows = windows.slice(0, pastCount);
   const liveWindows = windows.slice(pastCount);
 
+  const matchup = (g: (typeof windows)[number]["added"][number]) =>
+    `${g.away.abbr ?? g.away.name} @ ${g.home.abbr ?? g.home.name}`;
+
   const renderWindow = (w: (typeof windows)[number], i: number) => (
     <section key={w.start} className="watch-window">
       <div className="watch-window-head">
@@ -132,14 +135,14 @@ export default async function WatchPage({
       </div>
       {(w.added.length > 0 || w.dropped.length > 0) && i > 0 && (
         <div className="watch-swap">
-          {w.dropped.length > 0 && (
-            <span>
-              out: {w.dropped.map((g) => g.away.abbr ?? g.away.name).join(", ")}
+          {w.added.length > 0 && (
+            <span className="watch-swap-in">
+              New to the lineup: {w.added.map(matchup).join(", ")}
             </span>
           )}
-          {w.added.length > 0 && (
-            <span>
-              in: {w.added.map((g) => g.away.abbr ?? g.away.name).join(", ")}
+          {w.dropped.length > 0 && (
+            <span className="watch-swap-out">
+              Off the lineup: {w.dropped.map(matchup).join(", ")}
             </span>
           )}
         </div>

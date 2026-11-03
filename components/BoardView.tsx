@@ -64,7 +64,11 @@ export function BoardView({
   // stored values; harmless).
   useEffect(() => {
     try {
-      setCompact(localStorage.getItem(COMPACT_KEY) === "1");
+      // no saved choice yet -> compact on phones, full cards on bigger screens
+      const saved = localStorage.getItem(COMPACT_KEY);
+      setCompact(
+        saved === null ? window.matchMedia("(max-width: 640px)").matches : saved === "1"
+      );
       setChosenFlag(localStorage.getItem(FLAG_KEY) || null);
     } catch {
       /* private browsing / storage blocked — just use the defaults */

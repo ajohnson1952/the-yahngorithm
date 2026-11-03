@@ -319,7 +319,7 @@ async function buildWeekBoard(
     id: t.id,
     name: t.canonicalName,
     abbr: t.abbreviation,
-    logo: t.logoLight,
+    logo: t.logoDark ?? t.logoLight,
     color: t.color,
     classification: t.classification,
     conference: t.conference,

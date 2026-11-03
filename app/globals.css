@@ -352,8 +352,8 @@ a.inline-link:hover { color: var(--blue); }
   display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-dim);
   margin: 0 0 10px;
 }
-.watch-swap span:first-child { color: var(--red); }
-.watch-swap span:last-child:not(:first-child) { color: var(--green); }
+.watch-swap-in { color: var(--green); }
+.watch-swap-out { color: var(--text-dim); }
 
 .watch-lineup {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
@@ -578,6 +578,12 @@ a.card:hover .team-name { color: var(--blue); }
 .card.compact .edge { margin-top: 0; font-size: 11px; padding: 0 5px; }
 .card.compact .pick-pill { padding: 1px 7px; margin-top: 2px; }
 .card.compact .pick-pill-side { font-size: 11px; }
+/* phones: the two market columns are only ~150px wide, so let the edge tag
+   drop under the line instead of overflowing into the total column */
+@media (max-width: 640px) {
+  .card.compact .card-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 4px 10px; }
+  .card.compact .mm-line { flex-wrap: wrap; row-gap: 2px; min-width: 0; }
+}
 .density-toggle {
   display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
   font-size: 12px; font-weight: 600; color: var(--text-dim); cursor: pointer;
@@ -1233,4 +1239,66 @@ tr:hover td { background: var(--panel); }
 @keyframes ios-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   .ios-spinner { animation-duration: 2.4s; }
+}
+
+/* ---------- pick log: one folding section per week ---------- */
+.pl-weeks { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.pl-week {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden;
+}
+.pl-week summary {
+  cursor: pointer; list-style: none; display: flex; flex-wrap: wrap;
+  align-items: baseline; gap: 6px 14px; padding: 12px 14px;
+}
+.pl-week summary::-webkit-details-marker { display: none; }
+.pl-week-name { font-weight: 700; font-size: 15px; }
+.pl-week-name::before { content: "▸ "; color: var(--text-faint); }
+.pl-week[open] .pl-week-name::before { content: "▾ "; }
+.pl-week-stats {
+  display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--mono);
+  font-size: 12px; color: var(--text);
+}
+.pl-dim { color: var(--text-faint); }
+
+.pl-head, .pl-row {
+  display: grid; align-items: center; gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 150px 60px 60px 60px 110px;
+  padding: 9px 14px;
+}
+.pl-head {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-faint); border-top: 1px solid var(--border);
+}
+.pl-row { border-top: 1px solid var(--border); color: var(--text); text-decoration: none; font-size: 13px; }
+.pl-row:hover { background: var(--panel-2); }
+.pl-game { display: flex; flex-direction: column; min-width: 0; }
+.pl-teams { font-weight: 600; }
+.pl-kick, .pl-market { color: var(--text-faint); font-size: 11px; }
+.pl-pick { display: flex; flex-direction: column; }
+.pl-pick .mono { font-weight: 700; }
+.pl-stats { display: contents; }
+.pl-label { display: none; }
+.pl-margin { color: var(--text-faint); margin-left: 6px; font-weight: 400; }
+.pl-result { font-weight: 700; }
+
+/* phones: each pick becomes a two-line card — game + result on top,
+   pick and its numbers underneath */
+@media (max-width: 640px) {
+  .pl-head { display: none; }
+  .pl-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "game result"
+      "pick pick"
+      "stats stats";
+    gap: 4px 10px; padding: 10px 12px;
+  }
+  .pl-game { grid-area: game; }
+  .pl-result { grid-area: result; text-align: right; align-self: start; }
+  .pl-margin { display: block; margin-left: 0; font-size: 11px; }
+  .pl-pick { grid-area: pick; flex-direction: row; align-items: baseline; gap: 8px; }
+  .pl-stats { grid-area: stats; display: flex; gap: 14px; }
+  .pl-stat { text-align: left; font-size: 12px; }
+  .pl-label { display: inline; color: var(--text-faint); }
 }

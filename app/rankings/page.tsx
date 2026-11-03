@@ -49,6 +49,7 @@ export default async function RankingsPage() {
         canonicalName: true,
         abbreviation: true,
         logoLight: true,
+        logoDark: true,
         conference: true,
       },
       orderBy: { canonicalName: "asc" },
@@ -76,7 +77,7 @@ export default async function RankingsPage() {
     id: t.id,
     name: t.canonicalName,
     abbr: t.abbreviation,
-    logo: t.logoLight,
+    logo: t.logoDark ?? t.logoLight,
     conference: t.conference,
     spPlus: spByTeam.get(t.id) ?? null,
   }));

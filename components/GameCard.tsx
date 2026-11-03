@@ -130,8 +130,8 @@ export function GameCard({
                   <EdgeTag
                     edge={g.spreadEdge}
                     threshold={SPREAD_EDGE_THRESHOLD}
-                    overLabel="h"
-                    underLabel="a"
+                    overLabel={teamShort(g.home)}
+                    underLabel={teamShort(g.away)}
                   />
                 )}
               </span>
@@ -185,8 +185,8 @@ export function GameCard({
                   <EdgeTag
                     edge={g.totalEdge}
                     threshold={TOTAL_EDGE_THRESHOLD}
-                    overLabel="o"
-                    underLabel="u"
+                    overLabel="over"
+                    underLabel="under"
                   />
                 )}
               </span>

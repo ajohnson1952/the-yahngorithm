@@ -1311,6 +1311,7 @@ function lite(
     canonicalName: string;
     abbreviation: string | null;
     logoLight: string | null;
+    logoDark: string | null;
     color: string | null;
     classification: string;
     conference: string | null;
@@ -1321,7 +1322,7 @@ function lite(
     id: t.id,
     name: t.canonicalName,
     abbr: t.abbreviation,
-    logo: t.logoLight,
+    logo: t.logoDark ?? t.logoLight,
     color: t.color,
     classification: t.classification,
     conference: t.conference,
