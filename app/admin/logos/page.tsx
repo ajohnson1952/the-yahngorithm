@@ -3,6 +3,7 @@ import { isAdmin } from "../../../lib/adminAuth";
 import { db } from "../../../lib/db";
 import { LoginForm } from "../../rankings/LoginForm";
 import { LogoPicker, type LogoTeam } from "./LogoPicker";
+import { espnLogo } from "../../../lib/teamLogo";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Logos · Admin · the yahngorithm" };
@@ -36,8 +37,8 @@ export default async function LogosPage() {
     id: t.id,
     name: t.canonicalName,
     group: t.classification === "fbs" ? (t.conference ?? "Other FBS") : "FCS & other divisions",
-    light: t.logoLight,
-    dark: t.logoDark,
+    light: espnLogo(t.logoLight),
+    dark: espnLogo(t.logoDark),
     choice: t.logoPref === "dark" ? "dark" : "light",
   }));
 
