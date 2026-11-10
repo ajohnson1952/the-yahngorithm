@@ -779,6 +779,11 @@ export interface ApiUsageView {
   oddsRemaining: number | null;
   oddsBudget: number;
   oddsUpdatedAt: Date | null;
+  // CBB Odds key — exact used + remaining from the API's own headers
+  oddsCbbUsed: number;
+  oddsCbbRemaining: number | null;
+  oddsCbbBudget: number;
+  oddsCbbUpdatedAt: Date | null;
 }
 
 export interface FreshnessRow {
@@ -847,6 +852,7 @@ export async function getApiUsage(): Promise<ApiUsageView> {
   const rows = await db.apiUsage.findMany({ where: { yearMonth: ym } });
   const cfbd = rows.find((r) => r.api === "cfbd");
   const odds = rows.find((r) => r.api === "odds");
+  const oddsCbb = rows.find((r) => r.api === "odds_cbb");
   return {
     cfbdCalls: cfbd?.calls ?? 0,
     // Real cap is unknown (CFBD has no "your plan limit is N" endpoint), but
@@ -860,5 +866,11 @@ export async function getApiUsage(): Promise<ApiUsageView> {
     oddsRemaining: odds?.lastRemaining ?? null,
     oddsBudget: ODDS_MONTHLY_BUDGET,
     oddsUpdatedAt: odds?.updatedAt ?? null,
+    oddsCbbUsed: oddsCbb?.calls ?? 0,
+    oddsCbbRemaining: oddsCbb?.lastRemaining ?? null,
+    // used + remaining = the real plan size (500 on free); guess 500 until read
+    oddsCbbBudget:
+      oddsCbb?.lastRemaining != null ? oddsCbb.calls + oddsCbb.lastRemaining : ODDS_MONTHLY_BUDGET,
+    oddsCbbUpdatedAt: oddsCbb?.updatedAt ?? null,
   };
 }

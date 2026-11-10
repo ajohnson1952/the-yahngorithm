@@ -270,7 +270,7 @@ export default async function AdminPage() {
           updatedAt={usage.cfbdUpdatedAt}
         />
         <UsageBar
-          label="The Odds API"
+          label="The Odds API (CFB)"
           used={usage.oddsUsed}
           budget={usage.oddsBudget}
           detail={
@@ -279,6 +279,17 @@ export default async function AdminPage() {
               : "No pull yet this month — will populate after the next pull-lines run."
           }
           updatedAt={usage.oddsUpdatedAt}
+        />
+        <UsageBar
+          label="The Odds API (CBB)"
+          used={usage.oddsCbbUsed}
+          budget={usage.oddsCbbBudget}
+          detail={
+            usage.oddsCbbRemaining != null
+              ? `Exact — used and remaining both come from the API's own headers. ${usage.oddsCbbRemaining} credits remaining on the separate CBB key. A FanDuel moneyline + spread pull costs 2 (3 with totals). Free re-check: npm run odds-cbb-usage.`
+              : "No reading yet this month. Run npm run odds-cbb-usage (free) once ODDS_API_KEY_CBB is set."
+          }
+          updatedAt={usage.oddsCbbUpdatedAt}
         />
         <p className="admin-usage-note">
           Resets naturally at the start of each calendar month (a fresh row). Each bar's "last

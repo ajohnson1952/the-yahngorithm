@@ -1,6 +1,6 @@
 # Reusable job: check out, install, and run a pipeline command string.
 # Called by the scheduler workflows. Needs repo secrets:
-#   DATABASE_URL, CFBD_API_KEY, ODDS_API_KEY
+#   DATABASE_URL, CFBD_API_KEY, ODDS_API_KEY, ODDS_API_KEY_CBB (optional until CBB pulls run)
 name: run-pipeline
 
 on:
@@ -29,6 +29,7 @@ jobs:
             echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"
             echo "CFBD_API_KEY=${{ secrets.CFBD_API_KEY }}"
             echo "ODDS_API_KEY=${{ secrets.ODDS_API_KEY }}"
+            echo "ODDS_API_KEY_CBB=${{ secrets.ODDS_API_KEY_CBB }}"
           } > .env
       - name: run
         run: ${{ inputs.commands }}

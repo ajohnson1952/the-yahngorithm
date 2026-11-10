@@ -35,6 +35,32 @@ export async function recordCfbdUsage(prisma: PrismaClient, calls: number): Prom
   });
 }
 
+/**
+ * CBB Odds key ('odds_cbb'). Unlike 'odds' (which adds up our own call costs),
+ * this stores the API's OWN numbers: `calls` = x-requests-used and
+ * `lastRemaining` = x-requests-remaining, both exact and overwritten each time.
+ * So used + remaining = the real plan size, even after an upgrade.
+ * Safe to call with a free balance check (lastCost 0) — that's how a freshly
+ * pasted or rotated key gets a correct reading without spending credits.
+ */
+export async function recordOddsCbbUsage(
+  prisma: PrismaClient,
+  b: { used: number | null; remaining: number | null; lastCost: number | null }
+): Promise<void> {
+  if (b.used == null && b.remaining == null) return;
+  const ym = yearMonth();
+  const data = {
+    calls: b.used ?? undefined,
+    lastRemaining: b.remaining ?? undefined,
+    lastCost: b.lastCost ?? undefined,
+  };
+  await prisma.apiUsage.upsert({
+    where: { api_yearMonth: { api: "odds_cbb", yearMonth: ym } },
+    update: data,
+    create: { api: "odds_cbb", yearMonth: ym, calls: b.used ?? 0, lastRemaining: b.remaining, lastCost: b.lastCost },
+  });
+}
+
 export async function recordOddsUsage(
   prisma: PrismaClient,
   opts: { remaining: number | null; cost: number | null }

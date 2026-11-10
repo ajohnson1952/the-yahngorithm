@@ -30,6 +30,7 @@
     "neon-usage": "tsx --env-file=.env scripts/neonUsage.ts",
     "db-touches": "tsx --env-file=.env scripts/dbTouches.ts",
     "cfbd-usage": "tsx --env-file=.env scripts/cfbdUsage.ts",
+    "odds-cbb-usage": "tsx --env-file=.env scripts/oddsCbbUsage.ts",
     "compute-flags": "tsx --env-file=.env scripts/computeFlags.ts",
     "compute-market-flags": "tsx --env-file=.env scripts/computeMarketFlags.ts",
     "compute-weather-flags": "tsx --env-file=.env scripts/computeWeatherFlags.ts",
