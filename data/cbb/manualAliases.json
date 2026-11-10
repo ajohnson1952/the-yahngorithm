@@ -1,0 +1,18 @@
+{
+  "_note": "Hand-checked source names the auto matcher can't get (rebrands, odd spellings). source -> { name as that source writes it: our CbbTeam.name }. Read by npm run cbb:match-names.",
+  "odds_api": {
+    "Arkansas-Little Rock Trojans": "Little Rock",
+    "GW Revolutionaries": "George Washington",
+    "Grand Canyon Antelopes": "Grand Canyon",
+    "IUPUI Jaguars": "IU Indianapolis",
+    "Long Beach St 49ers": "Long Beach State",
+    "Loyola (Chi) Ramblers": "Loyola Chicago",
+    "Maryland-Eastern Shore Hawks": "Maryland Eastern Shore",
+    "Nicholls St Colonels": "Nicholls",
+    "Prairie View Panthers": "Prairie View A&M",
+    "Sam Houston St Bearkats": "Sam Houston",
+    "Seattle Redhawks": "Seattle U",
+    "Tenn-Martin Skyhawks": "UT Martin"
+  },
+  "kenpom": {}
+}
