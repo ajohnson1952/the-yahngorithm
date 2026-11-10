@@ -95,8 +95,8 @@ async function main() {
         data: { source, alias: n, teamId: s.teamId, confidence: "needs_review" },
       });
       suggested++;
-      if (s.how !== "espn_name" || s.ambiguous) {
-        console.log(`  ? ${source}: "${n}" -> ${s.teamName}${s.ambiguous ? "  (AMBIGUOUS)" : ""}`);
+      if (s.ambiguous) {
+        console.log(`  ? ${source}: "${n}" -> ${s.teamName}  (AMBIGUOUS — check this one)`);
       }
     }
     console.log(
