@@ -393,7 +393,14 @@ async function main() {
   ]);
   const hardFail =
     site === "auth" ||
-    failed.some((f) => onlyArg != null || run.weekly || COMPUTE.has(f.split(" ")[0]));
+    failed.some(
+      (f) =>
+        onlyArg != null ||
+        // Kalshi is side data and every tick re-pulls it, so a rate-limit blip
+        // there shouldn't turn the Tuesday weekly run red on its own
+        (run.weekly && !f.startsWith("pull-kalshi")) ||
+        COMPUTE.has(f.split(" ")[0])
+    );
   if (failed.length && !hardFail) {
     console.log("  (data-pull failures only — treating as a transient upstream outage, not failing the tick)");
   }

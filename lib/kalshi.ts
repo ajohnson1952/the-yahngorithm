@@ -32,6 +32,23 @@ export interface KalshiEvent {
   sub_title: string; // "MSU vs ND (Sep 19)"
 }
 
+// Kalshi rate-limits (429) in short bursts, and the public API sometimes 5xxs.
+// Wait and retry a few times (honoring Retry-After) before giving up.
+async function fetchWithRetry(url: string): Promise<Response> {
+  const waits = [2_000, 5_000, 15_000];
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(20_000),
+    });
+    const retryable = res.status === 429 || res.status >= 500;
+    if (!retryable || attempt >= waits.length) return res;
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 30_000) : waits[attempt];
+    await new Promise((r) => setTimeout(r, wait));
+  }
+}
+
 async function getAll<T>(
   path: string,
   key: "markets" | "events"
@@ -42,10 +59,7 @@ async function getAll<T>(
     const url = `${BASE}${path}${path.includes("?") ? "&" : "?"}limit=200${
       cursor ? `&cursor=${cursor}` : ""
     }`;
-    const res = await fetch(url, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(20_000),
-    });
+    const res = await fetchWithRetry(url);
     if (!res.ok) throw new Error(`Kalshi ${path} -> ${res.status}`);
     const j = (await res.json()) as Record<string, unknown>;
     out.push(...((j[key] as T[]) ?? []));
