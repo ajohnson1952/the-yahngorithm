@@ -573,3 +573,83 @@ model TeamRatingAsOf {
   @@unique([teamId, season, throughWeek])
   @@index([season, throughWeek])
 }
+
+// ============================================================
+// COLLEGE BASKETBALL — kept in its own tables on purpose, so no CFB
+// query can ever pick up a CBB row. See YAHNGORITHM_CBB_PLAN.md.
+// ============================================================
+
+model CbbTeam {
+  id           String  @id @default(cuid())
+  name         String  @unique // D-I: CollegeBasketballData's name. Non-D-I: ESPN's name.
+  // 'd1' for teams we track fully. 'non_d1' for D-II/NAIA/etc. opponents that
+  // only exist here so D-I-vs-small-school games (and their lines) can be stored.
+  division     String  @default("d1")
+  cbbdId       Int?    @unique
+  espnId       Int?    @unique // links ESPN schedule/scores + logos
+  conference   String?
+  abbreviation String?
+  logo         String?
+  color        String?
+
+  aliases   CbbTeamAlias[]
+  homeGames CbbGame[]      @relation("CbbHome")
+  awayGames CbbGame[]      @relation("CbbAway")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// How each source spells each team ("Connecticut" on KenPom vs "UConn Huskies"
+// on FanDuel). Matching is exact-alias only; fuzzy matching just suggests rows.
+model CbbTeamAlias {
+  id         String  @id @default(cuid())
+  teamId     String
+  team       CbbTeam @relation(fields: [teamId], references: [id])
+  source     String // 'cbbd' | 'espn' | 'odds_api' | 'kenpom' | 'torvik'
+  alias      String
+  confidence String  @default("needs_review") // 'confirmed' | 'needs_review'
+
+  createdAt DateTime @default(now())
+
+  @@unique([source, alias])
+  @@index([teamId])
+}
+
+model CbbGame {
+  id          String   @id @default(cuid())
+  season      Int // 2027 = the 2026-27 season
+  espnId      Int?     @unique // ESPN is the daily schedule source; teams can meet twice a season
+  startTime   DateTime
+  homeTeamId  String
+  homeTeam    CbbTeam  @relation("CbbHome", fields: [homeTeamId], references: [id])
+  awayTeamId  String
+  awayTeam    CbbTeam  @relation("CbbAway", fields: [awayTeamId], references: [id])
+  neutralSite Boolean  @default(false)
+  status      String   @default("scheduled") // scheduled | live | final | postponed | canceled
+  homeScore   Int?
+  awayScore   Int?
+
+  lines CbbLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startTime])
+}
+
+// One row per market per pull, never overwritten — line movement and closing
+// lines fall out of this later.
+model CbbLine {
+  id         String   @id @default(cuid())
+  gameId     String
+  game       CbbGame  @relation(fields: [gameId], references: [id])
+  book       String   @default("fanduel")
+  market     String // 'h2h' (moneyline) | 'spreads' | 'totals'
+  homeValue  Float? // home spread, or the total
+  homePrice  Int? // American odds
+  awayPrice  Int?
+  capturedAt DateTime @default(now())
+
+  @@index([gameId, capturedAt])
+}
