@@ -252,6 +252,8 @@ export default async function AdminPage() {
 
       <p className="subhead">
         <a href="/admin/logos" style={{ color: "var(--blue)" }}>Pick team logos →</a>
+        {" · "}
+        <a href="/cbb/admin/teams" style={{ color: "var(--blue)" }}>CBB team names →</a>
       </p>
 
       <FreshnessPanel rows={freshness} />

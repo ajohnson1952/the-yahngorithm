@@ -1342,3 +1342,34 @@ tr:hover td { background: var(--panel); }
 .lp-none { height: 48px; display: flex; align-items: center; font-size: 12px; }
 .lp-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .lp-option.on .lp-label::before { content: "✓ "; color: var(--blue); }
+
+/* ---------- CBB team-name review (/cbb/admin/teams) ---------- */
+.cbbt { max-width: 900px; }
+.cbbt-unmatched { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin: 12px 0; font-size: 13px; }
+.cbbt-unmatched.good { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, var(--border)); }
+.cbbt-unmatched.bad { border-color: color-mix(in srgb, var(--red) 45%, var(--border)); }
+.cbbt-unmatched ul { margin: 6px 0 0; padding-left: 18px; color: var(--text-dim); }
+.cbbt-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.cbbt-search { flex: 1 1 220px; min-width: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; color: inherit; font: inherit; font-size: 13px; }
+.cbbt-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.cbbt-chip { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; color: var(--text-dim); cursor: pointer; }
+.cbbt-chip.on { color: var(--text); border-color: var(--blue); }
+.cbbt-msg { font-size: 12px; color: var(--amber); margin: 4px 0; }
+.cbbt-note { font-size: 11px; color: var(--text-faint); margin: 4px 0 10px; }
+.cbbt-list { display: flex; flex-direction: column; gap: 6px; }
+.cbbt-empty { color: var(--text-faint); font-size: 13px; }
+.cbbt-row { display: grid; grid-template-columns: minmax(140px, 1.1fr) 1fr 1fr; gap: 10px; align-items: start; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; }
+.cbbt-team { display: flex; flex-direction: column; min-width: 0; }
+.cbbt-name { font-weight: 650; font-size: 14px; }
+.cbbt-conf { font-size: 11px; color: var(--text-faint); }
+.cbbt-cell { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 0; }
+.cbbt-src { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); margin-right: 2px; }
+.cbbt-none { color: var(--text-faint); font-size: 12px; }
+.cbbt-alias { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; border-radius: 6px; padding: 2px 6px; border: 1px solid var(--border); overflow-wrap: anywhere; }
+.cbbt-alias.ok { color: var(--green); border-color: color-mix(in srgb, var(--green) 35%, var(--border)); }
+.cbbt-alias.rev { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 45%, var(--border)); }
+.cbbt-alias button { background: none; border: none; color: inherit; cursor: pointer; padding: 0 2px; font-size: 12px; }
+.cbbt-alias button:disabled { opacity: 0.4; cursor: default; }
+@media (max-width: 600px) {
+  .cbbt-row { grid-template-columns: 1fr; gap: 4px; }
+}

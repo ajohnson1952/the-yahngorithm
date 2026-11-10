@@ -11,11 +11,12 @@
 // /cbb/admin/teams.
 
 import { readFileSync } from "fs";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { buildCbbMatcher } from "../../lib/cbbNames";
 import { requireOddsCbbKey } from "../../lib/oddsCbb";
 
 const prisma = new PrismaClient();
+const UNMATCHED_KEY = "cbbUnmatchedNames"; // Meta row read by /cbb/admin/teams
 
 async function oddsNames(): Promise<string[]> {
   const res = await fetch(
@@ -104,6 +105,11 @@ async function main() {
         `${suggested} new suggestions, ${unmatched.length} unmatched`
     );
     for (const n of unmatched.sort()) console.log(`  ✗ ${n}`);
+
+    // Keep this source's unmatched list for /cbb/admin/teams (replaced each run).
+    const prev = await prisma.meta.findUnique({ where: { key: UNMATCHED_KEY } });
+    const value: Prisma.InputJsonObject = { ...((prev?.value as Prisma.InputJsonObject) ?? {}), [source]: { names: unmatched, at: new Date().toISOString() } };
+    await prisma.meta.upsert({ where: { key: UNMATCHED_KEY }, update: { value }, create: { key: UNMATCHED_KEY, value } });
   }
 }
 
