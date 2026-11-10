@@ -1,17 +1,17 @@
 import Link from "next/link";
-import { currentSeason, currentWeek, weeksWithGames } from "../../lib/currentWeek";
-import { getWeekBoard } from "../../lib/webData";
-import { getLiveScores, type LiveGame } from "../../lib/liveScores";
+import { currentSeason, currentWeek, weeksWithGames } from "../../../lib/currentWeek";
+import { getWeekBoard } from "../../../lib/webData";
+import { getLiveScores, type LiveGame } from "../../../lib/liveScores";
 import {
   getRivalryPairs,
   toWatchGame,
   buildWatchWindows,
   QUADBOX_SIZE,
   type WatchGame,
-} from "../../lib/watchGuide";
-import { WatchCard } from "../../components/WatchCard";
-import { WatchAutoRefresh } from "../../components/WatchAutoRefresh";
-import { HapticSegments } from "../../components/HapticSegments";
+} from "../../../lib/watchGuide";
+import { WatchCard } from "../../../components/WatchCard";
+import { WatchAutoRefresh } from "../../../components/WatchAutoRefresh";
+import { HapticSegments } from "../../../components/HapticSegments";
 
 export const metadata = { title: "Watch guide · the yahngorithm" };
 
@@ -59,7 +59,7 @@ export default async function WatchPage({
     if (o.week != null) p.set("week", String(o.week));
     if (o.day) p.set("day", o.day);
     const s = p.toString();
-    return s ? `/watch?${s}` : "/watch";
+    return s ? `/cfb/watch?${s}` : "/cfb/watch";
   };
 
   // group into calendar days (CT)
@@ -174,7 +174,7 @@ export default async function WatchPage({
         stakes, and rivalries. Once games kick off it re-ranks on the live
         score (ESPN): a one-score game late jumps the board, a blowout drops
         to the bench.{" "}
-        <Link href="/watch-timeline" className="inline-link" style={{ color: "var(--blue)" }}>
+        <Link href="/cfb/watch-timeline" className="inline-link" style={{ color: "var(--blue)" }}>
           Try the timeline view (prototype) →
         </Link>
       </p>

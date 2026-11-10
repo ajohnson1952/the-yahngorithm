@@ -1,6 +1,6 @@
 import { readFile } from "fs/promises";
 import path from "path";
-import { renderMarkdown } from "../../lib/miniMarkdown";
+import { renderMarkdown } from "../../../lib/miniMarkdown";
 
 export const dynamic = "force-static";
 

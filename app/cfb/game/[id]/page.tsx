@@ -1,14 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { visitor } from "../../../lib/visitor";
-import { getGameDetail } from "../../../lib/webData";
-import { getCaveSplits, CAVEPICKS_URL, type CaveSplit } from "../../../lib/cave";
-import { median } from "../../../lib/consensus";
-import { HOME_FIELD_ADVANTAGE } from "../../../lib/modelConfig";
-import { probToSpread } from "../../../lib/winProb";
-import { PinButton } from "../../../components/PinButton";
-import { GameJumpBar } from "../../../components/GameJumpBar";
+import { visitor } from "../../../../lib/visitor";
+import { getGameDetail } from "../../../../lib/webData";
+import { getCaveSplits, CAVEPICKS_URL, type CaveSplit } from "../../../../lib/cave";
+import { median } from "../../../../lib/consensus";
+import { HOME_FIELD_ADVANTAGE } from "../../../../lib/modelConfig";
+import { probToSpread } from "../../../../lib/winProb";
+import { PinButton } from "../../../../components/PinButton";
+import { GameJumpBar } from "../../../../components/GameJumpBar";
 import {
   TeamRow,
   FlagChip,
@@ -22,8 +22,8 @@ import {
   signed,
   trim,
   spreadStr,
-} from "../../../components/ui";
-import { teamLogo } from "../../../lib/teamLogo";
+} from "../../../../components/ui";
+import { teamLogo } from "../../../../lib/teamLogo";
 
 export const dynamic = "force-dynamic";
 
@@ -261,7 +261,7 @@ export default async function GamePage({
         {/* the only way back in home-screen (standalone) mode, which has no
             browser back button — so it's a real tap target, and it returns to
             this game's own week rather than the current one */}
-        <Link className="gback" href={`/?week=${g.week}`}>
+        <Link className="gback" href={`/cfb?week=${g.week}`}>
           ‹ Week {g.week}
         </Link>
         <PinButton gameId={g.id} pinned={data.pinned} large />
@@ -712,7 +712,7 @@ export default async function GamePage({
 
       <p className="foot">
         Decision support, not a guarantee. Read the{" "}
-        <Link className="inline-link" href="/guide" style={{ color: "var(--blue)" }}>
+        <Link className="inline-link" href="/cfb/guide" style={{ color: "var(--blue)" }}>
           interpretation guide
         </Link>
         .

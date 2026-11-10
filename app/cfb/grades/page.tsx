@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Units } from "../../components/ui";
-import { currentSeason } from "../../lib/currentWeek";
-import { getGradeBoard } from "../../lib/webData";
+import { Units } from "../../../components/ui";
+import { currentSeason } from "../../../lib/currentWeek";
+import { getGradeBoard } from "../../../lib/webData";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Model grades · the yahngorithm" };
@@ -63,7 +63,7 @@ export default async function GradesPage() {
         Every spread model and every flag, graded against the closing line on each
         final game — the hindsight-free record. Break-even is 52.4%. Backtests say
         expect ~50%; see the{" "}
-        <Link href="/guide" style={{ color: "var(--blue)" }}>
+        <Link href="/cfb/guide" style={{ color: "var(--blue)" }}>
           guide
         </Link>
         . {gamesGraded} game{gamesGraded === 1 ? "" : "s"} graded so far.

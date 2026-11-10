@@ -6,7 +6,7 @@ import {
   type FreshnessRow,
 } from "../../lib/webData";
 import type { NeonUsageView, NeonMetric } from "../../lib/neonUsage";
-import { LoginForm } from "../rankings/LoginForm";
+import { LoginForm } from "../cfb/rankings/LoginForm";
 import { RUNNABLE, RUN_ALL_ORDER } from "./scripts";
 import { RunPanel } from "./RunPanel";
 

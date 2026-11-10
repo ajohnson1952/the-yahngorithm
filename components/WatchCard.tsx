@@ -15,7 +15,7 @@ export function WatchCard({ g, rank }: { g: WatchGame; rank?: number }) {
   return (
     <Link
       prefetch={false}
-      href={`/game/${g.id}`}
+      href={`/cfb/game/${g.id}`}
       className={`watch-card${isLive ? " is-live" : ""}${
         live?.state === "post" ? " is-final" : ""
       }`}

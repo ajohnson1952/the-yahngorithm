@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { isAdmin } from "../../../lib/adminAuth";
 import { db } from "../../../lib/db";
-import { LoginForm } from "../../rankings/LoginForm";
+import { LoginForm } from "../../cfb/rankings/LoginForm";
 import { LogoPicker, type LogoTeam } from "./LogoPicker";
 import { espnLogo } from "../../../lib/teamLogo";
 

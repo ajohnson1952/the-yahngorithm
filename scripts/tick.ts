@@ -111,7 +111,7 @@ async function refreshSite(): Promise<"ok" | "auth" | "error"> {
     // week, weeks list, pick log, grade board)
     const codes: number[] = [];
     // …and the Cavepicks feed, so that app's requests never wake Neon either
-    for (const path of ["/", "/watch", "/picks", "/grades", "/api/feed"]) {
+    for (const path of ["/cfb", "/cfb/watch", "/cfb/picks", "/cfb/grades", "/api/feed"]) {
       const warm = await fetch(`${SITE_URL}${path}`, { signal: AbortSignal.timeout(40_000) });
       await warm.text(); // drain the stream so the render (and its cache fill) completes
       codes.push(warm.status);

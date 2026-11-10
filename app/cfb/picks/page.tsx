@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { currentSeason } from "../../lib/currentWeek";
-import { getPickLog } from "../../lib/webData";
-import { signed, trim, kickoffStr, unitsAt110 } from "../../components/ui";
+import { currentSeason } from "../../../lib/currentWeek";
+import { getPickLog } from "../../../lib/webData";
+import { signed, trim, kickoffStr, unitsAt110 } from "../../../components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +60,7 @@ export default async function PicksPage() {
       <p className="subhead">
         Every pick logged the first moment it qualified, frozen at that line.
         Watch the CLV, not the record — see{" "}
-        <Link href="/guide" style={{ color: "var(--blue)" }}>
+        <Link href="/cfb/guide" style={{ color: "var(--blue)" }}>
           guide §7
         </Link>
         .
@@ -160,7 +160,7 @@ export default async function PicksPage() {
                 <span>Result</span>
               </div>
               {w.rows.map((r) => (
-                <Link key={r.id} href={`/game/${r.gameId}`} prefetch={false} className="pl-row">
+                <Link key={r.id} href={`/cfb/game/${r.gameId}`} prefetch={false} className="pl-row">
                   <span className="pl-game">
                     <span className="pl-teams">
                       {r.awayRank != null && <span className="ap-rank">{r.awayRank}</span>}

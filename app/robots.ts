@@ -5,6 +5,6 @@ import type { MetadataRoute } from "next";
 // keeps Neon awake for the whole crawl — see lib/pipelineCache.ts.
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: "*", disallow: ["/game/", "/admin", "/rankings", "/api/", "/watch-timeline", "/lab"] }],
+    rules: [{ userAgent: "*", disallow: ["/cfb/game/", "/cfb/rankings", "/cfb/watch-timeline", "/cfb/lab", "/game/", "/admin", "/rankings", "/api/", "/watch-timeline", "/lab", "/cbb/admin"] }],
   };
 }

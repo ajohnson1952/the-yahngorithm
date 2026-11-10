@@ -1,5 +1,7 @@
 "use client";
 
+import { sportOf } from "./sport";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -52,30 +54,41 @@ function IconMore() {
   );
 }
 
-const TABS = [
-  { href: "/", label: "This week", Icon: IconWeek },
-  { href: "/watch", label: "Watch", Icon: IconWatch },
-  { href: "/picks", label: "Picks", Icon: IconPicks },
-  { href: "/grades", label: "Grades", Icon: IconGrades },
-];
-const MORE_LINKS = [
-  { href: "/guide", label: "Guide" },
-  { href: "/admin", label: "Admin" },
-  // TEMP — Cavepicks cross-link mockups; remove with app/lab when decided
-  { href: "/lab", label: "Lab" },
-];
+const TABS = {
+  cfb: [
+    { href: "/cfb", label: "This week", Icon: IconWeek },
+    { href: "/cfb/watch", label: "Watch", Icon: IconWatch },
+    { href: "/cfb/picks", label: "Picks", Icon: IconPicks },
+    { href: "/cfb/grades", label: "Grades", Icon: IconGrades },
+  ],
+  cbb: [{ href: "/cbb", label: "Today", Icon: IconWeek }],
+};
+const MORE_LINKS = {
+  cfb: [
+    { href: "/cfb/guide", label: "Guide" },
+    { href: "/admin", label: "Admin" },
+    // TEMP — Cavepicks cross-link mockups; remove with app/cfb/lab when decided
+    { href: "/cfb/lab", label: "Lab" },
+  ],
+  cbb: [
+    { href: "/admin", label: "Admin" },
+    { href: "/cbb/admin/teams", label: "Team names" },
+  ],
+};
 
+// a sport's home tab is active only on its exact path; others on any subpage
 const isActive = (path: string, href: string) =>
-  href === "/" ? path === "/" : path.startsWith(href);
+  href === "/cfb" || href === "/cbb" ? path === href : path.startsWith(href);
 
 export function BottomNav() {
   const path = usePathname();
+  const sport = sportOf(path);
   const [moreOpen, setMoreOpen] = useState(false);
 
   // close the "More" sheet on every navigation
   useEffect(() => setMoreOpen(false), [path]);
 
-  const moreActive = MORE_LINKS.some((l) => isActive(path, l.href));
+  const moreActive = MORE_LINKS[sport].some((l) => isActive(path, l.href));
 
   return (
     <>
@@ -84,7 +97,7 @@ export function BottomNav() {
       )}
       {moreOpen && (
         <div className="bn-sheet" role="menu">
-          {MORE_LINKS.map((l) => (
+          {MORE_LINKS[sport].map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -102,7 +115,7 @@ export function BottomNav() {
         </div>
       )}
       <nav className="bottom-nav" aria-label="Primary">
-        {TABS.map((t) => {
+        {TABS[sport].map((t) => {
           const active = isActive(path, t.href);
           return (
             <Link key={t.href} href={t.href} className={`bn-tab${active ? " active" : ""}`}>

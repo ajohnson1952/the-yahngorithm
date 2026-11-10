@@ -1,8 +1,8 @@
-import Link from "next/link";
 import type { Metadata, Viewport } from "next";
 import { Inter, Roboto_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import { BrandAndToggle } from "../components/SportToggle";
 import { Nav } from "../components/Nav";
 import { BottomNav } from "../components/BottomNav";
 import { PullToRefresh } from "../components/PullToRefresh";
@@ -46,10 +46,10 @@ export default function RootLayout({
       <body>
         <header className="topbar">
           <div className="wrap topbar-inner">
-            <Link href="/" className="brand">
+            <BrandAndToggle>
               <img className="brand-avatar" src="/joe.png" alt="" />
               the yahngorithm
-            </Link>
+            </BrandAndToggle>
             <Nav />
           </div>
         </header>

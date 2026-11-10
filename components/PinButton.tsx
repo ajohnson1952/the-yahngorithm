@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { togglePin } from "../app/actions";
+import { togglePin } from "../app/cfb/actions";
 import { HapticToggle } from "./HapticToggle";
 
 export function PinButton({

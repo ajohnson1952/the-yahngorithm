@@ -106,7 +106,7 @@ export async function buildFeed(season: number, week: number): Promise<YahnFeed>
     record: { win: log.record.win, loss: log.record.loss, push: log.record.push },
     games: board.map((g) => ({
       id: g.id,
-      url: `${SITE_URL}/game/${g.id}`,
+      url: `${SITE_URL}/cfb/game/${g.id}`,
       kickoff: g.kickoff,
       home: team(g.home),
       away: team(g.away),

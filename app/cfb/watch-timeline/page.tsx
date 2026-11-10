@@ -5,16 +5,16 @@ import Link from "next/link";
 // glance instead of only seeing "the current best 4." Separate route on
 // purpose: /watch (the quadbox planner) is untouched, this is a mockup to
 // compare against before deciding whether either replaces or joins it.
-import { currentSeason, currentWeek, weeksWithGames } from "../../lib/currentWeek";
-import { getWeekBoard } from "../../lib/webData";
-import { getLiveScores, type LiveGame } from "../../lib/liveScores";
+import { currentSeason, currentWeek, weeksWithGames } from "../../../lib/currentWeek";
+import { getWeekBoard } from "../../../lib/webData";
+import { getLiveScores, type LiveGame } from "../../../lib/liveScores";
 import {
   getRivalryPairs,
   toWatchGame,
   GAME_DURATION_MS,
   CLUSTER_GAP_MS,
   type WatchGame,
-} from "../../lib/watchGuide";
+} from "../../../lib/watchGuide";
 
 /** Group games into kickoff "waves" (same clustering rule as the quadbox
  *  windows — kickoffs within CLUSTER_GAP_MS share one), then rank by
@@ -39,8 +39,8 @@ function sortByWaveThenScore(games: WatchGame[]): WatchGame[] {
   flush();
   return out;
 }
-import { teamShort } from "../../components/ui";
-import { WatchAutoRefresh } from "../../components/WatchAutoRefresh";
+import { teamShort } from "../../../components/ui";
+import { WatchAutoRefresh } from "../../../components/WatchAutoRefresh";
 
 export const metadata = { title: "Watch timeline (prototype) · the yahngorithm" };
 
@@ -110,7 +110,7 @@ export default async function WatchTimelinePage({
     if (o.week != null) p.set("week", String(o.week));
     if (o.day) p.set("day", o.day);
     const s = p.toString();
-    return s ? `/watch-timeline?${s}` : "/watch-timeline";
+    return s ? `/cfb/watch-timeline?${s}` : "/cfb/watch-timeline";
   };
 
   const byDay = new Map<string, typeof board>();
@@ -230,7 +230,7 @@ export default async function WatchTimelinePage({
                 </div>
                 <Link
                   prefetch={false}
-                  href={`/game/${g.id}`}
+                  href={`/cfb/game/${g.id}`}
                   className={`tl-bar${isLive ? " is-live" : ""}${isFinal ? " is-final" : ""}`}
                   style={{ left, width, background: bg }}
                   title={g.reasons.join(" · ")}
@@ -252,7 +252,7 @@ export default async function WatchTimelinePage({
       <h1>Watch timeline (prototype)</h1>
       <p className="subhead">
         Same watchability scoring as the{" "}
-        <Link href={`/watch${sp.week ? `?week=${week}` : ""}`} className="inline-link" style={{ color: "var(--blue)" }}>
+        <Link href={`/cfb/watch${sp.week ? `?week=${week}` : ""}`} className="inline-link" style={{ color: "var(--blue)" }}>
           quadbox guide
         </Link>
         , shown as a broadcast-schedule timeline instead — one bar per game,

@@ -98,7 +98,7 @@ export function GameCard({
   return (
     <div className="card-wrap">
       <PinButton gameId={g.id} pinned={g.pinned} />
-      <Link href={`/game/${g.id}`} className={cls} prefetch={false}>
+      <Link href={`/cfb/game/${g.id}`} className={cls} prefetch={false}>
         <div className="card-grid">
         <div className="gc-matchup">
           <TeamRow team={g.away} score={g.awayScore} won={awayWon} />

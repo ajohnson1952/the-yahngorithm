@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { isAdmin } from "../../../../lib/adminAuth";
 import { db } from "../../../../lib/db";
-import { LoginForm } from "../../../rankings/LoginForm";
+import { LoginForm } from "../../../cfb/rankings/LoginForm";
 import { TeamsReview, type ReviewTeam, type Unmatched } from "./TeamsReview";
 
 // Admin-only, and it touches the DB only after the password check, so bots

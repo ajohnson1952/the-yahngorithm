@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { visitor } from "../lib/visitor";
-import { currentSeason, currentWeek, weeksWithGames } from "../lib/currentWeek";
-import { getWeekBoard, getPinnedGameIds } from "../lib/webData";
-import { getCaveSplits, type CaveSplit } from "../lib/cave";
-import { BoardView } from "../components/BoardView";
-import { HapticSegments } from "../components/HapticSegments";
+import { visitor } from "../../lib/visitor";
+import { currentSeason, currentWeek, weeksWithGames } from "../../lib/currentWeek";
+import { getWeekBoard, getPinnedGameIds } from "../../lib/webData";
+import { getCaveSplits, type CaveSplit } from "../../lib/cave";
+import { BoardView } from "../../components/BoardView";
+import { HapticSegments } from "../../components/HapticSegments";
 
 // The page itself still renders per request (it reads ?week=/?sort= and the
 // yahn_uid cookie), but the expensive part — getWeekBoard's queries — is cached
@@ -77,7 +77,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     if (o.week != null) p.set("week", String(o.week));
     if (o.sort) p.set("sort", o.sort);
     const s = p.toString();
-    return s ? `/?${s}` : "/";
+    return s ? `/cfb?${s}` : "/cfb";
   };
 
   const pickCount = board.filter((g) => g.picks.length > 0).length;
@@ -213,7 +213,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
 
       <p className="foot">
         Decision support, not a guarantee. Read the{" "}
-        <Link href="/guide" className="inline-link" style={{ color: "var(--blue)" }}>
+        <Link href="/cfb/guide" className="inline-link" style={{ color: "var(--blue)" }}>
           interpretation guide
         </Link>{" "}
         before acting on anything here.

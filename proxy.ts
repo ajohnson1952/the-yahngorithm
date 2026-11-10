@@ -11,12 +11,12 @@ const WALL_PARAM = "_c"; // marks the one cookie-check hop
 /** Pages whose render can miss the cache and read the DB: one cache entry per
  *  game (hundreds across a season), the rankings editor (uncached), and any
  *  board / watch URL with params (other weeks / days). The plain nav pages
- *  (/, /watch, /picks, /grades, /guide) are always served from cache and stay
+ *  (/cfb, /cfb/watch, /cfb/picks, /cfb/grades, /cfb/guide) are always served from cache and stay
  *  open to everyone. */
 function costly(req: NextRequest): boolean {
   const { pathname, search } = req.nextUrl;
-  if (pathname.startsWith("/game/") || pathname.startsWith("/rankings")) return true;
-  return search !== "" && ["/", "/watch", "/watch-timeline"].includes(pathname);
+  if (pathname.startsWith("/cfb/game/") || pathname.startsWith("/cfb/rankings")) return true;
+  return search !== "" && ["/cfb", "/cfb/watch", "/cfb/watch-timeline"].includes(pathname);
 }
 
 // The JS door for DB-costly pages. A request without the `yahn_ok` cookie gets

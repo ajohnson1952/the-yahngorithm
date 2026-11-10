@@ -2,16 +2,16 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { db } from "../../lib/db";
-import { currentSeason } from "../../lib/currentWeek";
+import { db } from "../../../lib/db";
+import { currentSeason } from "../../../lib/currentWeek";
 import {
   ADMIN_PASSWORD,
   ADMIN_COOKIE,
   adminToken,
   safeEqual,
   isAdmin,
-} from "../../lib/adminAuth";
-import { YAHN_MAX_RANK } from "../../lib/yahn";
+} from "../../../lib/adminAuth";
+import { YAHN_MAX_RANK } from "../../../lib/yahn";
 
 // Best-effort brute-force throttle. Per-process (fine for a single Render
 // instance); resets on redeploy. The 4-digit default password is only ~10k
@@ -46,14 +46,14 @@ export async function login(
     path: "/",
     maxAge: 60 * 60 * 24 * 90,
   });
-  revalidatePath("/rankings");
+  revalidatePath("/cfb/rankings");
   revalidatePath("/admin");
   return {};
 }
 
 export async function logout(): Promise<void> {
   (await cookies()).delete(ADMIN_COOKIE);
-  revalidatePath("/rankings");
+  revalidatePath("/cfb/rankings");
 }
 
 export async function saveRanking(
@@ -84,6 +84,6 @@ export async function saveRanking(
   ]);
   // NOTE: the Yahn spread model no longer reads this ranking — it's a
   // reference list for now (the opt-in "bounded prior" comes in build 4).
-  revalidatePath("/rankings");
+  revalidatePath("/cfb/rankings");
   return { ok: true };
 }

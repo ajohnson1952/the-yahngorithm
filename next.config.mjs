@@ -27,6 +27,20 @@ const nextConfig = {
     ],
   },
 
+  // CFB moved under /cfb (Nov 2026) so CBB can live at /cbb. Old links keep
+  // working: permanent redirects (query strings like ?week= carry over). "/"
+  // is temporary (307) because it may become a sport picker later.
+  async redirects() {
+    const moved = ["game", "picks", "grades", "guide", "lab", "rankings", "watch", "watch-timeline"];
+    return [
+      { source: "/", destination: "/cfb", permanent: false },
+      ...moved.flatMap((p) => [
+        { source: `/${p}`, destination: `/cfb/${p}`, permanent: true },
+        { source: `/${p}/:path*`, destination: `/cfb/${p}/:path*`, permanent: true },
+      ]),
+    ];
+  },
+
   async headers() {
     return [
       {

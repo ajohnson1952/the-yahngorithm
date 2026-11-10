@@ -2,8 +2,8 @@
 
 import { updateTag } from "next/cache";
 import { cookies } from "next/headers";
-import { db } from "../lib/db";
-import { pinsTag } from "../lib/pipelineCache";
+import { db } from "../../lib/db";
+import { pinsTag } from "../../lib/pipelineCache";
 
 /** Toggle a game's pin for the current visitor. Pins are per-browser
  *  (keyed on the anonymous `yahn_uid` cookie set by middleware) — no

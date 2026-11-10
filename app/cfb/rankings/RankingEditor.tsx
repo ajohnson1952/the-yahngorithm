@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { HapticToggle } from "../../components/HapticToggle";
+import { HapticToggle } from "../../../components/HapticToggle";
 import {
   DndContext,
   closestCenter,
@@ -19,7 +19,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { YAHN_TIERS, tierOf, YAHN_MAX_RANK } from "../../lib/yahn";
+import { YAHN_TIERS, tierOf, YAHN_MAX_RANK } from "../../../lib/yahn";
 import { saveRanking } from "./actions";
 import type { TeamOpt } from "./page";
 

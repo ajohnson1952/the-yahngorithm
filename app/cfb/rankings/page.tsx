@@ -1,10 +1,10 @@
-import { isAdmin } from "../../lib/adminAuth";
-import { db } from "../../lib/db";
-import { currentSeason } from "../../lib/currentWeek";
-import { tierRatings, YAHN_TIERS } from "../../lib/yahn";
+import { isAdmin } from "../../../lib/adminAuth";
+import { db } from "../../../lib/db";
+import { currentSeason } from "../../../lib/currentWeek";
+import { tierRatings, YAHN_TIERS } from "../../../lib/yahn";
 import { LoginForm } from "./LoginForm";
 import { RankingEditor } from "./RankingEditor";
-import { teamLogo } from "../../lib/teamLogo";
+import { teamLogo } from "../../../lib/teamLogo";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Top 25 · the yahngorithm" };
